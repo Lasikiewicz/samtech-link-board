@@ -6,7 +6,317 @@
     <title>Collaborative Link Board</title>
     <!-- Tailwind CSS for styling -->
     <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Google Fonts: Inter --><!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Collaborative Link Board</title>
+    <!-- Tailwind CSS for styling -->
+    <script src="https://cdn.tailwindcss.com"></script>
     <!-- Google Fonts: Inter -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <!-- Custom Styles -->
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #f1f5f9; /* bg-slate-100 */
+        }
+        /* Custom scrollbar for a cleaner look */
+        .custom-scrollbar::-webkit-scrollbar {
+            width: 8px;
+        }
+        .custom-scrollbar::-webkit-scrollbar-track {
+            background: #f1f5f9;
+        }
+        .custom-scrollbar::-webkit-scrollbar-thumb {
+            background: #94a3b8;
+            border-radius: 4px;
+        }
+        .custom-scrollbar::-webkit-scrollbar-thumb:hover {
+            background: #64748b;
+        }
+        /* Hide elements by default */
+        #auth-container, #app-container {
+            display: none;
+        }
+        .message-box {
+            animation: fadeIn 0.3s ease-out;
+        }
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(-10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+    </style>
+</head>
+<body class="bg-slate-100 text-slate-800">
+
+    <!-- Authentication Container -->
+    <div id="auth-container" class="min-h-screen flex items-center justify-center p-4">
+        <div class="max-w-md w-full bg-white p-8 rounded-2xl shadow-xl">
+            <div class="text-center mb-8">
+                <img src="./logo1.png" alt="Samtech Solutions Logo" class="mx-auto mb-4 h-16 w-auto">
+                <h1 class="text-2xl font-bold text-slate-800">Welcome</h1>
+                <p class="text-slate-500">Sign in or create an account to continue</p>
+            </div>
+            
+            <div id="auth-message" class="hidden message-box mb-4 p-4 text-sm rounded-lg"></div>
+
+            <form id="auth-form">
+                <div class="space-y-4">
+                    <input id="auth-email" type="email" placeholder="Enter your email" class="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-indigo-500 transition" required>
+                    <input id="auth-password" type="password" placeholder="Enter your password" class="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-indigo-500 transition" required>
+                </div>
+                <p id="auth-error" class="text-red-500 text-sm mt-4 h-5"></p>
+                <div class="mt-6 flex flex-col sm:flex-row gap-3">
+                    <button type="button" id="login-btn" class="w-full bg-indigo-600 text-white font-semibold px-6 py-2 rounded-lg hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 transition">Login</button>
+                    <button type="button" id="register-btn" class="w-full bg-slate-600 text-white font-semibold px-6 py-2 rounded-lg hover:bg-slate-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-slate-500 transition">Register</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+
+    <!-- Main Application Container -->
+    <div id="app-container" class="container mx-auto max-w-4xl p-4 sm:p-6 lg:p-8">
+
+        <header class="mb-6">
+            <div class="flex justify-between items-center">
+                <div>
+                    <h1 class="text-3xl sm:text-4xl font-bold text-slate-900">Collaborative Link Board</h1>
+                     <p class="text-slate-600 mt-1">Share, discuss, and edit web links in real-time.</p>
+                </div>
+                <button id="logout-btn" class="bg-red-500 text-white font-semibold px-4 py-2 rounded-lg hover:bg-red-600 transition">Logout</button>
+            </div>
+             <div class="mt-4 text-xs text-slate-500 bg-white px-2 py-1 rounded-md inline-block shadow-sm">
+                Signed in as: <span id="user-email" class="font-mono font-semibold">Loading...</span>
+            </div>
+        </header>
+        
+        <div class="bg-white p-6 rounded-xl shadow-lg mb-8">
+            <h2 class="text-xl font-semibold mb-4">Add a New Link</h2>
+            <form id="add-link-form">
+                <div class="space-y-4">
+                    <input id="link-title" type="text" placeholder="Enter Q&A ID and Title" class="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-indigo-500" required>
+                    <input id="link-url" type="url" placeholder="Enter full URL (e.g., https://example.com)" class="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-indigo-500" required>
+                </div>
+                <button type="submit" class="mt-4 w-full sm:w-auto bg-indigo-600 text-white font-semibold px-6 py-2 rounded-lg hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 transition transform hover:scale-105">
+                    Share Link
+                </button>
+            </form>
+        </div>
+
+        <div>
+            <h2 class="text-2xl font-bold mb-4 text-slate-900">Shared Links</h2>
+            <div id="links-container" class="space-y-6">
+                <p id="loading-state" class="text-slate-500">Loading links...</p>
+            </div>
+        </div>
+
+    </div>
+
+    <!-- Edit Link Modal -->
+    <div id="edit-modal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 hidden">
+        <div class="bg-white rounded-xl shadow-2xl p-6 w-full max-w-lg">
+            <h2 class="text-xl font-semibold mb-4">Edit Link</h2>
+            <form id="edit-link-form">
+                <input type="hidden" id="edit-link-id">
+                <div class="space-y-4">
+                    <input id="edit-link-title" type="text" placeholder="Link title" class="w-full px-4 py-2 border border-slate-300 rounded-lg" required>
+                    <input id="edit-link-url" type="url" placeholder="Link URL" class="w-full px-4 py-2 border border-slate-300 rounded-lg" required>
+                </div>
+                <div class="mt-6 flex justify-end space-x-3">
+                    <button type="button" id="cancel-edit" class="bg-slate-200 text-slate-800 font-semibold px-4 py-2 rounded-lg hover:bg-slate-300">Cancel</button>
+                    <button type="submit" class="bg-indigo-600 text-white font-semibold px-4 py-2 rounded-lg hover:bg-indigo-700">Save Changes</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Firebase App and Services -->
+    <script type="module">
+        // Firebase Imports
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
+        import { getAuth, onAuthStateChanged, createUserWithEmailAndPassword, signInWithEmailAndPassword, signOut, sendEmailVerification } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+        import { getFirestore, doc, collection, onSnapshot, addDoc, updateDoc, deleteDoc, arrayUnion, serverTimestamp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+        // NOTE: Firebase Storage import has been removed
+
+        // --- DO NOT EDIT ---
+        // For Firebase JS SDK v7.20.0 and later, measurementId is optional
+        const firebaseConfig = {
+          apiKey: "AIzaSyCAr34nYgy15_0IcbRlna7y8fKsuTI3rdQ",
+          authDomain: "samtech-link-board.firebaseapp.com",
+          projectId: "samtech-link-board",
+          storageBucket: "samtech-link-board.firebasestorage.app",
+          messagingSenderId: "381303892620",
+          appId: "1:381303892620:web:598e61fd75cd76ce3fa9a9",
+          measurementId: "G-31ZN3SL2TE"
+        };
+        const appId = 'samtech-link-board'; // You can name this whatever you like
+        // --- END DO NOT EDIT ---
+
+        // Firebase Initialization
+        let app, auth, db, userId, linksUnsubscribe;
+        try {
+            app = initializeApp(firebaseConfig);
+            auth = getAuth(app);
+            db = getFirestore(app);
+            // NOTE: Firebase Storage initialization has been removed
+        } catch (e) {
+            console.error("Firebase initialization failed:", e);
+            document.body.innerHTML = '<div class="text-red-500 p-4">Error initializing Firebase. Check console for details.</div>';
+        }
+
+        const authContainer = document.getElementById('auth-container'), appContainer = document.getElementById('app-container'), authForm = document.getElementById('auth-form'), authEmailInput = document.getElementById('auth-email'), authPasswordInput = document.getElementById('auth-password'), loginBtn = document.getElementById('login-btn'), registerBtn = document.getElementById('register-btn'), logoutBtn = document.getElementById('logout-btn'), authError = document.getElementById('auth-error'), authMessage = document.getElementById('auth-message'), userEmailSpan = document.getElementById('user-email'), addLinkForm = document.getElementById('add-link-form'), linksContainer = document.getElementById('links-container'), loadingState = document.getElementById('loading-state'), editModal = document.getElementById('edit-modal'), editLinkForm = document.getElementById('edit-link-form'), editLinkIdInput = document.getElementById('edit-link-id'), editLinkTitleInput = document.getElementById('edit-link-title'), editLinkUrlInput = document.getElementById('edit-link-url'), cancelEditBtn = document.getElementById('cancel-edit');
+        
+        const linksCollectionPath = `/artifacts/${appId}/public/data/links`;
+        const linksCollection = collection(db, linksCollectionPath);
+        const ALLOWED_EMAIL_DOMAIN = 'sam-tech.co.uk';
+
+        const showAuthMessage = (message, type = 'success') => { authMessage.innerHTML = message; authMessage.className = `message-box mb-4 p-4 text-sm rounded-lg ${type === 'success' ? 'bg-green-100 text-green-800' : 'bg-yellow-100 text-yellow-800'}`; authMessage.classList.remove('hidden'); };
+        const hideAuthMessage = () => { authMessage.classList.add('hidden'); authError.textContent = ''; }
+
+        const renderLink = (linkDoc) => {
+            const linkData = linkDoc.data();
+            const linkId = linkDoc.id;
+            const card = document.createElement('div');
+            card.className = "bg-white p-5 rounded-xl shadow-lg transition hover:shadow-xl";
+            card.setAttribute('data-id', linkId);
+            let url = linkData.url;
+            if (!url.startsWith('http://') && !url.startsWith('https://')) url = 'https://' + url;
+            
+            card.innerHTML = `
+                <div class="flex justify-between items-start">
+                    <div>
+                        <a href="${url}" target="_blank" rel="noopener noreferrer" class="text-lg font-semibold text-indigo-700 hover:underline break-all">${linkData.title}</a>
+                        <p class="text-sm text-slate-500 break-all">${linkData.url}</p>
+                        <p class="text-xs text-slate-400 mt-1">Added by: <span class="font-mono">${linkData.addedByEmail}</span></p>
+                    </div>
+                    ${linkData.addedBy === userId ? `<div class="flex-shrink-0 ml-4 space-x-2"><button class="edit-btn text-slate-500 hover:text-indigo-600 transition">&#9998;</button><button class="delete-btn text-slate-500 hover:text-red-600 transition">&#10006;</button></div>` : ''}
+                </div>
+                <div class="mt-4 pt-4 border-t border-slate-200">
+                    <h4 class="text-sm font-semibold mb-2">Comments</h4>
+                    <div class="comments-list space-y-3 max-h-60 overflow-y-auto custom-scrollbar pr-2">
+                        ${(linkData.comments && linkData.comments.length > 0) ? linkData.comments.map(c => `
+                            <div class="bg-slate-100 p-3 rounded-lg text-sm">
+                                <p class="break-words" style="white-space: pre-wrap;">${c.text || ''}</p>
+                                <p class="text-xs text-slate-500 mt-2">By: <span class="font-mono">${c.commentByEmail}</span></p>
+                            </div>`).join('') : '<p class="text-xs text-slate-400">No comments yet.</p>'}
+                    </div>
+                    <form class="add-comment-form mt-3 flex items-start gap-2">
+                        <textarea placeholder="Add a comment..." class="flex-grow w-full text-sm px-3 py-2 border border-slate-300 rounded-lg focus:ring-1 focus:ring-indigo-500" rows="2"></textarea>
+                        <button type="submit" class="bg-slate-600 text-white font-semibold text-sm px-4 py-2 rounded-lg hover:bg-slate-700 transition flex-shrink-0">Post</button>
+                    </form>
+                </div>`;
+            
+            if(linkData.addedBy === userId){
+                card.querySelector('.edit-btn').addEventListener('click', () => openEditModal(linkId, linkData.title, linkData.url));
+                card.querySelector('.delete-btn').addEventListener('click', () => deleteLink(linkId));
+            }
+            const commentForm = card.querySelector('.add-comment-form');
+            commentForm.addEventListener('submit', (e) => addComment(e, linkId));
+            return card;
+        };
+        
+        const openEditModal = (id, title, url) => { editLinkIdInput.value = id; editLinkTitleInput.value = title; editLinkUrlInput.value = url; editModal.classList.remove('hidden'); };
+        const closeEditModal = () => editModal.classList.add('hidden');
+        cancelEditBtn.addEventListener('click', closeEditModal);
+        const deleteLink = async (id) => { try { await deleteDoc(doc(db, linksCollectionPath, id)); } catch (error) { console.error("Error deleting link: ", error); } };
+        
+        const addComment = async (e, id) => {
+            e.preventDefault();
+            const form = e.target;
+            const textarea = form.querySelector('textarea');
+            const submitBtn = form.querySelector('button[type="submit"]');
+            const text = textarea.value.trim();
+            if (!text) return;
+
+            submitBtn.disabled = true;
+            
+            const newComment = { text, commentBy: auth.currentUser.uid, commentByEmail: auth.currentUser.email, createdAt: new Date() };
+            try {
+                await updateDoc(doc(db, linksCollectionPath, id), { comments: arrayUnion(newComment) });
+                form.reset();
+            } catch (error) {
+                console.error("Error adding comment: ", error);
+            } finally {
+                submitBtn.disabled = false;
+            }
+        };
+
+        const setupLinksListener = () => {
+             if (linksUnsubscribe) linksUnsubscribe();
+             linksUnsubscribe = onSnapshot(linksCollection, (snapshot) => {
+                loadingState.style.display = 'none'; linksContainer.innerHTML = ''; 
+                if (snapshot.empty) { linksContainer.innerHTML = '<p class="text-slate-500">No links have been shared yet.</p>'; return; }
+                const docs = snapshot.docs.sort((a,b) => (b.data().createdAt?.seconds || 0) - (a.data().createdAt?.seconds || 0));
+                docs.forEach(doc => linksContainer.appendChild(renderLink(doc)));
+            }, (error) => { console.error("Error fetching links: ", error); linksContainer.innerHTML = '<p class="text-red-500">Could not load links.</p>'; });
+        }
+        
+        onAuthStateChanged(auth, (user) => {
+            hideAuthMessage();
+            if (user && user.emailVerified) {
+                userId = user.uid;
+                userEmailSpan.textContent = user.email;
+                authContainer.style.display = 'none';
+                appContainer.style.display = 'block';
+                setupLinksListener();
+            } else {
+                userId = null;
+                userEmailSpan.textContent = '';
+                authContainer.style.display = 'flex';
+                appContainer.style.display = 'none';
+                if (linksUnsubscribe) { linksUnsubscribe(); linksUnsubscribe = null; }
+                if (user && !user.emailVerified) {
+                     showAuthMessage(`A verification link was sent to <strong>${user.email}</strong>. Please check your inbox and verify your account. <br><br> <button id="resend-verification-btn" class="font-semibold underline hover:text-yellow-900">Resend verification email</button>`, 'warning');
+                     document.getElementById('resend-verification-btn')?.addEventListener('click', async () => {
+                         try { await sendEmailVerification(user); showAuthMessage('A new verification email has been sent.', 'success'); } catch (error) { authError.textContent = 'Error resending email.'; }
+                     });
+                }
+            }
+        });
+
+        loginBtn.addEventListener('click', async () => {
+            const email = authEmailInput.value, password = authPasswordInput.value; hideAuthMessage();
+            try { const userCredential = await signInWithEmailAndPassword(auth, email, password); if (!userCredential.user.emailVerified) await signOut(auth); } catch (error) { authError.textContent = error.message; }
+        });
+
+        registerBtn.addEventListener('click', async () => {
+            const email = authEmailInput.value, password = authPasswordInput.value; hideAuthMessage();
+            if (!email.endsWith('@' + ALLOWED_EMAIL_DOMAIN)) { authError.textContent = `Registration only allowed for @${ALLOWED_EMAIL_DOMAIN} emails.`; return; }
+            try {
+                const userCredential = await createUserWithEmailAndPassword(auth, email, password);
+                await sendEmailVerification(userCredential.user);
+                await signOut(auth);
+                showAuthMessage(`Registration successful! A verification link has been sent to <strong>${email}</strong>. Please check your inbox.`, 'success');
+            } catch (error) { authError.textContent = error.message; }
+        });
+
+        logoutBtn.addEventListener('click', async () => { try { await signOut(auth); } catch (error) { console.error("Error signing out:", error); } });
+        addLinkForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            if (!auth.currentUser) return;
+            const title = addLinkForm.querySelector('#link-title').value.trim();
+            const url = addLinkForm.querySelector('#link-url').value.trim();
+            if (title && url) {
+                try {
+                    await addDoc(linksCollection, { title, url, addedBy: auth.currentUser.uid, addedByEmail: auth.currentUser.email, createdAt: serverTimestamp(), comments: [] });
+                    addLinkForm.reset();
+                } catch (error) { console.error("Error adding document: ", error); }
+            }
+        });
+        editLinkForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const id = editLinkIdInput.value, newTitle = editLinkTitleInput.value.trim(), newUrl = editLinkUrlInput.value.trim();
+            if (id && newTitle && newUrl) { try { await updateDoc(doc(db, linksCollectionPath, id), { title: newTitle, url: newUrl }); closeEditModal(); } catch (error) { console.error("Error updating link: ", error); } }
+        });
+    </script>
+</body>
+</html>
+
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
