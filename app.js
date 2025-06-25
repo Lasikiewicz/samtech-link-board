@@ -10,7 +10,7 @@ let allRecords = []; // This will hold the full dataset from the current main fi
 let groupedFaults = new Map();
 let currentSort = 'newest', currentSearch = '', currentCategory = '', currentFilter = 'all', currentUserDisplayName = '';
 let recordToDelete = null;
-let expandedRecordIds = new Set();
+let expandedRecordIds = new Set(); // <--- THIS LINE WAS MISSING AND HAS BEEN RESTORED
 let pendingRecordData = null;
 let isInitialLoad = true;
 
@@ -39,7 +39,7 @@ const dom = {
 
 const formInputClasses = "w-full p-2 border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-900 rounded text-slate-900 dark:text-slate-200 placeholder-slate-400 dark:placeholder-slate-500";
 const formFieldsTemplates = {
-    qa: `<input name="title" type="text" placeholder="Q&A Title / Description" class="${formInputClasses}" required><input name="qaId" type="text" placeholder="Q&A Question ID" pattern="\\d{8}" title="8 digits" class="${formInputClasses}" required><input name="modelNumber" type="text" placeholder="Model Number" class="${formInputClasses}"><input name="serialNumber" type="text" placeholder="Serial Number" class="${formInputClasses}"><input name="serviceOrderNumber" type="text" placeholder="Service Order Number" pattern="\\d{10}" title="10 digits" class="${formInputClasses}"><input name="salesforceCaseNumber" type="text" placeholder="Salesforce Case Number" pattern="\\d{8}" title="8 digits" class="${formInputClasses}"><textarea name="description" placeholder="Description" class="${formInputClasses}" rows="4"></textarea>`,
+    qa: `<input name="title" type="text" placeholder="Q&A Title" class="${formInputClasses}" required><input name="qaId" type="text" placeholder="Q&A Question ID" pattern="\\d{8}" title="8 digits" class="${formInputClasses}" required><input name="modelNumber" type="text" placeholder="Model Number" class="${formInputClasses}"><input name="serialNumber" type="text" placeholder="Serial Number" class="${formInputClasses}"><input name="serviceOrderNumber" type="text" placeholder="Service Order Number" pattern="\\d{10}" title="10 digits" class="${formInputClasses}"><input name="salesforceCaseNumber" type="text" placeholder="Salesforce Case Number" pattern="\\d{8}" title="8 digits" class="${formInputClasses}"><textarea name="description" placeholder="Description" class="${formInputClasses}" rows="4"></textarea>`,
     'common-fault': `<input name="title" type="text" placeholder="Title / Description" class="${formInputClasses}" required><input name="modelNumber" type="text" placeholder="Model Number" class="${formInputClasses}"><input name="serialNumber" type="text" placeholder="Serial Number" class="${formInputClasses}"><input name="serviceOrderNumber" type="text" placeholder="Service Order Number" pattern="\\d{10}" title="10 digits" class="${formInputClasses}"><input name="salesforceCaseNumber" type="text" placeholder="Salesforce Case Number" pattern="\\d{8}" title="8 digits" class="${formInputClasses}"><textarea name="description" placeholder="Description" class="${formInputClasses}" rows="4"></textarea><label class="flex items-center mt-4"><input type="checkbox" name="onSamsungTracker" class="rounded mr-2"> On Samsung Action Tracker</label>`,
     general: `<input name="title" type="text" placeholder="Title / Description" class="${formInputClasses}" required><input name="modelNumber" type="text" placeholder="Model Number" class="${formInputClasses}"><input name="serialNumber" type="text" placeholder="Serial Number" class="${formInputClasses}"><input name="serviceOrderNumber" type="text" placeholder="Service Order Number" pattern="\\d{10}" title="10 digits" class="${formInputClasses}"><input name="salesforceCaseNumber" type="text" placeholder="Salesforce Case Number" pattern="\\d{8}" title="8 digits" class="${formInputClasses}"><textarea name="description" placeholder="Description" class="${formInputClasses}" rows="4"></textarea>`
 };
@@ -84,7 +84,9 @@ const groupCommonFaults = () => {
 
         while (queue.length > 0) {
             const currentFault = queue.shift();
+            
             const allRelated = [...(currentFault.relatedTo || []), ...(currentFault.relatedBy || [])];
+
             for(const related of allRelated) {
                  if (recordMap.has(related.id) && !visited.has(related.id)) {
                     visited.add(related.id);
@@ -184,7 +186,6 @@ const renderRecordCard = (record) => {
     const groupId = getRecordGroupId(record.id);
     const linkedRecordsHtml = groupId ? `<div class="mt-2"><dt class="font-semibold">Linked Faults:</dt><dd><button class="linked-fault-btn text-indigo-600 dark:text-indigo-400 underline" data-group-id="${groupId}">View Group</button></dd></div>` : '';
     const descriptionHtml = record.description ? `<div class="pt-2 font-semibold">Description:</div><p class="whitespace-pre-wrap">${record.description}</p>` : '<div class="pt-2 font-semibold">No Description Provided</div>';
-
 
     card.innerHTML = `
         <div class="collapsible-header flex justify-between items-start cursor-pointer record-header">
