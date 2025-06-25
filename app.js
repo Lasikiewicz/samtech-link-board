@@ -166,38 +166,11 @@ const renderRecordCard = (record) => {
 
     card.innerHTML = `<div class="collapsible-header flex justify-between items-start cursor-pointer record-header"><div class="flex items-center gap-3"><span class="text-xs capitalize text-white px-2 py-0.5 rounded-full" style="background-color: ${categoryColors[record.category] || '#64748b'}">${categoryDisplayNames[record.category] || record.category}</span><h3 class="text-lg font-semibold text-indigo-600 dark:text-indigo-400 break-all">${record.title}</h3></div><div class="flex items-center gap-2">${record.onSamsungTracker ? '<span class="text-xs font-bold bg-green-500 text-white px-2 py-1 rounded-full">Samsung Action Tracker</span>' : ''}${record.isClosed?'<span class="text-xs font-bold bg-slate-500 text-white px-2 py-1 rounded-full">CLOSED</span>':''}<div class="actions flex-shrink-0 ml-4 space-x-2"></div><svg class="chevron h-5 w-5 transition-transform" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" /></svg></div></div><div class="collapsible-content details-container"><div class="mt-4 pt-4 border-t border-slate-200 dark:border-slate-700 text-sm space-y-2"><dl class="grid grid-cols-1 md:grid-cols-2 gap-x-4 gap-y-1">${detailsHtml}${linkedRecordsHtml}</dl>${record.description?`<div class="pt-2"><p class="whitespace-pre-wrap">${record.description}</p></div>`:''}</div><div class="comments-section mt-4 pt-4 border-t border-slate-200 dark:border-slate-700"></div><p class="text-xs text-slate-400 dark:text-slate-500 mt-4">Added by <span class="font-mono">${record.addedBy}</span> on ${formatDateTime(record.createdAt)}</p></div>`;
     
-    card.querySelector('.record-header').addEventListener('click', (e) => {
-        if (!e.target.closest('.actions')) {
-            card.classList.toggle('expanded');
-            if (card.classList.contains('expanded')) {
-                expandedRecordIds.add(record.id);
-                card.querySelector('.comments-section')?.classList.add('expanded');
-            } else {
-                expandedRecordIds.delete(record.id);
-            }
-        }
-    });
-    
-    renderComments(card.querySelector('.comments-section'), record);
-    if(card.classList.contains('expanded')) card.querySelector('.comments-section')?.classList.add('expanded');
-
     const actions = card.querySelector('.actions');
     actions.innerHTML = `<button class="time-btn" title="Edit Timestamp">&#x1F4C5;</button><button class="edit-btn" title="Edit">&#9998;</button><button class="close-btn" title="${record.isClosed?'Re-open':'Close'}">${record.isClosed?'&#x1F513;':'&#x1F512;'}</button>`;
     actions.classList.add('text-slate-500','dark:text-slate-400');
     actions.querySelectorAll('button').forEach(btn=>btn.classList.add('hover:text-indigo-600','dark:hover:text-indigo-400','transition'));
     actions.querySelector('.close-btn').classList.add('hover:text-red-600','dark:hover:text-red-500');
-    actions.querySelector('.edit-btn').addEventListener('click',(e)=>{ e.stopPropagation(); openEditModal(record); });
-    actions.querySelector('.close-btn').addEventListener('click',(e)=>{ e.stopPropagation(); updateDoc(doc(db,`/artifacts/${appId}/public/data/records`,record.id),{isClosed:!record.isClosed}); });
-    actions.querySelector('.time-btn').addEventListener('click',(e)=>{ e.stopPropagation(); openTimeEditModal(record); });
-    
-    const linkedFaultBtn = card.querySelector('.linked-fault-btn');
-    if(linkedFaultBtn) {
-        linkedFaultBtn.addEventListener('click', (e) => {
-            e.stopPropagation();
-            const groupId = e.target.dataset.groupId;
-            dom.categoryMenu.querySelector(`[data-id="${groupId}"]`).click();
-        });
-    }
     
     return card;
 };
@@ -212,7 +185,7 @@ const renderComments = (container, record) => {
         sortedComments.forEach((comment, index) => {
             const commentDiv = document.createElement('div');
             commentDiv.className = 'bg-slate-100 dark:bg-slate-700 p-3 rounded-lg text-sm';
-            commentDiv.innerHTML = `<p class="text-xs text-slate-500 dark:text-slate-400 mb-1">By: <span class="font-mono">${comment.addedBy}</span> at ${formatDateTime(comment.createdAt)}</p><div class="comment-body flex justify-between items-start"><p class="comment-text break-words whitespace-pre-wrap flex-grow">${comment.text || ''}</p>${comment.addedBy === currentUserDisplayName ? `<div class="comment-actions flex-shrink-0 ml-2 space-x-2"><button class="edit-comment-btn" data-index="${index}" title="Edit">&#9998;</button><button class="delete-comment-btn" data-index="${index}" title="Delete">&#10006;</button></div>` : ''}</div>`;
+            commentDiv.innerHTML = `<p class="text-xs text-slate-500 dark:text-slate-400 mb-1">By: <span class="font-mono">${comment.addedBy}</span> at ${formatDateTime(comment.createdAt)}</p><div class="comment-body flex justify-between items-start"><p class="comment-text break-words whitespace-pre-wrap flex-grow">${comment.text || ''}</p><div class="comment-actions flex-shrink-0 ml-2 space-x-2"><button class="edit-comment-btn" data-index="${index}" title="Edit">&#9998;</button><button class="delete-comment-btn" data-index="${index}" title="Delete">&#10006;</button></div></div>`;
             commentsList.appendChild(commentDiv);
         });
     } else { commentsList.innerHTML = '<p class="text-xs text-slate-400 dark:text-slate-500">No comments yet.</p>'; }
@@ -300,22 +273,24 @@ dom.deleteRecordBtn.addEventListener('click', () => { recordToDelete = dom.editR
 dom.cancelDelete.addEventListener('click', () => { recordToDelete = null; dom.confirmDeleteModal.classList.add('hidden'); });
 dom.confirmDeleteBtn.addEventListener('click', async () => { if (recordToDelete) { await deleteDoc(doc(db, `/artifacts/${appId}/public/data/records`, recordToDelete)); dom.editRecordModal.classList.add('hidden'); dom.confirmDeleteModal.classList.add('hidden'); recordToDelete = null; } });
 
-dom.recordsContainer.addEventListener('click', (e) => {
+dom.recordsContainer.addEventListener('click', async (e) => {
     const recordCard = e.target.closest('.record-card');
     if (!recordCard) return;
     const recordId = recordCard.dataset.id;
 
-    if (e.target.classList.contains('add-comment-form')) {
-        e.preventDefault();
-        const form = e.target; const textarea = form.querySelector('textarea'); const text = textarea.value.trim(); const submitBtn = form.querySelector('button');
-        if (!text || !currentUserDisplayName) return;
-        submitBtn.disabled = true; submitBtn.textContent = '...';
-        updateDoc(doc(db, `/artifacts/${appId}/public/data/records`, recordId), { comments: arrayUnion({ text, addedBy: currentUserDisplayName, createdAt: Timestamp.now() }) })
-            .then(() => {
+    if (e.target.closest('.add-comment-form')) {
+        const form = e.target.closest('form');
+        if (e.target.tagName === 'BUTTON' && e.target.type === 'submit') {
+             e.preventDefault();
+             const textarea = form.querySelector('textarea'); const text = textarea.value.trim(); const submitBtn = form.querySelector('button');
+             if (!text || !currentUserDisplayName) return;
+             submitBtn.disabled = true; submitBtn.textContent = '...';
+             try {
+                await updateDoc(doc(db, `/artifacts/${appId}/public/data/records`, recordId), { comments: arrayUnion({ text, addedBy: currentUserDisplayName, createdAt: Timestamp.now() }) });
                 textarea.value = '';
-                expandedRecordIds.add(recordId); // Keep it expanded
-            })
-            .finally(() => { submitBtn.disabled = false; submitBtn.textContent = 'Post'; });
+                expandedRecordIds.add(recordId);
+             } finally { submitBtn.disabled = false; submitBtn.textContent = 'Post'; }
+        }
     }
     else if (e.target.classList.contains('edit-comment-btn')) {
         const commentBody = e.target.closest('.comment-body');
@@ -326,7 +301,7 @@ dom.recordsContainer.addEventListener('click', (e) => {
     else if(e.target.classList.contains('save-comment-btn')) {
          const commentIndex = parseInt(e.target.dataset.index);
          const newText = e.target.closest('.comment-body').querySelector('.edit-comment-textarea').value;
-         runTransaction(db, async (transaction) => {
+         await runTransaction(db, async (transaction) => {
              const recordRef = doc(db, `/artifacts/${appId}/public/data/records`, recordId);
              const recordDoc = await transaction.get(recordRef);
              if(!recordDoc.exists()) throw "Document does not exist!";
@@ -337,7 +312,7 @@ dom.recordsContainer.addEventListener('click', (e) => {
     }
     else if(e.target.classList.contains('delete-comment-btn')) {
         const commentIndex = parseInt(e.target.dataset.index);
-        runTransaction(db, async (transaction) => {
+        await runTransaction(db, async (transaction) => {
              const recordRef = doc(db, `/artifacts/${appId}/public/data/records`, recordId);
              const recordDoc = await transaction.get(recordRef);
              if(!recordDoc.exists()) throw "Document does not exist!";
@@ -347,13 +322,26 @@ dom.recordsContainer.addEventListener('click', (e) => {
          });
     }
     else if (e.target.classList.contains('cancel-comment-btn')) {
-        const record = fetchedRecords.find(r => r.id === recordId);
+        const record = allRecords.find(r => r.id === recordId);
         if (record) renderComments(e.target.closest('.comments-section'), record);
     }
 });
 
 
 dom.formCategorySelector.addEventListener('click', (e) => { if (e.target.matches('.form-category-btn')) setFormCategory(e.target.dataset.category, dom.formFieldsContainer); });
+
+const findSimilarFaults = (newTitle, modelNumber) => {
+    const modelNum = modelNumber?.toLowerCase() || '';
+    return allRecords.filter(r => {
+        if (r.category !== 'common-fault') return false;
+        if (r.modelNumber && modelNumber && r.modelNumber.toLowerCase() === modelNum) return true;
+        const newWords = newTitle.toLowerCase().split(' ').filter(w => w.length > 3);
+        if(newWords.length === 0) return false;
+        const existingWords = r.title.toLowerCase().split(' ');
+        const matchCount = newWords.filter(word => existingWords.includes(word)).length;
+        return matchCount >= 2;
+    });
+};
 
 const createRecord = async (recordData, relatedTo = []) => {
      const submitBtn = dom.addRecordForm.querySelector('#add-record-submit');
@@ -422,7 +410,27 @@ dom.editRecordModal.addEventListener('click', (e) => {
         const recordId = dom.editRecordForm.querySelector('[name="id"]').value;
         const unlinkId = e.target.dataset.unlinkId;
         const unlinkTitle = e.target.dataset.unlinkTitle;
-        unlinkFaults(recordId, unlinkId, unlinkTitle);
+        runTransaction(db, async (transaction) => {
+            const recordRef = doc(db, `/artifacts/${appId}/public/data/records`, recordId);
+            const unlinkRef = doc(db, `/artifacts/${appId}/public/data/records`, unlinkId);
+
+            const recordDoc = await transaction.get(recordRef);
+            if(!recordDoc.exists()) throw "Document does not exist!";
+            
+            // Remove from current record's arrays
+            transaction.update(recordRef, {
+                relatedTo: arrayRemove({id: unlinkId, title: unlinkTitle}),
+                relatedBy: arrayRemove({id: unlinkId, title: unlinkTitle})
+            });
+
+            // Remove from the other record's arrays
+            transaction.update(unlinkRef, {
+                relatedTo: arrayRemove({id: recordId, title: recordDoc.data().title}),
+                relatedBy: arrayRemove({id: recordId, title: recordDoc.data().title})
+            });
+        }).then(() => {
+            dom.editRecordModal.classList.add('hidden');
+        }).catch(err => console.error("Unlink transaction failed: ", err));
     }
 });
 
