@@ -1,12 +1,12 @@
 import { initializeApp, getApps, getApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
-import { getFirestore, doc, getDoc, collection, onSnapshot, addDoc, updateDoc, deleteDoc, serverTimestamp, query, where, orderBy, arrayUnion, arrayRemove, Timestamp, getDocs, runTransaction } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+import { getFirestore, doc, collection, onSnapshot, addDoc, updateDoc, deleteDoc, serverTimestamp, query, where, orderBy, arrayUnion, arrayRemove, Timestamp, getDocs, runTransaction } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
 const firebaseConfig = { apiKey: "__API_KEY__", authDomain: "__AUTH_DOMAIN__", projectId: "__PROJECT_ID__", storageBucket: "__STORAGE_BUCKET__", messagingSenderId: "__MESSAGING_SENDER_ID__", appId: "__APP_ID__" };
 const appId = 'samtech-record-board';
 const SHARED_PASSWORD = "__SHARED_PASSWORD__" || "samtech";
 
 let app, db, recordsUnsubscribe;
-let allRecords = []; 
+let allRecords = [];
 let groupedFaults = new Map();
 let currentSort = 'newest', currentSearch = '', currentCategory = '', currentFilter = 'all', currentUserDisplayName = '';
 let recordToDelete = null;
@@ -25,7 +25,6 @@ const dom = {
     filterControls: document.getElementById('filter-controls'), userNameDisplay: document.getElementById('user-name-display'),
     logoutBtn: document.getElementById('logout-btn'),
     authForm: document.getElementById('auth-form'), authPasswordInput: document.getElementById('auth-password'), authErrorEl: document.getElementById('auth-error'),
-    darkModeToggle: document.getElementById('dark-mode-toggle'), sunIcon: document.getElementById('sun-icon'), moonIcon: document.getElementById('moon-icon'),
     categoryMenu: document.getElementById('category-menu'),
     formCategorySelector: document.getElementById('form-category-selector'), formFieldsContainer: document.getElementById('form-fields-container'),
     editRecordModal: document.getElementById('edit-record-modal'), editRecordForm: document.getElementById('edit-record-form'),
@@ -37,7 +36,7 @@ const dom = {
     linkFaultModal: document.getElementById('link-fault-modal'), existingFaultsList: document.getElementById('existing-faults-list'), skipLinkBtn: document.getElementById('skip-link-btn'), confirmLinkBtn: document.getElementById('confirm-link-btn')
 };
 
-const formInputClasses = "w-full p-2 border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-900 rounded text-slate-900 dark:text-slate-200 placeholder-slate-400 dark:placeholder-slate-500";
+const formInputClasses = "w-full p-2 border border-slate-300 bg-white rounded placeholder-slate-400";
 const formFieldsTemplates = {
     qa: `<input name="title" type="text" placeholder="Q&A Title" class="${formInputClasses}" required><input name="qaId" type="text" placeholder="Q&A Question ID" pattern="\\d{8}" title="8 digits" class="${formInputClasses}" required><input name="modelNumber" type="text" placeholder="Model Number" class="${formInputClasses}"><input name="serialNumber" type="text" placeholder="Serial Number" class="${formInputClasses}"><input name="serviceOrderNumber" type="text" placeholder="Service Order Number" pattern="\\d{10}" title="10 digits" class="${formInputClasses}"><input name="salesforceCaseNumber" type="text" placeholder="Salesforce Case Number" pattern="\\d{8}" title="8 digits" class="${formInputClasses}"><textarea name="description" placeholder="Description" class="${formInputClasses}" rows="4"></textarea>`,
     'common-fault': `<input name="title" type="text" placeholder="Title / Description" class="${formInputClasses}" required><input name="modelNumber" type="text" placeholder="Model Number" class="${formInputClasses}"><input name="serialNumber" type="text" placeholder="Serial Number" class="${formInputClasses}"><input name="serviceOrderNumber" type="text" placeholder="Service Order Number" pattern="\\d{10}" title="10 digits" class="${formInputClasses}"><input name="salesforceCaseNumber" type="text" placeholder="Salesforce Case Number" pattern="\\d{8}" title="8 digits" class="${formInputClasses}"><textarea name="description" placeholder="Description" class="${formInputClasses}" rows="4"></textarea><label class="flex items-center mt-4"><input type="checkbox" name="onSamsungTracker" class="rounded mr-2"> On Samsung Action Tracker</label>`,
@@ -107,7 +106,7 @@ const renderCategoryMenu = () => {
         btn.dataset.id = id;
         btn.textContent = text;
         btn.title = text;
-        btn.className = `category-menu-item w-full text-left px-3 py-2 rounded-md text-sm truncate hover:bg-slate-200 dark:hover:bg-slate-700`;
+        btn.className = `category-menu-item w-full text-left px-3 py-2 rounded-md text-sm truncate hover:bg-slate-200`;
         if (level > 0) btn.style.paddingLeft = `${0.75 + (level * 0.75)}rem`;
         if (isGroupTitle) btn.classList.add('font-semibold');
         if (currentCategory === id) btn.classList.add('active');
@@ -136,7 +135,7 @@ const renderCategoryMenu = () => {
             linkedDetails.innerHTML = `<summary class="cursor-pointer text-sm font-medium py-1">Linked Faults</summary>`;
             if (groupedFaults.has(currentCategory)) linkedDetails.open = true;
             const subList = document.createElement('div');
-            subList.className = 'ml-2 border-l border-slate-200 dark:border-slate-700';
+            subList.className = 'ml-2 border-l border-slate-200';
             groupedFaults.forEach((group, groupId) => subList.appendChild(createBtn(groupId, group.title, 1, true)));
             linkedDetails.appendChild(subList);
             dom.categoryMenu.appendChild(linkedDetails);
@@ -156,25 +155,25 @@ const getRecordGroupId = (recordId) => {
 const renderRecordCard = (record) => {
     const card = document.createElement('div');
     card.dataset.id = record.id;
-    card.className = `record-card bg-white dark:bg-slate-800 p-5 rounded-xl shadow-lg transition-all ${record.isClosed ? 'opacity-60' : ''}`;
+    card.className = `record-card bg-white p-5 rounded-xl shadow-lg transition-all ${record.isClosed ? 'opacity-60' : ''}`;
     if (expandedRecordIds.has(record.id)) card.classList.add('expanded');
     
     const detailsHtml = `${record.qaId?`<div><dt class="font-semibold">Q&A ID:</dt><dd class="break-all">${record.qaId}</dd></div>`:''}${record.modelNumber?`<div><dt class="font-semibold">Model Number:</dt><dd class="break-all">${record.modelNumber}</dd></div>`:''}${record.serialNumber?`<div><dt class="font-semibold">Serial Number:</dt><dd class="break-all">${record.serialNumber}</dd></div>`:''}${record.serviceOrderNumber?`<div><dt class="font-semibold">Service Order Number:</dt><dd class="break-all">${record.serviceOrderNumber}</dd></div>`:''}${record.salesforceCaseNumber?`<div><dt class="font-semibold">Salesforce Case Number:</dt><dd class="break-all">${record.salesforceCaseNumber}</dd></div>`:''}`;
     const categoryDisplayNames = { qa: 'Q&A', 'common-fault': 'Common Fault', general: 'General' };
     const categoryColors = { qa: '#5fcae2', 'common-fault': '#4892cf', general: '#3f57ab' };
     const groupId = getRecordGroupId(record.id);
-    const linkedRecordsHtml = groupId ? `<div class="mt-2"><dt class="font-semibold">Linked Faults:</dt><dd><button class="linked-fault-btn text-indigo-600 dark:text-indigo-400 underline" data-group-id="${groupId}">View Group</button></dd></div>` : '';
+    const linkedRecordsHtml = groupId ? `<div class="mt-2"><dt class="font-semibold">Linked Faults:</dt><dd><button class="linked-fault-btn text-indigo-600 underline" data-group-id="${groupId}">View Group</button></dd></div>` : '';
     const descriptionHtml = `<div class="pt-2 font-semibold">Description:</div><p class="whitespace-pre-wrap">${record.description || 'N/A'}</p>`;
 
     const trackerBadge = record.onSamsungTracker ? `<span class="text-xs font-bold bg-green-500 text-white px-2 py-1 rounded-full">Samsung Action Tracker</span>` : '';
     const closedBadge = record.isClosed ? `<span class="text-xs font-bold bg-slate-500 text-white px-2 py-1 rounded-full">CLOSED</span>` : '';
-    const daysOpenBadge = `<span class="text-xs text-slate-500 dark:text-slate-400">${calculateDaysOpen(record)}</span>`;
+    const daysOpenBadge = `<span class="text-xs text-slate-500">${calculateDaysOpen(record)}</span>`;
 
     card.innerHTML = `
         <div class="collapsible-header flex justify-between items-start cursor-pointer record-header">
             <div class="flex items-center gap-3">
                 <span class="text-xs capitalize text-white px-2 py-0.5 rounded-full" style="background-color: ${categoryColors[record.category] || '#64748b'}">${categoryDisplayNames[record.category] || record.category}</span>
-                <h3 class="text-lg font-semibold text-indigo-600 dark:text-indigo-400 break-all">${record.title}</h3>
+                <h3 class="text-lg font-semibold text-indigo-600">${record.title}</h3>
             </div>
             <div class="flex items-center gap-2">
                 ${trackerBadge} ${closedBadge} ${daysOpenBadge}
@@ -183,33 +182,45 @@ const renderRecordCard = (record) => {
             </div>
         </div>
         <div class="collapsible-content details-container">
-            <div class="mt-4 pt-4 border-t border-slate-200 dark:border-slate-700 text-sm space-y-2">
+            <div class="mt-4 pt-4 border-t text-sm space-y-2">
                 <dl class="grid grid-cols-1 md:grid-cols-2 gap-x-4 gap-y-1">${detailsHtml}${linkedRecordsHtml}</dl>
                 ${descriptionHtml}
             </div>
-            <div class="comments-section mt-4 pt-4 border-t border-slate-200 dark:border-slate-700"></div>
-            <p class="text-xs text-slate-400 dark:text-slate-500 mt-4">Added by <span class="font-mono">${record.addedBy}</span> on ${formatDateTime(record.createdAt)}</p>
+            <div class="comments-section mt-4 pt-4 border-t"></div>
+            <p class="text-xs text-slate-400 mt-4">Added by <span class="font-mono">${record.addedBy}</span> on ${formatDateTime(record.createdAt)}</p>
         </div>`;
+    
+    renderComments(card.querySelector('.comments-section'), record);
+    if(card.classList.contains('expanded')) {
+        card.querySelector('.comments-section')?.classList.add('expanded');
+    }
+    
+    const actions = card.querySelector('.actions');
+    actions.innerHTML = `<button class="time-btn" title="Edit Timestamp">&#x1F4C5;</button><button class="edit-btn" title="Edit">&#9998;</button><button class="close-btn" title="${record.isClosed ? 'Re-open' : 'Close'}">${record.isClosed ? '&#x1F513;' : '&#x1F512;'}</button>`;
+    actions.classList.add('text-slate-500');
+    actions.querySelectorAll('button').forEach(btn => btn.classList.add('hover:text-indigo-600', 'transition'));
+    actions.querySelector('.close-btn').classList.add('hover:text-red-600');
     
     return card;
 };
 
 const renderComments = (container, record) => {
-    container.innerHTML = `<div class="collapsible-header flex justify-between items-center cursor-pointer"><h4 class="text-sm font-semibold">Updates & Comments</h4><svg class="chevron h-5 w-5 transition-transform" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" /></svg></div><div class="collapsible-content"><div class="comments-list mt-2 space-y-3 pr-2"></div>${!record.isClosed ? '<form class="add-comment-form mt-3 flex items-start gap-2"><textarea placeholder="Add a comment..." class="flex-grow w-full text-sm px-3 py-2 border rounded" rows="2"></textarea><button type="submit" class="bg-slate-600 text-white font-semibold text-sm px-4 py-2 rounded-lg hover:bg-slate-700 flex-shrink-0 disabled:opacity-50">Post</button></form>' : ''}</div>`;
+    container.innerHTML = `<h4 class="text-sm font-semibold mb-2">Comments</h4><div class="comments-list mt-2 space-y-3"></div>${!record.isClosed ? '<form class="add-comment-form mt-3 flex items-start gap-2"><textarea placeholder="Add a comment..." class="flex-grow w-full text-sm p-2 border rounded" rows="2"></textarea><button type="submit" class="bg-slate-600 text-white font-semibold text-sm px-4 py-2 rounded-lg hover:bg-slate-700 flex-shrink-0 disabled:opacity-50">Post</button></form>' : ''}`;
     
     const commentsList = container.querySelector('.comments-list');
     if (record.comments && record.comments.length > 0) {
          const sortedComments = record.comments.map((c, index) => ({...c, originalIndex: index, date: c.createdAt?.seconds ? new Date(c.createdAt.seconds * 1000) : new Date() })).sort((a,b) => a.date - b.date);
         sortedComments.forEach((comment) => {
             const commentDiv = document.createElement('div');
-            commentDiv.className = 'bg-slate-100 dark:bg-slate-700 p-3 rounded-lg text-sm';
-            commentDiv.innerHTML = `<p class="text-xs text-slate-500 dark:text-slate-400 mb-1">By: <span class="font-mono">${comment.addedBy}</span> at ${formatDateTime(comment.createdAt)}</p><div class="comment-body flex justify-between items-start"><p class="comment-text break-words whitespace-pre-wrap flex-grow">${comment.text || ''}</p><div class="comment-actions flex-shrink-0 ml-2 space-x-2"><button class="edit-comment-btn" data-index="${comment.originalIndex}" title="Edit">&#9998;</button><button class="delete-comment-btn" data-index="${comment.originalIndex}" title="Delete">&#10006;</button></div></div>`;
+            commentDiv.className = 'bg-slate-100 p-3 rounded-lg text-sm';
+            commentDiv.innerHTML = `<p class="text-xs text-slate-500 mb-1">By: <span class="font-mono">${comment.addedBy}</span> at ${formatDateTime(comment.createdAt)}</p><div class="comment-body flex justify-between items-start"><p class="comment-text break-words whitespace-pre-wrap flex-grow">${comment.text || ''}</p><div class="comment-actions flex-shrink-0 ml-2 space-x-2"><button class="edit-comment-btn" data-index="${comment.originalIndex}" title="Edit">&#9998;</button><button class="delete-comment-btn" data-index="${comment.originalIndex}" title="Delete">&#10006;</button></div></div>`;
             commentsList.appendChild(commentDiv);
         });
-    } else { commentsList.innerHTML = '<p class="text-xs text-slate-400 dark:text-slate-500">No comments yet.</p>'; }
+    } else { commentsList.innerHTML = '<p class="text-xs text-slate-400">No comments yet.</p>'; }
 };
 
 const renderRecords = () => {
+    dom.recordsContainer.innerHTML = '';
     let recordsToDisplay = [...allRecords];
     if (currentCategory) {
         if (currentCategory === 'action-tracker') {
@@ -225,8 +236,7 @@ const renderRecords = () => {
     }
     if (currentSearch) recordsToDisplay = recordsToDisplay.filter(r => Object.values(r).join(' ').toLowerCase().includes(currentSearch));
     
-    dom.recordsContainer.innerHTML = '';
-    if (recordsToDisplay.length === 0) { dom.recordsContainer.innerHTML = `<p class="text-slate-500 dark:text-slate-400">No records match your current filters.</p>`; return; }
+    if (recordsToDisplay.length === 0) { dom.recordsContainer.innerHTML = `<p class="text-slate-500">No records match your current filters.</p>`; return; }
     
     recordsToDisplay.forEach(recordData => dom.recordsContainer.appendChild(renderRecordCard(recordData)));
 };
@@ -239,7 +249,7 @@ const openEditModal = (record) => {
         const allRelated = [...(record.relatedTo || []), ...(record.relatedBy || [])];
         if (allRelated.length > 0) {
             const unlinkContainer = document.createElement('div');
-            unlinkContainer.className = "mt-4 pt-4 border-t border-slate-200 dark:border-slate-700";
+            unlinkContainer.className = "mt-4 pt-4 border-t";
             unlinkContainer.innerHTML = `<h3 class="text-md font-semibold mb-2">Linked Records</h3>`;
             const list = document.createElement('ul');
             list.className = "space-y-1";
@@ -296,7 +306,6 @@ const setupRecordsListener = () => {
 const showApp = () => { dom.authContainer.style.display = 'none'; dom.namePromptModal.classList.add('hidden'); dom.appContainer.style.display = 'block'; dom.userNameDisplay.textContent = currentUserDisplayName; setupRecordsListener(); };
 const showLogin = () => { dom.authContainer.style.display = 'flex'; dom.appContainer.style.display = 'none'; if (recordsUnsubscribe) recordsUnsubscribe(); };
 
-// --- MAIN EVENT DELEGATION LISTENER ---
 dom.recordsContainer.addEventListener('click', async (e) => {
     const recordCard = e.target.closest('.record-card');
     if (!recordCard) return;
@@ -312,25 +321,25 @@ dom.recordsContainer.addEventListener('click', async (e) => {
             expandedRecordIds.delete(recordId);
         }
         renderRecords();
-    } else if(e.target.closest('.comments-section > .collapsible-header')) {
+    } else if (e.target.closest('.comments-section > .collapsible-header')) {
         e.target.closest('.comments-section').classList.toggle('expanded');
-    } else if(e.target.classList.contains('edit-comment-btn')) {
+    } else if (e.target.classList.contains('edit-comment-btn')) {
         const commentBody = e.target.closest('.comment-body');
         const commentIndex = parseInt(e.target.dataset.index);
         const currentText = commentBody.querySelector('.comment-text').textContent;
         commentBody.innerHTML = `<textarea class="edit-comment-textarea flex-grow w-full text-sm p-2 border rounded">${currentText}</textarea><div class="flex flex-col ml-2 space-y-1"><button class="save-comment-btn text-xs bg-green-500 text-white px-2 py-1 rounded" data-index="${commentIndex}">Save</button><button class="cancel-comment-btn text-xs bg-gray-500 text-white px-2 py-1 rounded">Cancel</button></div>`;
-    } else if(e.target.classList.contains('save-comment-btn')) {
-         const commentIndex = parseInt(e.target.dataset.index);
-         const newText = e.target.closest('.comment-body').querySelector('.edit-comment-textarea').value;
-         const recordRef = doc(db, `/artifacts/${appId}/public/data/records`, recordId);
-         await runTransaction(db, async (transaction) => {
-             const recordDoc = await transaction.get(recordRef);
-             if(!recordDoc.exists()) throw "Document does not exist!";
-             const comments = recordDoc.data().comments;
-             comments[commentIndex].text = newText;
-             transaction.update(recordRef, { comments });
-         });
-    } else if(e.target.classList.contains('delete-comment-btn')) {
+    } else if (e.target.classList.contains('save-comment-btn')) {
+        const commentIndex = parseInt(e.target.dataset.index);
+        const newText = e.target.closest('.comment-body').querySelector('.edit-comment-textarea').value;
+        const recordRef = doc(db, `/artifacts/${appId}/public/data/records`, recordId);
+        await runTransaction(db, async (transaction) => {
+            const recordDoc = await transaction.get(recordRef);
+            if (!recordDoc.exists()) throw "Document does not exist!";
+            const comments = recordDoc.data().comments;
+            comments[commentIndex].text = newText;
+            transaction.update(recordRef, { comments });
+        });
+    } else if (e.target.classList.contains('delete-comment-btn')) {
         const commentIndex = parseInt(e.target.dataset.index);
         await runTransaction(db, async (transaction) => {
              const recordRef = doc(db, `/artifacts/${appId}/public/data/records`, recordId);
