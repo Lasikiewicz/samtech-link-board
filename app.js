@@ -10,7 +10,7 @@ let allRecords = []; // This will hold the full dataset from the current main fi
 let groupedFaults = new Map();
 let currentSort = 'newest', currentSearch = '', currentCategory = '', currentFilter = 'all', currentUserDisplayName = '';
 let recordToDelete = null;
-let expandedRecordIds = new Set(); // <--- THIS LINE WAS MISSING AND HAS BEEN RESTORED
+let expandedRecordIds = new Set();
 let pendingRecordData = null;
 let isInitialLoad = true;
 
@@ -187,6 +187,7 @@ const renderRecordCard = (record) => {
     const linkedRecordsHtml = groupId ? `<div class="mt-2"><dt class="font-semibold">Linked Faults:</dt><dd><button class="linked-fault-btn text-indigo-600 dark:text-indigo-400 underline" data-group-id="${groupId}">View Group</button></dd></div>` : '';
     const descriptionHtml = record.description ? `<div class="pt-2 font-semibold">Description:</div><p class="whitespace-pre-wrap">${record.description}</p>` : '<div class="pt-2 font-semibold">No Description Provided</div>';
 
+
     card.innerHTML = `
         <div class="collapsible-header flex justify-between items-start cursor-pointer record-header">
             <div class="flex items-center gap-3">
@@ -252,7 +253,32 @@ const renderRecords = () => {
     recordsToDisplay.forEach(recordData => dom.recordsContainer.appendChild(renderRecordCard(recordData)));
 };
 
-const openEditModal = (record) => { dom.editRecordForm.querySelector('[name="id"]').value = record.id; setFormCategory(record.category, dom.editFormFieldsContainer, record); dom.editRecordModal.classList.remove('hidden'); };
+const openEditModal = (record) => { 
+    dom.editRecordForm.querySelector('[name="id"]').value = record.id; 
+    setFormCategory(record.category, dom.editFormFieldsContainer, record); 
+    
+    // Add unlink functionality
+    if (record.category === 'common-fault') {
+        const allRelated = [...(record.relatedTo || []), ...(record.relatedBy || [])];
+        if (allRelated.length > 0) {
+            const unlinkContainer = document.createElement('div');
+            unlinkContainer.className = "mt-4 pt-4 border-t border-slate-200 dark:border-slate-700";
+            unlinkContainer.innerHTML = `<h3 class="text-md font-semibold mb-2">Linked Records</h3>`;
+            const list = document.createElement('ul');
+            list.className = "space-y-1";
+            allRelated.forEach(related => {
+                const item = document.createElement('li');
+                item.className = "flex justify-between items-center";
+                item.innerHTML = `<span>${related.title}</span><button type="button" class="unlink-btn text-red-500 text-xs hover:underline" data-unlink-id="${related.id}" data-unlink-title="${related.title}">Unlink</button>`;
+                list.appendChild(item);
+            });
+            unlinkContainer.appendChild(list);
+            dom.editFormFieldsContainer.appendChild(unlinkContainer);
+        }
+    }
+
+    dom.editRecordModal.classList.remove('hidden'); 
+};
 const openTimeEditModal = (record) => {
     const form = dom.editTimeForm;
     form.querySelector('[name="id"]').value = record.id;
@@ -295,6 +321,7 @@ const setupRecordsListener = () => {
 const showApp = () => { dom.authContainer.style.display = 'none'; dom.namePromptModal.classList.add('hidden'); dom.appContainer.style.display = 'block'; dom.userNameDisplay.textContent = currentUserDisplayName; setupRecordsListener(); };
 const showLogin = () => { dom.authContainer.style.display = 'flex'; dom.appContainer.style.display = 'none'; if (recordsUnsubscribe) recordsUnsubscribe(); };
 
+// --- MAIN EVENT DELEGATION LISTENER ---
 dom.recordsContainer.addEventListener('click', async (e) => {
     const recordCard = e.target.closest('.record-card');
     if (!recordCard) return;
