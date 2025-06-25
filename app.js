@@ -1,5 +1,5 @@
 import { initializeApp, getApps, getApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
-import { getFirestore, doc, collection, onSnapshot, addDoc, updateDoc, deleteDoc, serverTimestamp, query, where, orderBy, arrayUnion, arrayRemove, Timestamp, getDocs, runTransaction } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+import { getFirestore, doc, getDoc, collection, onSnapshot, addDoc, updateDoc, deleteDoc, serverTimestamp, query, where, orderBy, arrayUnion, arrayRemove, Timestamp, getDocs, runTransaction } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
 const firebaseConfig = { apiKey: "__API_KEY__", authDomain: "__AUTH_DOMAIN__", projectId: "__PROJECT_ID__", storageBucket: "__STORAGE_BUCKET__", messagingSenderId: "__MESSAGING_SENDER_ID__", appId: "__APP_ID__" };
 const appId = 'samtech-record-board';
@@ -329,16 +329,16 @@ dom.recordsContainer.addEventListener('click', async (e) => {
         const currentText = commentBody.querySelector('.comment-text').textContent;
         commentBody.innerHTML = `<textarea class="edit-comment-textarea flex-grow w-full text-sm p-2 border rounded">${currentText}</textarea><div class="flex flex-col ml-2 space-y-1"><button class="save-comment-btn text-xs bg-green-500 text-white px-2 py-1 rounded" data-index="${commentIndex}">Save</button><button class="cancel-comment-btn text-xs bg-gray-500 text-white px-2 py-1 rounded">Cancel</button></div>`;
     } else if (e.target.classList.contains('save-comment-btn')) {
-        const commentIndex = parseInt(e.target.dataset.index);
-        const newText = e.target.closest('.comment-body').querySelector('.edit-comment-textarea').value;
-        const recordRef = doc(db, `/artifacts/${appId}/public/data/records`, recordId);
-        await runTransaction(db, async (transaction) => {
-            const recordDoc = await transaction.get(recordRef);
-            if (!recordDoc.exists()) throw "Document does not exist!";
-            const comments = recordDoc.data().comments;
-            comments[commentIndex].text = newText;
-            transaction.update(recordRef, { comments });
-        });
+         const commentIndex = parseInt(e.target.dataset.index);
+         const newText = e.target.closest('.comment-body').querySelector('.edit-comment-textarea').value;
+         const recordRef = doc(db, `/artifacts/${appId}/public/data/records`, recordId);
+         await runTransaction(db, async (transaction) => {
+             const recordDoc = await transaction.get(recordRef);
+             if (!recordDoc.exists()) throw "Document does not exist!";
+             const comments = recordDoc.data().comments;
+             comments[commentIndex].text = newText;
+             transaction.update(recordRef, { comments });
+         });
     } else if (e.target.classList.contains('delete-comment-btn')) {
         const commentIndex = parseInt(e.target.dataset.index);
         await runTransaction(db, async (transaction) => {
@@ -526,12 +526,5 @@ dom.namePromptForm.addEventListener('submit', (e) => {
 
 dom.logoutBtn.addEventListener('click', () => { sessionStorage.clear(); showLogin(); });
 
-const applyTheme = () => {
-    if (localStorage.getItem('theme') === 'dark') { document.documentElement.classList.add('dark'); dom.sunIcon.classList.add('hidden'); dom.moonIcon.classList.remove('hidden'); } 
-    else { document.documentElement.classList.remove('dark'); dom.sunIcon.classList.remove('hidden'); dom.moonIcon.classList.add('hidden'); }
-};
-dom.darkModeToggle.addEventListener('click', () => { localStorage.setItem('theme', document.documentElement.classList.contains('dark') ? 'light' : 'dark'); applyTheme(); });
-
 if (sessionStorage.getItem('isLoggedIn') === 'true' && sessionStorage.getItem('displayName')) { currentUserDisplayName = sessionStorage.getItem('displayName'); showApp(); } 
 else { showLogin(); }
-applyTheme();
