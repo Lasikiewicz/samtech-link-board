@@ -6,7 +6,7 @@ const appId = 'samtech-record-board';
 const SHARED_PASSWORD = "__SHARED_PASSWORD__" || "samtech";
 
 let app, db, recordsUnsubscribe;
-let allRecords = []; // This will hold the full dataset from the current main filter
+let allRecords = []; 
 let groupedFaults = new Map();
 let currentSort = 'newest', currentSearch = '', currentCategory = '', currentFilter = 'all', currentUserDisplayName = '';
 let recordToDelete = null;
@@ -59,7 +59,6 @@ const setFormCategory = (category, container, record = {}) => {
 };
 
 const formatDateTime = (timestamp) => timestamp?.seconds ? new Date(timestamp.seconds * 1000).toLocaleString('en-GB', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' }) : 'N/A';
-
 const calculateDaysOpen = (record) => {
     if (!record.createdAt?.seconds) return '';
     const start = new Date(record.createdAt.seconds * 1000);
@@ -74,14 +73,11 @@ const groupCommonFaults = () => {
     const recordMap = new Map(commonFaults.map(r => [r.id, r]));
     groupedFaults.clear();
     const visited = new Set();
-
     for (const fault of commonFaults) {
         if (visited.has(fault.id)) continue;
-        
         let currentGroupIds = new Set([fault.id]);
         let queue = [fault];
         visited.add(fault.id);
-
         while (queue.length > 0) {
             const currentFault = queue.shift();
             const allRelated = [...(currentFault.relatedTo || []), ...(currentFault.relatedBy || [])];
@@ -93,14 +89,11 @@ const groupCommonFaults = () => {
                 }
             }
         }
-        
         if (currentGroupIds.size > 1) {
             const groupRecords = Array.from(currentGroupIds).map(id => recordMap.get(id));
             groupRecords.sort((a,b) => (a.createdAt?.seconds || 0) - (b.createdAt?.seconds || 0));
             const rootRecord = groupRecords[0];
-            if (rootRecord) {
-                groupedFaults.set(rootRecord.id, { title: rootRecord.title, records: groupRecords });
-            }
+            if (rootRecord) groupedFaults.set(rootRecord.id, { title: rootRecord.title, records: groupRecords });
         }
     }
 };
@@ -118,45 +111,27 @@ const renderCategoryMenu = () => {
         if (level > 0) btn.style.paddingLeft = `${0.75 + (level * 0.75)}rem`;
         if (isGroupTitle) btn.classList.add('font-semibold');
         if (currentCategory === id) btn.classList.add('active');
-        btn.addEventListener('click', () => { 
-            currentCategory = id; 
-            currentFilter = 'all'; 
-            dom.filterControls.querySelectorAll('.control-btn').forEach(b => b.classList.remove('active'));
-            dom.filterControls.querySelector(`[data-filter="all"]`).classList.add('active');
-            setupRecordsListener();
-        });
+        btn.addEventListener('click', () => { currentCategory = id; currentFilter = 'all'; dom.filterControls.querySelector(`[data-filter="all"]`).click(); });
         return btn;
     }
 
     Object.entries(categories).forEach(([key, value]) => {
-        const mainBtn = createBtn(key, value);
-        dom.categoryMenu.appendChild(mainBtn);
-
-        const details = document.createElement('details');
-        details.className = 'pl-4';
-        const summary = document.createElement('summary');
-        summary.className = "cursor-pointer text-sm font-medium py-1";
-        summary.textContent = `Closed`;
-        details.appendChild(summary);
-        
-        const subBtn = createBtn(`${key}-closed`, 'View Closed', 1);
-        details.appendChild(subBtn);
-        
-        if (key !== '') dom.categoryMenu.appendChild(details);
-
+        dom.categoryMenu.appendChild(createBtn(key, value));
+        if (key !== '') {
+            const details = document.createElement('details');
+            details.className = 'pl-4';
+            details.innerHTML = `<summary class="cursor-pointer text-sm font-medium py-1">Closed</summary>`;
+            details.appendChild(createBtn(`${key}-closed`, 'View Closed', 1));
+            dom.categoryMenu.appendChild(details);
+        }
         if (key === 'common-fault' && groupedFaults.size > 0) {
             const linkedDetails = document.createElement('details');
             linkedDetails.className = 'pl-4';
             linkedDetails.innerHTML = `<summary class="cursor-pointer text-sm font-medium py-1">Linked Faults</summary>`;
-            if (groupedFaults.has(currentCategory)) {
-                linkedDetails.open = true;
-            }
+            if (groupedFaults.has(currentCategory)) linkedDetails.open = true;
             const subList = document.createElement('div');
             subList.className = 'ml-2 border-l border-slate-200 dark:border-slate-700';
-            groupedFaults.forEach((group, groupId) => {
-                const groupBtn = createBtn(groupId, group.title, 1, true);
-                subList.appendChild(groupBtn);
-            });
+            groupedFaults.forEach((group, groupId) => subList.appendChild(createBtn(groupId, group.title, 1, true)));
             linkedDetails.appendChild(subList);
             dom.categoryMenu.appendChild(linkedDetails);
         }
@@ -165,9 +140,7 @@ const renderCategoryMenu = () => {
 
 const getRecordGroupId = (recordId) => {
     for (const [groupId, group] of groupedFaults.entries()) {
-        if(group.records.some(r => r.id === recordId)) {
-            return groupId;
-        }
+        if(group.records.some(r => r.id === recordId)) return groupId;
     }
     return null;
 };
@@ -189,26 +162,7 @@ const renderRecordCard = (record) => {
     const closedBadge = record.isClosed ? `<span class="text-xs font-bold bg-slate-500 text-white px-2 py-1 rounded-full">CLOSED</span>` : '';
     const daysOpenBadge = `<span class="text-xs text-slate-500 dark:text-slate-400">${calculateDaysOpen(record)}</span>`;
 
-    card.innerHTML = `
-        <div class="collapsible-header flex justify-between items-start cursor-pointer record-header">
-            <div class="flex items-center gap-3">
-                <span class="text-xs capitalize text-white px-2 py-0.5 rounded-full" style="background-color: ${categoryColors[record.category] || '#64748b'}">${categoryDisplayNames[record.category] || record.category}</span>
-                <h3 class="text-lg font-semibold text-indigo-600 dark:text-indigo-400 break-all">${record.title}</h3>
-            </div>
-            <div class="flex items-center gap-2">
-                ${trackerBadge} ${closedBadge} ${daysOpenBadge}
-                <div class="actions flex-shrink-0 ml-4 space-x-2"></div>
-                <svg class="chevron h-5 w-5 transition-transform" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" /></svg>
-            </div>
-        </div>
-        <div class="collapsible-content details-container">
-            <div class="mt-4 pt-4 border-t border-slate-200 dark:border-slate-700 text-sm space-y-2">
-                <dl class="grid grid-cols-1 md:grid-cols-2 gap-x-4 gap-y-1">${detailsHtml}${linkedRecordsHtml}</dl>
-                ${descriptionHtml}
-            </div>
-            <div class="comments-section mt-4 pt-4 border-t border-slate-200 dark:border-slate-700"></div>
-            <p class="text-xs text-slate-400 dark:text-slate-500 mt-4">Added by <span class="font-mono">${record.addedBy}</span> on ${formatDateTime(record.createdAt)}</p>
-        </div>`;
+    card.innerHTML = `<div class="collapsible-header flex justify-between items-start cursor-pointer record-header"><div class="flex items-center gap-3"><span class="text-xs capitalize text-white px-2 py-0.5 rounded-full" style="background-color: ${categoryColors[record.category] || '#64748b'}">${categoryDisplayNames[record.category] || record.category}</span><h3 class="text-lg font-semibold text-indigo-600 dark:text-indigo-400 break-all">${record.title}</h3></div><div class="flex items-center gap-2">${trackerBadge} ${closedBadge} ${daysOpenBadge}<div class="actions flex-shrink-0 ml-4 space-x-2"></div><svg class="chevron h-5 w-5 transition-transform" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" /></svg></div></div><div class="collapsible-content details-container"><div class="mt-4 pt-4 border-t border-slate-200 dark:border-slate-700 text-sm space-y-2"><dl class="grid grid-cols-1 md:grid-cols-2 gap-x-4 gap-y-1">${detailsHtml}${linkedRecordsHtml}</dl>${descriptionHtml}</div><div class="comments-section mt-4 pt-4 border-t border-slate-200 dark:border-slate-700"></div><p class="text-xs text-slate-400 dark:text-slate-500 mt-4">Added by <span class="font-mono">${record.addedBy}</span> on ${formatDateTime(record.createdAt)}</p></div>`;
     
     const actions = card.querySelector('.actions');
     actions.innerHTML = `<button class="time-btn" title="Edit Timestamp">&#x1F4C5;</button><button class="edit-btn" title="Edit">&#9998;</button><button class="close-btn" title="${record.isClosed ? 'Re-open' : 'Close'}">${record.isClosed ? '&#x1F513;' : '&#x1F512;'}</button>`;
@@ -295,16 +249,16 @@ const setupRecordsListener = () => {
 const showApp = () => { dom.authContainer.style.display = 'none'; dom.namePromptModal.classList.add('hidden'); dom.appContainer.style.display = 'block'; dom.userNameDisplay.textContent = currentUserDisplayName; setupRecordsListener(); };
 const showLogin = () => { dom.authContainer.style.display = 'flex'; dom.appContainer.style.display = 'none'; if (recordsUnsubscribe) recordsUnsubscribe(); };
 
+// --- MAIN EVENT DELEGATION LISTENER ---
 dom.recordsContainer.addEventListener('click', async (e) => {
     const recordCard = e.target.closest('.record-card');
     if (!recordCard) return;
     const recordId = recordCard.dataset.id;
-    const record = allRecords.find(r => r.id === recordId);
+    let record = allRecords.find(r => r.id === recordId);
     if (!record) return;
 
     if (e.target.closest('.record-header') && !e.target.closest('.actions')) {
         const isCurrentlyExpanded = recordCard.classList.contains('expanded');
-        // This is no longer auto-collapsing others
         if (!isCurrentlyExpanded) {
             recordCard.classList.add('expanded');
             recordCard.querySelector('.comments-section')?.classList.add('expanded');
