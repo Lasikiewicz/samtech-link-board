@@ -1,5 +1,5 @@
 import { initializeApp, getApps, getApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
-import { getFirestore, doc, getDoc, collection, onSnapshot, addDoc, updateDoc, deleteDoc, serverTimestamp, query, where, orderBy, arrayUnion, Timestamp, getDocs } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+import { getFirestore, doc, getDoc, collection, onSnapshot, addDoc, updateDoc, deleteDoc, serverTimestamp, query, where, orderBy, arrayUnion, arrayRemove, Timestamp, getDocs } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
 const firebaseConfig = { apiKey: "__API_KEY__", authDomain: "__AUTH_DOMAIN__", projectId: "__PROJECT_ID__", storageBucket: "__STORAGE_BUCKET__", messagingSenderId: "__MESSAGING_SENDER_ID__", appId: "__APP_ID__" };
 const appId = 'samtech-record-board';
@@ -7,11 +7,12 @@ const SHARED_PASSWORD = "__SHARED_PASSWORD__" || "samtech";
 
 let app, db, recordsUnsubscribe;
 let allRecords = []; // This will hold the full dataset from the current main filter
-let groupedFaults = {};
+let groupedFaults = new Map();
 let currentSort = 'newest', currentSearch = '', currentCategory = '', currentFilter = 'all', currentUserDisplayName = '';
 let recordToDelete = null;
 let expandedRecordIds = new Set();
 let pendingRecordData = null;
+let isInitialLoad = true;
 
 try { app = getApps().length ? getApp() : initializeApp(firebaseConfig); db = getFirestore(app); } catch (e) { console.error("Firebase init failed:", e); }
 
@@ -103,6 +104,7 @@ const renderCategoryMenu = () => {
 
     const createBtn = (id, text, level = 0, isGroupTitle = false) => {
         const btn = document.createElement('button');
+        btn.dataset.id = id;
         btn.textContent = text;
         btn.title = text;
         btn.className = `category-menu-item w-full text-left px-3 py-2 rounded-md text-sm truncate hover:bg-slate-200 dark:hover:bg-slate-700`;
@@ -111,7 +113,7 @@ const renderCategoryMenu = () => {
         if (currentCategory === id) btn.classList.add('active');
         btn.addEventListener('click', () => { 
             currentCategory = id; 
-            currentFilter = 'all'; // Reset to all when category changes
+            currentFilter = 'all'; 
             dom.filterControls.querySelectorAll('.control-btn').forEach(b => b.classList.remove('active'));
             dom.filterControls.querySelector(`[data-filter="all"]`).classList.add('active');
             setupRecordsListener();
@@ -140,6 +142,15 @@ const renderCategoryMenu = () => {
     dom.categoryMenu.appendChild(createBtn('general', 'General'));
 };
 
+const getRecordGroupId = (recordId) => {
+    for (const [groupId, group] of groupedFaults.entries()) {
+        if(group.records.some(r => r.id === recordId)) {
+            return groupId;
+        }
+    }
+    return null;
+};
+
 const renderRecordCard = (record) => {
     const card = document.createElement('div');
     card.dataset.id = record.id;
@@ -149,7 +160,9 @@ const renderRecordCard = (record) => {
     const detailsHtml = `${record.qaId?`<div><dt class="font-semibold">Q&A ID:</dt><dd class="break-all">${record.qaId}</dd></div>`:''}${record.modelNumber?`<div><dt class="font-semibold">Model Number:</dt><dd class="break-all">${record.modelNumber}</dd></div>`:''}${record.serialNumber?`<div><dt class="font-semibold">Serial Number:</dt><dd class="break-all">${record.serialNumber}</dd></div>`:''}${record.serviceOrderNumber?`<div><dt class="font-semibold">Service Order Number:</dt><dd class="break-all">${record.serviceOrderNumber}</dd></div>`:''}${record.salesforceCaseNumber?`<div><dt class="font-semibold">Salesforce Case Number:</dt><dd class="break-all">${record.salesforceCaseNumber}</dd></div>`:''}`;
     const categoryDisplayNames = { qa: 'Q&A', 'common-fault': 'Common Fault', general: 'General' };
     const categoryColors = { qa: '#5fcae2', 'common-fault': '#4892cf', general: '#3f57ab' };
-    const linkedRecordsHtml = record.relatedTo?.length > 0 ? `<div class="mt-2"><dt class="font-semibold">Linked To:</dt><dd>${record.relatedTo.map(r => `<span>${r.title}</span>`).join(', ')}</dd></div>` : '';
+    const groupId = getRecordGroupId(record.id);
+    const linkedRecordsHtml = groupId ? `<div class="mt-2"><dt class="font-semibold">Linked Faults:</dt><dd><button class="linked-fault-btn text-indigo-600 dark:text-indigo-400 underline" data-group-id="${groupId}">View Group</button></dd></div>` : '';
+
 
     card.innerHTML = `<div class="collapsible-header flex justify-between items-start cursor-pointer record-header"><div class="flex items-center gap-3"><span class="text-xs capitalize text-white px-2 py-0.5 rounded-full" style="background-color: ${categoryColors[record.category] || '#64748b'}">${categoryDisplayNames[record.category] || record.category}</span><h3 class="text-lg font-semibold text-indigo-600 dark:text-indigo-400 break-all">${record.title}</h3></div><div class="flex items-center gap-2">${record.onSamsungTracker ? '<span class="text-xs font-bold bg-green-500 text-white px-2 py-1 rounded-full">Samsung Action Tracker</span>' : ''}${record.isClosed?'<span class="text-xs font-bold bg-slate-500 text-white px-2 py-1 rounded-full">CLOSED</span>':''}<div class="actions flex-shrink-0 ml-4 space-x-2"></div><svg class="chevron h-5 w-5 transition-transform" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" /></svg></div></div><div class="collapsible-content details-container"><div class="mt-4 pt-4 border-t border-slate-200 dark:border-slate-700 text-sm space-y-2"><dl class="grid grid-cols-1 md:grid-cols-2 gap-x-4 gap-y-1">${detailsHtml}${linkedRecordsHtml}</dl>${record.description?`<div class="pt-2"><p class="whitespace-pre-wrap">${record.description}</p></div>`:''}</div><div class="comments-section mt-4 pt-4 border-t border-slate-200 dark:border-slate-700"></div><p class="text-xs text-slate-400 dark:text-slate-500 mt-4">Added by <span class="font-mono">${record.addedBy}</span> on ${formatDateTime(record.createdAt)}</p></div>`;
     
@@ -178,6 +191,15 @@ const renderRecordCard = (record) => {
     actions.querySelector('.update-btn').addEventListener('click',(e)=>{ e.stopPropagation(); logUpdate(record.id); });
     actions.querySelector('.time-btn').addEventListener('click',(e)=>{ e.stopPropagation(); openTimeEditModal(record); });
     
+    const linkedFaultBtn = card.querySelector('.linked-fault-btn');
+    if(linkedFaultBtn) {
+        linkedFaultBtn.addEventListener('click', (e) => {
+            e.stopPropagation();
+            const groupId = e.target.dataset.groupId;
+            dom.categoryMenu.querySelector(`[data-id="${groupId}"]`).click();
+        });
+    }
+    
     return card;
 };
 
@@ -202,9 +224,9 @@ const logUpdate = async (recordId) => { await updateDoc(doc(db, `/artifacts/${ap
 const renderRecords = () => {
      let recordsToDisplay = [...allRecords];
     if (currentCategory) {
-        if(groupedFaults.has(currentCategory)) { // It's a group ID
+        if(groupedFaults.has(currentCategory)) {
              recordsToDisplay = groupedFaults.get(currentCategory).records;
-        } else { // It's a standard category
+        } else {
             recordsToDisplay = recordsToDisplay.filter(r => r.category === currentCategory);
         }
     }
@@ -215,7 +237,54 @@ const renderRecords = () => {
     recordsToDisplay.forEach(recordData => dom.recordsContainer.appendChild(renderRecordCard(recordData)));
 };
 
-const openEditModal = (record) => { dom.editRecordForm.querySelector('[name="id"]').value = record.id; setFormCategory(record.category, dom.editFormFieldsContainer, record); dom.editRecordModal.classList.remove('hidden'); };
+const openEditModal = (record) => {
+    dom.editRecordForm.querySelector('[name="id"]').value = record.id;
+    setFormCategory(record.category, dom.editFormFieldsContainer, record);
+    
+    // Add unlink functionality
+    if (record.category === 'common-fault') {
+        const allRelated = [...(record.relatedTo || []), ...(record.relatedBy || [])];
+        if (allRelated.length > 0) {
+            const unlinkContainer = document.createElement('div');
+            unlinkContainer.className = "mt-4 pt-4 border-t border-slate-200 dark:border-slate-700";
+            unlinkContainer.innerHTML = `<h3 class="text-md font-semibold mb-2">Linked Records</h3>`;
+            const list = document.createElement('ul');
+            list.className = "space-y-1";
+            allRelated.forEach(related => {
+                const item = document.createElement('li');
+                item.className = "flex justify-between items-center";
+                item.innerHTML = `<span>${related.title}</span><button type="button" class="unlink-btn text-red-500 text-xs hover:underline" data-unlink-id="${related.id}" data-unlink-title="${related.title}">Unlink</button>`;
+                list.appendChild(item);
+            });
+            unlinkContainer.appendChild(list);
+            dom.editFormFieldsContainer.appendChild(unlinkContainer);
+        }
+    }
+    
+    dom.editRecordModal.classList.remove('hidden');
+};
+
+const unlinkFaults = async (recordId, unlinkId, unlinkTitle) => {
+    const recordRef = doc(db, `/artifacts/${appId}/public/data/records`, recordId);
+    const unlinkRef = doc(db, `/artifacts/${appId}/public/data/records`, unlinkId);
+    const recordSnap = await getDoc(recordRef);
+    const recordData = recordSnap.data();
+
+    // Remove from current record's arrays
+    await updateDoc(recordRef, {
+        relatedTo: arrayRemove({id: unlinkId, title: unlinkTitle}),
+        relatedBy: arrayRemove({id: unlinkId, title: unlinkTitle})
+    });
+
+    // Remove from the other record's arrays
+    await updateDoc(unlinkRef, {
+        relatedTo: arrayRemove({id: recordId, title: recordData.title}),
+        relatedBy: arrayRemove({id: recordId, title: recordData.title})
+    });
+    
+    dom.editRecordModal.classList.add('hidden'); // Close modal after unlinking
+};
+
 const openTimeEditModal = (record) => {
     const form = dom.editTimeForm;
     form.querySelector('[name="id"]').value = record.id;
@@ -233,7 +302,7 @@ const setupRecordsListener = () => {
     if (currentFilter === 'my') constraints.push(where('addedBy', '==', currentUserDisplayName));
     else if (currentFilter === 'open') constraints.push(where('isClosed', '==', false));
     else if (currentFilter === 'closed') constraints.push(where('isClosed', '==', true));
-
+    
     const sortField = currentSort === 'alpha' ? 'title' : 'createdAt';
     const sortDirection = currentSort === 'oldest' ? 'asc' : 'desc';
     constraints.push(orderBy(sortField, sortDirection));
@@ -246,6 +315,11 @@ const setupRecordsListener = () => {
         groupCommonFaults();
         renderRecords();
         renderCategoryMenu();
+        if (isInitialLoad && currentSort === 'newest' && allRecords.length > 0) {
+            expandedRecordIds.add(allRecords[0].id);
+            renderRecords();
+            isInitialLoad = false;
+        }
     }, (error) => { console.error("Firestore error:", error); dom.loadingState.innerHTML = `<p class="text-red-500">Error loading data. A required index is likely missing. Check console (F12) for a link.</p>`; });
 };
 
@@ -262,6 +336,7 @@ dom.searchInput.addEventListener('input', (e) => { currentSearch = e.target.valu
             dom.searchInput.value = ''; currentSearch = '';
             container.querySelectorAll('.control-btn').forEach(b => b.classList.remove('active'));
             btn.classList.add('active');
+            isInitialLoad = true;
             setupRecordsListener();
         }
     });
@@ -286,22 +361,27 @@ dom.recordsContainer.addEventListener('submit', async (e) => {
         try {
             await updateDoc(doc(db, `/artifacts/${appId}/public/data/records`, recordId), { comments: arrayUnion({ text, addedBy: currentUserDisplayName, createdAt: Timestamp.now() }) });
             textarea.value = '';
-            if(!card.classList.contains('expanded')) {
-                card.classList.add('expanded');
-                card.querySelector('.comments-section').classList.add('expanded');
-            }
+            expandedRecordIds.add(recordId); // Keep it expanded
         } finally { submitBtn.disabled = false; submitBtn.textContent = 'Post'; }
+    }
+});
+
+dom.editRecordModal.addEventListener('click', (e) => {
+    if(e.target.classList.contains('unlink-btn')) {
+        const recordId = dom.editRecordForm.querySelector('[name="id"]').value;
+        const unlinkId = e.target.dataset.unlinkId;
+        const unlinkTitle = e.target.dataset.unlinkTitle;
+        unlinkFaults(recordId, unlinkId, unlinkTitle);
     }
 });
 
 dom.formCategorySelector.addEventListener('click', (e) => { if (e.target.matches('.form-category-btn')) setFormCategory(e.target.dataset.category, dom.formFieldsContainer); });
 
 const findSimilarFaults = (newTitle, modelNumber) => {
-    const modelNum = modelNumber.toLowerCase();
+    const modelNum = modelNumber?.toLowerCase() || '';
     return allRecords.filter(r => {
         if (r.category !== 'common-fault') return false;
-        if (r.modelNumber && r.modelNumber.toLowerCase() === modelNum) return true;
-        
+        if (r.modelNumber && modelNumber && r.modelNumber.toLowerCase() === modelNum) return true;
         const newWords = newTitle.toLowerCase().split(' ').filter(w => w.length > 3);
         if(newWords.length === 0) return false;
         const existingWords = r.title.toLowerCase().split(' ');
@@ -315,7 +395,7 @@ const createRecord = async (recordData, relatedTo = []) => {
      submitBtn.disabled = true; submitBtn.textContent = '...';
      try {
         recordData.onSamsungTracker = recordData.onSamsungTracker === 'on';
-        const newRecordRef = await addDoc(collection(db, `/artifacts/${appId}/public/data/records`), { ...recordData, category: currentFormCategory, addedBy: currentUserDisplayName, createdAt: serverTimestamp(), isClosed: false, comments: [], relatedTo: [], relatedBy: relatedTo });
+        const newRecordRef = await addDoc(collection(db, `/artifacts/${appId}/public/data/records`), { ...recordData, category: currentFormCategory, addedBy: currentUserDisplayName, createdAt: serverTimestamp(), isClosed: false, comments: [], relatedTo: relatedTo, relatedBy: [] });
         for(const related of relatedTo) {
             const relatedDocRef = doc(db, `/artifacts/${appId}/public/data/records`, related.id);
             await updateDoc(relatedDocRef, { relatedBy: arrayUnion({ id: newRecordRef.id, title: recordData.title }) });
