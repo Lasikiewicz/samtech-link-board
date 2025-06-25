@@ -113,9 +113,9 @@ const renderCategoryMenu = () => {
         if (currentCategory === id) btn.classList.add('active');
         btn.addEventListener('click', () => { 
             currentCategory = id; 
-            currentFilter = id === 'action-tracker' ? 'open' : 'all'; // Default to open for tracker
+            currentFilter = 'all'; 
             dom.filterControls.querySelectorAll('.control-btn').forEach(b => b.classList.remove('active'));
-            dom.filterControls.querySelector(`[data-filter="${currentFilter}"]`).classList.add('active');
+            dom.filterControls.querySelector(`[data-filter="all"]`).classList.add('active');
             setupRecordsListener();
         });
         return btn;
@@ -194,11 +194,18 @@ const renderRecordCard = (record) => {
             <p class="text-xs text-slate-400 dark:text-slate-500 mt-4">Added by <span class="font-mono">${record.addedBy}</span> on ${formatDateTime(record.createdAt)}</p>
         </div>`;
     
+    // Actions are now always visible
+    const actions = card.querySelector('.actions');
+    actions.innerHTML = `<button class="time-btn" title="Edit Timestamp">&#x1F4C5;</button><button class="edit-btn" title="Edit">&#9998;</button><button class="close-btn" title="${record.isClosed ? 'Re-open' : 'Close'}">${record.isClosed ? '&#x1F513;' : '&#x1F512;'}</button>`;
+    actions.classList.add('text-slate-500', 'dark:text-slate-400');
+    actions.querySelectorAll('button').forEach(btn => btn.classList.add('hover:text-indigo-600', 'dark:hover:text-indigo-400', 'transition'));
+    actions.querySelector('.close-btn').classList.add('hover:text-red-600', 'dark:hover:text-red-500');
+    
     return card;
 };
 
 const renderComments = (container, record) => {
-    container.innerHTML = `<div class="collapsible-header flex justify-between items-center cursor-pointer"><h4 class="text-sm font-semibold">Updates & Comments</h4><svg class="chevron h-5 w-5 transition-transform" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" /></svg></div><div class="collapsible-content"><div class="comments-list mt-2 space-y-3 pr-2"></div>${!record.isClosed ? '<form class="add-comment-form mt-3 flex items-start gap-2"><textarea placeholder="Add a comment..." class="flex-grow w-full text-sm px-3 py-2 border rounded" rows="2"></textarea><button type="submit" class="bg-slate-600 text-white font-semibold text-sm px-4 py-2 rounded-lg hover:bg-slate-700 flex-shrink-0 disabled:opacity-50">Post</button></form>' : ''}</div>`;
+    container.innerHTML = `<h4 class="text-sm font-semibold mb-2">Updates & Comments</h4><div class="comments-list mt-2 space-y-3 pr-2"></div>${!record.isClosed ? '<form class="add-comment-form mt-3 flex items-start gap-2"><textarea placeholder="Add a comment..." class="flex-grow w-full text-sm px-3 py-2 border rounded" rows="2"></textarea><button type="submit" class="bg-slate-600 text-white font-semibold text-sm px-4 py-2 rounded-lg hover:bg-slate-700 flex-shrink-0 disabled:opacity-50">Post</button></form>' : ''}`;
     
     const commentsList = container.querySelector('.comments-list');
     if (record.comments && record.comments.length > 0) {
@@ -218,7 +225,7 @@ const renderRecords = () => {
         if (currentCategory === 'action-tracker') {
             recordsToDisplay = recordsToDisplay.filter(r => r.onSamsungTracker);
         } else if(groupedFaults.has(currentCategory)) {
-            recordsToDisplay = groupedFaults.get(currentCategory).records;
+             recordsToDisplay = groupedFaults.get(currentCategory).records;
         } else if (currentCategory.endsWith('-closed')) {
             const cat = currentCategory.replace('-closed', '');
             recordsToDisplay = recordsToDisplay.filter(r => r.category === cat && r.isClosed);
@@ -286,13 +293,13 @@ dom.recordsContainer.addEventListener('click', async (e) => {
     if (e.target.closest('.record-header') && !e.target.closest('.actions')) {
         const isCurrentlyExpanded = recordCard.classList.contains('expanded');
         if (!isCurrentlyExpanded) {
-            recordCard.classList.add('expanded');
-            recordCard.querySelector('.comments-section')?.classList.add('expanded');
             expandedRecordIds.add(recordId);
         } else {
-            recordCard.classList.remove('expanded');
             expandedRecordIds.delete(recordId);
         }
+        recordCard.classList.toggle('expanded');
+        recordCard.querySelector('.comments-section')?.classList.toggle('expanded', !isCurrentlyExpanded);
+
     } else if(e.target.closest('.comments-section > .collapsible-header')) {
         e.target.closest('.comments-section').classList.toggle('expanded');
     } else if(e.target.classList.contains('edit-comment-btn')) {
