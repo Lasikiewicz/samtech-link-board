@@ -90,8 +90,8 @@
             <div class="bg-white dark:bg-slate-800 p-4 rounded-xl shadow-lg mb-8 space-y-4">
                 <input id="search-input" type="search" placeholder="&#x1F50D; Search by title..." class="w-full px-4 py-2 border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-700 rounded-lg">
                 <div class="flex flex-wrap items-center gap-x-4 gap-y-2">
-                    <div class="flex items-center gap-2"><span class="text-sm font-semibold">Show:</span><div id="filter-controls" class="flex gap-2"><button class="filter-btn text-sm px-3 py-1 rounded-full border border-slate-300 dark:border-slate-600 hover:bg-slate-100 dark:hover:bg-slate-700 active" data-filter="all">All</button><button class="filter-btn text-sm px-3 py-1 rounded-full border border-slate-300 dark:border-slate-600 hover:bg-slate-100 dark:hover:bg-slate-700" data-filter="my">My Links</button></div></div>
-                    <div class="flex items-center gap-2"><span class="text-sm font-semibold">Sort by:</span><div id="sort-controls" class="flex gap-2"><button class="sort-btn text-sm px-3 py-1 rounded-full border border-slate-300 dark:border-slate-600 hover:bg-slate-100 dark:hover:bg-slate-700 active" data-sort="newest">Newest</button><button class="sort-btn text-sm px-3 py-1 rounded-full border border-slate-300 dark:border-slate-600 hover:bg-slate-100 dark:hover:bg-slate-700" data-sort="oldest">Oldest</button><button class="sort-btn text-sm px-3 py-1 rounded-full border border-slate-300 dark:border-slate-600 hover:bg-slate-100 dark:hover:bg-slate-700" data-sort="alpha">A-Z</button></div></div>
+                    <div class="flex items-center gap-2"><span class="text-sm font-semibold">Show:</span><div id="filter-controls" class="flex gap-2"><button class="filter-btn text-sm px-3 py-1 rounded-full border border-slate-300 dark:border-slate-600 active" data-filter="open">Open</button><button class="filter-btn text-sm px-3 py-1 rounded-full border border-slate-300 dark:border-slate-600" data-filter="closed">Closed</button><button class="filter-btn text-sm px-3 py-1 rounded-full border border-slate-300 dark:border-slate-600" data-filter="all">All</button><button class="filter-btn text-sm px-3 py-1 rounded-full border border-slate-300 dark:border-slate-600" data-filter="my">My Links</button></div></div>
+                    <div class="flex items-center gap-2"><span class="text-sm font-semibold">Sort by:</span><div id="sort-controls" class="flex gap-2"><button class="sort-btn text-sm px-3 py-1 rounded-full border border-slate-300 dark:border-slate-600 active" data-sort="newest">Newest</button><button class="sort-btn text-sm px-3 py-1 rounded-full border border-slate-300 dark:border-slate-600" data-sort="oldest">Oldest</button><button class="sort-btn text-sm px-3 py-1 rounded-full border border-slate-300 dark:border-slate-600" data-sort="alpha">A-Z</button></div></div>
                 </div>
             </div>
 
@@ -122,7 +122,7 @@
     <script type="module">
         import { initializeApp, getApps, getApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
         import { getAuth, onAuthStateChanged, createUserWithEmailAndPassword, signInWithEmailAndPassword, signOut } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
-        import { getFirestore, doc, collection, onSnapshot, addDoc, updateDoc, deleteDoc, arrayUnion, serverTimestamp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+        import { getFirestore, doc, getDoc, collection, onSnapshot, addDoc, updateDoc, deleteDoc, arrayUnion, serverTimestamp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
         import { getDatabase, ref, onValue, set, onDisconnect, serverTimestamp as dbServerTimestamp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-database.js";
 
         const firebaseConfig = { apiKey: "__API_KEY__", authDomain: "__AUTH_DOMAIN__", projectId: "__PROJECT_ID__", storageBucket: "__STORAGE_BUCKET__", messagingSenderId: "__MESSAGING_SENDER_ID__", appId: "__APP_ID__" };
@@ -130,7 +130,7 @@
 
         let app, auth, db, rtDb, userId, linksUnsubscribe;
         let allLinks = [], allTags = new Set();
-        let currentSort = 'newest', currentSearch = '', currentTag = '', currentFilter = 'all';
+        let currentSort = 'newest', currentSearch = '', currentTag = '', currentFilter = 'open';
 
         try {
             app = getApps().length ? getApp() : initializeApp(firebaseConfig);
@@ -163,14 +163,12 @@
         
         const renderTagMenu = () => {
             dom.tagMenu.innerHTML = '';
-            // "All Links" button
             const allBtn = document.createElement('button');
-            allBtn.textContent = 'All Links';
+            allBtn.textContent = 'All Tags';
             allBtn.className = `tag-menu-item w-full text-left px-3 py-2 rounded-md text-sm hover:bg-slate-200 dark:hover:bg-slate-700`;
             if (currentTag === '') allBtn.classList.add('active');
             allBtn.addEventListener('click', () => { currentTag = ''; renderLinks(); renderTagMenu(); });
             dom.tagMenu.appendChild(allBtn);
-            // Individual tag buttons
             [...allTags].sort().forEach(tag => {
                 const tagBtn = document.createElement('button');
                 tagBtn.textContent = tag;
@@ -186,6 +184,9 @@
             let filteredLinks = [...allLinks];
 
             if (currentFilter === 'my' && userId) filteredLinks = filteredLinks.filter(link => link.addedBy === userId);
+            else if (currentFilter === 'open') filteredLinks = filteredLinks.filter(link => !link.isClosed);
+            else if (currentFilter === 'closed') filteredLinks = filteredLinks.filter(link => link.isClosed);
+            
             if (currentSearch) filteredLinks = filteredLinks.filter(link => link.title.toLowerCase().includes(currentSearch));
             if (currentTag) filteredLinks = filteredLinks.filter(link => link.tags && link.tags.includes(currentTag));
 
@@ -201,29 +202,69 @@
 
             filteredLinks.forEach(linkData => {
                 const card = document.createElement('div');
-                card.className = "bg-white dark:bg-slate-800 p-5 rounded-xl shadow-lg";
+                card.className = `bg-white dark:bg-slate-800 p-5 rounded-xl shadow-lg transition-opacity ${linkData.isClosed ? 'opacity-60' : ''}`;
                 let url = linkData.url;
                 if (!url.startsWith('http')) url = 'https://' + url;
 
-                card.innerHTML = `<div class="flex justify-between items-start"><div><a href="${url}" target="_blank" rel="noopener noreferrer" class="text-lg font-semibold text-indigo-600 dark:text-indigo-400 hover:underline break-all">${linkData.title}</a><div class="mt-2 flex flex-wrap gap-2">${linkData.tags ? linkData.tags.map(tag => `<span class="text-xs bg-sky-100 dark:bg-sky-900 text-sky-800 dark:text-sky-200 px-2 py-0.5 rounded-full">${tag}</span>`).join('') : ''}</div><p class="text-sm text-slate-500 dark:text-slate-400 break-all mt-2">${linkData.url}</p><p class="text-xs text-slate-400 dark:text-slate-500 mt-1">Added by: <span class="font-mono">${linkData.addedByEmail}</span></p></div>${linkData.addedBy === userId ? `<div class="flex-shrink-0 ml-4 space-x-2"><button class="edit-btn text-slate-500 dark:text-slate-400 hover:text-indigo-600 dark:hover:text-indigo-400 transition" title="Edit">&#9998;</button><button class="delete-btn text-slate-500 dark:text-slate-400 hover:text-red-600 dark:hover:text-red-500 transition" title="Delete">&#10006;</button></div>` : ''}</div><div class="mt-4 pt-4 border-t border-slate-200 dark:border-slate-700"><h4 class="text-sm font-semibold mb-2">Comments</h4><div class="comments-list space-y-3 max-h-60 overflow-y-auto custom-scrollbar pr-2">${(linkData.comments && linkData.comments.length > 0) ? linkData.comments.map(c => `<div class="bg-slate-100 dark:bg-slate-700 p-3 rounded-lg text-sm"><p class="break-words whitespace-pre-wrap">${c.text || ''}</p><p class="text-xs text-slate-500 dark:text-slate-400 mt-2">By: <span class="font-mono">${c.commentByEmail}</span></p></div>`).join('') : '<p class="text-xs text-slate-400 dark:text-slate-500">No comments yet.</p>'}</div><form class="add-comment-form mt-3 flex items-start gap-2"><textarea placeholder="Add a comment..." class="flex-grow w-full text-sm px-3 py-2 border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-700 rounded-lg" rows="2"></textarea><button type="submit" class="bg-slate-600 text-white font-semibold text-sm px-4 py-2 rounded-lg hover:bg-slate-700 flex-shrink-0 disabled:opacity-50">Post</button></form></div>`;
+                card.innerHTML = `<div class="flex justify-between items-start"><div><a href="${url}" target="_blank" rel="noopener noreferrer" class="text-lg font-semibold text-indigo-600 dark:text-indigo-400 hover:underline break-all ${linkData.isClosed ? 'line-through' : ''}">${linkData.title}</a> ${linkData.isClosed ? '<span class="ml-2 text-xs font-bold bg-slate-500 text-white px-2 py-1 rounded-full">CLOSED</span>' : ''}<div class="mt-2 flex flex-wrap gap-2">${linkData.tags ? linkData.tags.map(tag => `<span class="text-xs bg-sky-100 dark:bg-sky-900 text-sky-800 dark:text-sky-200 px-2 py-0.5 rounded-full">${tag}</span>`).join('') : ''}</div><p class="text-sm text-slate-500 dark:text-slate-400 break-all mt-2">${linkData.url}</p><p class="text-xs text-slate-400 dark:text-slate-500 mt-1">Added by: <span class="font-mono">${linkData.addedByEmail}</span></p></div><div class="flex-shrink-0 ml-4 space-x-2">${linkData.addedBy === userId ? `<button class="edit-btn text-slate-500 dark:text-slate-400 hover:text-indigo-600 dark:hover:text-indigo-400 transition" title="Edit">&#9998;</button><button class="close-btn text-slate-500 dark:text-slate-400 hover:text-red-600 dark:hover:text-red-500 transition" title="${linkData.isClosed ? 'Re-open' : 'Close'}">${linkData.isClosed ? '&#x1F513;' : '&#x1F512;'}</button><button class="delete-btn text-slate-500 dark:text-slate-400 hover:text-red-600 dark:hover:text-red-500 transition" title="Delete">&#10006;</button>` : ''}</div></div><div class="mt-4 pt-4 border-t border-slate-200 dark:border-slate-700"><h4 class="text-sm font-semibold mb-2">Comments</h4><div class="comments-list space-y-3 max-h-60 overflow-y-auto custom-scrollbar pr-2"></div>${!linkData.isClosed ? '<form class="add-comment-form mt-3 flex items-start gap-2"><textarea placeholder="Add a comment..." class="flex-grow w-full text-sm px-3 py-2 border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-700 rounded-lg" rows="2"></textarea><button type="submit" class="bg-slate-600 text-white font-semibold text-sm px-4 py-2 rounded-lg hover:bg-slate-700 flex-shrink-0 disabled:opacity-50">Post</button></form>' : ''}</div>`;
                 
+                const commentsList = card.querySelector('.comments-list');
+                if (linkData.comments && linkData.comments.length > 0) {
+                    linkData.comments.forEach((comment, index) => {
+                        const commentDiv = document.createElement('div');
+                        commentDiv.className = 'bg-slate-100 dark:bg-slate-700 p-3 rounded-lg text-sm';
+                        commentDiv.innerHTML = `<div class="flex justify-between items-start"><p class="comment-text break-words whitespace-pre-wrap flex-grow">${comment.text || ''}</p>${comment.commentBy === userId ? `<button class="edit-comment-btn flex-shrink-0 ml-2 text-slate-500 dark:text-slate-400 hover:text-indigo-600 dark:hover:text-indigo-400" title="Edit Comment">&#9998;</button>` : ''}</div><p class="text-xs text-slate-500 dark:text-slate-400 mt-2">By: <span class="font-mono">${comment.commentByEmail}</span></p>`;
+                        commentsList.appendChild(commentDiv);
+                        if(comment.commentBy === userId){
+                             commentDiv.querySelector('.edit-comment-btn').addEventListener('click', (e) => toggleCommentEdit(e.currentTarget.closest('.flex'), linkData.id, index));
+                        }
+                    });
+                } else {
+                    commentsList.innerHTML = '<p class="text-xs text-slate-400 dark:text-slate-500">No comments yet.</p>';
+                }
+
                 if (linkData.addedBy === userId) {
                     card.querySelector('.edit-btn').addEventListener('click', () => openEditModal(linkData));
+                    card.querySelector('.close-btn').addEventListener('click', () => updateDoc(doc(db, `/artifacts/${appId}/public/data/links`, linkData.id), { isClosed: !linkData.isClosed }));
                     card.querySelector('.delete-btn').addEventListener('click', () => deleteDoc(doc(db, `/artifacts/${appId}/public/data/links`, linkData.id)));
                 }
-                card.querySelector('.add-comment-form').addEventListener('submit', async (e) => {
-                    e.preventDefault();
-                    const form = e.target; const textarea = form.querySelector('textarea'); const text = textarea.value.trim(); const submitBtn = form.querySelector('button');
-                    if (!text || !auth.currentUser) return;
-                    submitBtn.disabled = true; submitBtn.textContent = '...';
-                    try {
-                        const newComment = { text, commentBy: auth.currentUser.uid, commentByEmail: auth.currentUser.email, createdAt: new Date() };
-                        await updateDoc(doc(db, `/artifacts/${appId}/public/data/links`, linkData.id), { comments: arrayUnion(newComment) });
-                        textarea.value = '';
-                    } finally { submitBtn.disabled = false; submitBtn.textContent = 'Post'; }
-                });
+                if (!linkData.isClosed) {
+                    card.querySelector('.add-comment-form').addEventListener('submit', async (e) => {
+                        e.preventDefault();
+                        const form = e.target; const textarea = form.querySelector('textarea'); const text = textarea.value.trim(); const submitBtn = form.querySelector('button');
+                        if (!text || !auth.currentUser) return;
+                        submitBtn.disabled = true; submitBtn.textContent = '...';
+                        try {
+                            const newComment = { text, commentBy: auth.currentUser.uid, commentByEmail: auth.currentUser.email, createdAt: new Date() };
+                            await updateDoc(doc(db, `/artifacts/${appId}/public/data/links`, linkData.id), { comments: arrayUnion(newComment) });
+                            textarea.value = '';
+                        } finally { submitBtn.disabled = false; submitBtn.textContent = 'Post'; }
+                    });
+                }
                 dom.linksContainer.appendChild(card);
             });
+        };
+
+        const toggleCommentEdit = (commentContainer, linkId, commentIndex) => {
+            const currentText = commentContainer.querySelector('.comment-text').textContent;
+            commentContainer.innerHTML = `
+                <textarea class="edit-comment-textarea flex-grow w-full text-sm px-2 py-1 border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800 rounded-lg" rows="3">${currentText}</textarea>
+                <div class="flex flex-col ml-2 space-y-1">
+                    <button class="save-comment-btn text-xs bg-green-500 text-white px-2 py-1 rounded hover:bg-green-600">Save</button>
+                    <button class="cancel-comment-edit-btn text-xs bg-red-500 text-white px-2 py-1 rounded hover:bg-red-600">Cancel</button>
+                </div>`;
+            
+            commentContainer.querySelector('.save-comment-btn').addEventListener('click', async () => {
+                const newText = commentContainer.querySelector('.edit-comment-textarea').value;
+                const linkRef = doc(db, `/artifacts/${appId}/public/data/links`, linkId);
+                const linkDoc = await getDoc(linkRef);
+                if(linkDoc.exists()){
+                    const comments = linkDoc.data().comments;
+                    comments[commentIndex].text = newText;
+                    await updateDoc(linkRef, { comments });
+                }
+            });
+             commentContainer.querySelector('.cancel-comment-edit-btn').addEventListener('click', () => renderLinks());
         };
         
         const openEditModal = (linkData) => {
@@ -233,7 +274,7 @@
             form.querySelector('#edit-link-url').value = linkData.url;
             form.querySelector('#edit-link-tags').value = linkData.tags ? linkData.tags.join(', ') : '';
             dom.editModal.classList.remove('hidden');
-        }
+        };
 
         const setupLinksListener = () => {
             if (linksUnsubscribe) linksUnsubscribe();
@@ -296,7 +337,7 @@
                 submitBtn.disabled = true; submitBtn.textContent = '...';
                 try {
                     const tags = tagsRaw ? tagsRaw.split(',').map(tag => tag.trim()).filter(Boolean) : [];
-                    await addDoc(collection(db, `/artifacts/${appId}/public/data/links`), { title, url, tags, addedBy: auth.currentUser.uid, addedByEmail: auth.currentUser.email, createdAt: serverTimestamp(), comments: [] });
+                    await addDoc(collection(db, `/artifacts/${appId}/public/data/links`), { title, url, tags, addedBy: auth.currentUser.uid, addedByEmail: auth.currentUser.email, createdAt: serverTimestamp(), comments: [], isClosed: false });
                     dom.addLinkForm.reset();
                     dom.addLinkModal.classList.add('hidden');
                 } finally { submitBtn.disabled = false; submitBtn.textContent = 'Share Link'; }
