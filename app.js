@@ -36,10 +36,11 @@ const dom = {
     linkFaultModal: document.getElementById('link-fault-modal'), existingFaultsList: document.getElementById('existing-faults-list'), skipLinkBtn: document.getElementById('skip-link-btn'), confirmLinkBtn: document.getElementById('confirm-link-btn')
 };
 
+const formInputClasses = "w-full p-2 border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-900 rounded text-slate-900 dark:text-slate-200 placeholder-slate-400 dark:placeholder-slate-500";
 const formFieldsTemplates = {
-    qa: `<input name="title" type="text" placeholder="Q&A Title" class="w-full p-2 border rounded" required><input name="qaId" type="text" placeholder="Q&A Question ID" pattern="\\d{8}" title="8 digits" class="w-full p-2 border rounded" required><input name="modelNumber" type="text" placeholder="Model Number" class="w-full p-2 border rounded"><input name="serialNumber" type="text" placeholder="Serial Number" class="w-full p-2 border rounded"><input name="serviceOrderNumber" type="text" placeholder="Service Order Number" pattern="\\d{10}" title="10 digits" class="w-full p-2 border rounded"><input name="salesforceCaseNumber" type="text" placeholder="Salesforce Case Number" class="w-full p-2 border rounded"><textarea name="description" placeholder="Description" class="w-full p-2 border rounded" rows="4"></textarea>`,
-    'common-fault': `<input name="title" type="text" placeholder="Title" class="w-full p-2 border rounded" required><input name="modelNumber" type="text" placeholder="Model Number" class="w-full p-2 border rounded"><input name="serialNumber" type="text" placeholder="Serial Number" class="w-full p-2 border rounded"><input name="serviceOrderNumber" type="text" placeholder="Service Order Number" pattern="\\d{10}" title="10 digits" class="w-full p-2 border rounded"><input name="salesforceCaseNumber" type="text" placeholder="Salesforce Case Number" class="w-full p-2 border rounded"><textarea name="description" placeholder="Description" class="w-full p-2 border rounded" rows="4"></textarea><label class="flex items-center mt-4"><input type="checkbox" name="onSamsungTracker" class="rounded mr-2"> On Samsung Action Tracker</label>`,
-    general: `<input name="title" type="text" placeholder="Title" class="w-full p-2 border rounded" required><input name="modelNumber" type="text" placeholder="Model Number" class="w-full p-2 border rounded"><input name="serialNumber" type="text" placeholder="Serial Number" class="w-full p-2 border rounded"><input name="serviceOrderNumber" type="text" placeholder="Service Order Number" pattern="\\d{10}" title="10 digits" class="w-full p-2 border rounded"><input name="salesforceCaseNumber" type="text" placeholder="Salesforce Case Number" class="w-full p-2 border rounded"><textarea name="description" placeholder="Description" class="w-full p-2 border rounded" rows="4"></textarea>`
+    qa: `<input name="title" type="text" placeholder="Q&A Title" class="${formInputClasses}" required><input name="qaId" type="text" placeholder="Q&A Question ID" pattern="\\d{8}" title="8 digits" class="${formInputClasses}" required><input name="modelNumber" type="text" placeholder="Model Number" class="${formInputClasses}"><input name="serialNumber" type="text" placeholder="Serial Number" class="${formInputClasses}"><input name="serviceOrderNumber" type="text" placeholder="Service Order Number" pattern="\\d{10}" title="10 digits" class="${formInputClasses}"><input name="salesforceCaseNumber" type="text" placeholder="Salesforce Case Number" class="${formInputClasses}"><textarea name="description" placeholder="Description" class="${formInputClasses}" rows="4"></textarea>`,
+    'common-fault': `<input name="title" type="text" placeholder="Title" class="${formInputClasses}" required><input name="modelNumber" type="text" placeholder="Model Number" class="${formInputClasses}"><input name="serialNumber" type="text" placeholder="Serial Number" class="${formInputClasses}"><input name="serviceOrderNumber" type="text" placeholder="Service Order Number" pattern="\\d{10}" title="10 digits" class="${formInputClasses}"><input name="salesforceCaseNumber" type="text" placeholder="Salesforce Case Number" class="${formInputClasses}"><textarea name="description" placeholder="Description" class="${formInputClasses}" rows="4"></textarea><label class="flex items-center mt-4"><input type="checkbox" name="onSamsungTracker" class="rounded mr-2"> On Samsung Action Tracker</label>`,
+    general: `<input name="title" type="text" placeholder="Title" class="${formInputClasses}" required><input name="modelNumber" type="text" placeholder="Model Number" class="${formInputClasses}"><input name="serialNumber" type="text" placeholder="Serial Number" class="${formInputClasses}"><input name="serviceOrderNumber" type="text" placeholder="Service Order Number" pattern="\\d{10}" title="10 digits" class="${formInputClasses}"><input name="salesforceCaseNumber" type="text" placeholder="Salesforce Case Number" class="${formInputClasses}"><textarea name="description" placeholder="Description" class="${formInputClasses}" rows="4"></textarea>`
 };
 
 let currentFormCategory = 'qa';
@@ -74,7 +75,6 @@ const groupCommonFaults = () => {
             const currentFault = queue.shift();
             visited.add(currentFault.id);
 
-            // Find records that this fault is related to
             currentFault.relatedTo?.forEach(related => {
                 if (recordMap.has(related.id) && !currentGroup.has(related.id)) {
                     currentGroup.add(related.id);
@@ -82,7 +82,6 @@ const groupCommonFaults = () => {
                 }
             });
 
-            // Find records that are related to this fault
             for (const otherFault of commonFaults) {
                 if (otherFault.relatedTo?.some(r => r.id === currentFault.id) && !currentGroup.has(otherFault.id)) {
                     currentGroup.add(otherFault.id);
@@ -154,7 +153,6 @@ const renderRecordCard = (record) => {
     renderComments(card.querySelector('.comments-section'), record);
     if(card.classList.contains('expanded')) card.querySelector('.comments-section')?.classList.add('expanded');
 
-
     const actions = card.querySelector('.actions');
     actions.innerHTML = `<button class="time-btn" title="Edit Timestamp">&#x1F4C5;</button><button class="update-btn" title="Log Update">&#x1F4DD;</button><button class="edit-btn" title="Edit">&#9998;</button><button class="close-btn" title="${record.isClosed?'Re-open':'Close'}">${record.isClosed?'&#x1F513;':'&#x1F512;'}</button>`;
     actions.classList.add('text-slate-500','dark:text-slate-400');
@@ -188,16 +186,14 @@ const logUpdate = async (recordId) => { await updateDoc(doc(db, `/artifacts/${ap
 
 const renderRecords = () => {
      let recordsToDisplay = [...fetchedRecords];
-    if (currentCategory.length > 2) { // It's a group ID, not a short category key
+    if (currentCategory.length > 2) { // It's a group ID
         const group = groupedFaults.get(currentCategory);
-        if(group) {
-            recordsToDisplay = group.records;
-        }
+        if(group) recordsToDisplay = group.records;
     } else if(currentCategory) {
         recordsToDisplay = recordsToDisplay.filter(r => r.category === currentCategory);
     }
-
     if (currentSearch) recordsToDisplay = recordsToDisplay.filter(r => Object.values(r).join(' ').toLowerCase().includes(currentSearch));
+    
     dom.recordsContainer.innerHTML = '';
     if (recordsToDisplay.length === 0) { dom.recordsContainer.innerHTML = `<p class="text-slate-500 dark:text-slate-400">No records match your current filters.</p>`; return; }
     recordsToDisplay.forEach(recordData => dom.recordsContainer.appendChild(renderRecordCard(recordData)));
@@ -221,7 +217,7 @@ const setupRecordsListener = () => {
     if (currentFilter === 'my') constraints.push(where('addedBy', '==', currentUserDisplayName));
     else if (currentFilter === 'open') constraints.push(where('isClosed', '==', false));
     else if (currentFilter === 'closed') constraints.push(where('isClosed', '==', true));
-
+    
     const sortField = currentSort === 'alpha' ? 'title' : 'createdAt';
     const sortDirection = currentSort === 'oldest' ? 'asc' : 'desc';
     constraints.push(orderBy(sortField, sortDirection));
@@ -287,7 +283,7 @@ dom.formCategorySelector.addEventListener('click', (e) => { if (e.target.matches
 const findSimilarFaults = (newTitle, modelNumber) => {
     return fetchedRecords.filter(r => {
         if (r.category !== 'common-fault') return false;
-        if (r.modelNumber && r.modelNumber === modelNumber) return true;
+        if (r.modelNumber && r.modelNumber.toLowerCase() === modelNumber.toLowerCase()) return true;
         const newWords = newTitle.toLowerCase().split(' ').filter(w => w.length > 3);
         if(newWords.length === 0) return false;
         const existingWords = r.title.toLowerCase().split(' ');
