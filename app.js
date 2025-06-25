@@ -187,6 +187,9 @@ const renderRecordCard = (record) => {
     const linkedRecordsHtml = groupId ? `<div class="mt-2"><dt class="font-semibold">Linked Faults:</dt><dd><button class="linked-fault-btn text-indigo-600 dark:text-indigo-400 underline" data-group-id="${groupId}">View Group</button></dd></div>` : '';
     const descriptionHtml = record.description ? `<div class="pt-2 font-semibold">Description:</div><p class="whitespace-pre-wrap">${record.description}</p>` : '<div class="pt-2 font-semibold">No Description Provided</div>';
 
+    const trackerBadge = record.onSamsungTracker ? `<span class="text-xs font-bold bg-green-500 text-white px-2 py-1 rounded-full">Samsung Action Tracker</span>` : '';
+    const closedBadge = record.isClosed ? `<span class="text-xs font-bold bg-slate-500 text-white px-2 py-1 rounded-full">CLOSED</span>` : '';
+    const daysOpenBadge = `<span class="text-xs text-slate-500 dark:text-slate-400">${calculateDaysOpen(record)}</span>`;
 
     card.innerHTML = `
         <div class="collapsible-header flex justify-between items-start cursor-pointer record-header">
@@ -195,8 +198,7 @@ const renderRecordCard = (record) => {
                 <h3 class="text-lg font-semibold text-indigo-600 dark:text-indigo-400 break-all">${record.title}</h3>
             </div>
             <div class="flex items-center gap-2">
-                ${record.onSamsungTracker ? '<span class="text-xs font-bold bg-green-500 text-white px-2 py-1 rounded-full">Samsung Action Tracker</span>' : ''}
-                ${record.isClosed ? `<span class="text-xs font-bold bg-slate-500 text-white px-2 py-1 rounded-full">CLOSED</span><span class="text-xs text-slate-500 dark:text-slate-400">${calculateDaysOpen(record)}</span>` : `<span class="text-xs text-slate-500 dark:text-slate-400">${calculateDaysOpen(record)}</span>`}
+                ${trackerBadge} ${closedBadge} ${daysOpenBadge}
                 <div class="actions flex-shrink-0 ml-4 space-x-2"></div>
                 <svg class="chevron h-5 w-5 transition-transform" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" /></svg>
             </div>
@@ -210,14 +212,9 @@ const renderRecordCard = (record) => {
             <p class="text-xs text-slate-400 dark:text-slate-500 mt-4">Added by <span class="font-mono">${record.addedBy}</span> on ${formatDateTime(record.createdAt)}</p>
         </div>`;
     
-    const actions = card.querySelector('.actions');
-    actions.innerHTML = `<button class="time-btn" title="Edit Timestamp">&#x1F4C5;</button><button class="edit-btn" title="Edit">&#9998;</button><button class="close-btn" title="${record.isClosed ? 'Re-open' : 'Close'}">${record.isClosed ? '&#x1F513;' : '&#x1F512;'}</button>`;
-    actions.classList.add('text-slate-500', 'dark:text-slate-400');
-    actions.querySelectorAll('button').forEach(btn => btn.classList.add('hover:text-indigo-600', 'dark:hover:text-indigo-400', 'transition'));
-    actions.querySelector('.close-btn').classList.add('hover:text-red-600', 'dark:hover:text-red-500');
-    
     return card;
 };
+
 
 const renderComments = (container, record) => {
     container.innerHTML = `<div class="collapsible-header flex justify-between items-center cursor-pointer"><h4 class="text-sm font-semibold">Updates & Comments</h4><svg class="chevron h-5 w-5 transition-transform" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" /></svg></div><div class="collapsible-content"><div class="comments-list mt-2 space-y-3 pr-2"></div>${!record.isClosed ? '<form class="add-comment-form mt-3 flex items-start gap-2"><textarea placeholder="Add a comment..." class="flex-grow w-full text-sm px-3 py-2 border rounded" rows="2"></textarea><button type="submit" class="bg-slate-600 text-white font-semibold text-sm px-4 py-2 rounded-lg hover:bg-slate-700 flex-shrink-0 disabled:opacity-50">Post</button></form>' : ''}</div>`;
@@ -253,32 +250,7 @@ const renderRecords = () => {
     recordsToDisplay.forEach(recordData => dom.recordsContainer.appendChild(renderRecordCard(recordData)));
 };
 
-const openEditModal = (record) => { 
-    dom.editRecordForm.querySelector('[name="id"]').value = record.id; 
-    setFormCategory(record.category, dom.editFormFieldsContainer, record); 
-    
-    // Add unlink functionality
-    if (record.category === 'common-fault') {
-        const allRelated = [...(record.relatedTo || []), ...(record.relatedBy || [])];
-        if (allRelated.length > 0) {
-            const unlinkContainer = document.createElement('div');
-            unlinkContainer.className = "mt-4 pt-4 border-t border-slate-200 dark:border-slate-700";
-            unlinkContainer.innerHTML = `<h3 class="text-md font-semibold mb-2">Linked Records</h3>`;
-            const list = document.createElement('ul');
-            list.className = "space-y-1";
-            allRelated.forEach(related => {
-                const item = document.createElement('li');
-                item.className = "flex justify-between items-center";
-                item.innerHTML = `<span>${related.title}</span><button type="button" class="unlink-btn text-red-500 text-xs hover:underline" data-unlink-id="${related.id}" data-unlink-title="${related.title}">Unlink</button>`;
-                list.appendChild(item);
-            });
-            unlinkContainer.appendChild(list);
-            dom.editFormFieldsContainer.appendChild(unlinkContainer);
-        }
-    }
-
-    dom.editRecordModal.classList.remove('hidden'); 
-};
+const openEditModal = (record) => { dom.editRecordForm.querySelector('[name="id"]').value = record.id; setFormCategory(record.category, dom.editFormFieldsContainer, record); dom.editRecordModal.classList.remove('hidden'); };
 const openTimeEditModal = (record) => {
     const form = dom.editTimeForm;
     form.querySelector('[name="id"]').value = record.id;
@@ -321,7 +293,6 @@ const setupRecordsListener = () => {
 const showApp = () => { dom.authContainer.style.display = 'none'; dom.namePromptModal.classList.add('hidden'); dom.appContainer.style.display = 'block'; dom.userNameDisplay.textContent = currentUserDisplayName; setupRecordsListener(); };
 const showLogin = () => { dom.authContainer.style.display = 'flex'; dom.appContainer.style.display = 'none'; if (recordsUnsubscribe) recordsUnsubscribe(); };
 
-// --- MAIN EVENT DELEGATION LISTENER ---
 dom.recordsContainer.addEventListener('click', async (e) => {
     const recordCard = e.target.closest('.record-card');
     if (!recordCard) return;
@@ -331,20 +302,25 @@ dom.recordsContainer.addEventListener('click', async (e) => {
 
     if (e.target.closest('.record-header') && !e.target.closest('.actions')) {
         const isCurrentlyExpanded = recordCard.classList.contains('expanded');
-        if(!groupedFaults.has(currentCategory)) {
-             dom.recordsContainer.querySelectorAll('.record-card').forEach(c => c.classList.remove('expanded'));
-             expandedRecordIds.clear();
-        }
+        
+        dom.recordsContainer.querySelectorAll('.record-card').forEach(c => c.classList.remove('expanded'));
+        expandedRecordIds.clear();
+
         if (!isCurrentlyExpanded) {
             recordCard.classList.add('expanded');
             recordCard.querySelector('.comments-section')?.classList.add('expanded');
             expandedRecordIds.add(recordId);
-        } else {
-            expandedRecordIds.delete(recordId);
         }
-    } else if(e.target.closest('.comments-section > .collapsible-header')) {
-        e.target.closest('.comments-section').classList.toggle('expanded');
-    } else if(e.target.classList.contains('edit-comment-btn')) {
+        return;
+    }
+    
+    const commentsSection = e.target.closest('.comments-section');
+    if(commentsSection && e.target.closest('.collapsible-header')) {
+        commentsSection.classList.toggle('expanded');
+        return;
+    }
+
+    if(e.target.classList.contains('edit-comment-btn')) {
         const commentBody = e.target.closest('.comment-body');
         const commentIndex = parseInt(e.target.dataset.index);
         const currentText = commentBody.querySelector('.comment-text').textContent;
