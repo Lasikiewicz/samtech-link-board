@@ -17,7 +17,6 @@
         .dark .custom-scrollbar::-webkit-scrollbar-track { background: #1e293b; }
         .custom-scrollbar::-webkit-scrollbar-thumb { background: #94a3b8; border-radius: 4px; }
         .dark .custom-scrollbar::-webkit-scrollbar-thumb { background: #475569; }
-        .custom-scrollbar::-webkit-scrollbar-thumb:hover { background: #64748b; }
         #auth-container, #app-container { display: none; }
         .message-box { animation: fadeIn 0.3s ease-out; }
         @keyframes fadeIn { from { opacity: 0; transform: translateY(-10px); } to { opacity: 1; transform: translateY(0); } }
@@ -34,39 +33,39 @@
     <!-- Authentication Container -->
     <div id="auth-container" class="min-h-screen flex items-center justify-center p-4">
         <div class="max-w-md w-full bg-white p-8 rounded-2xl shadow-xl">
-            <div class="text-center mb-8"><img src="https://i.ibb.co/b3y7t5R/logo1.png" alt="Samtech Solutions Logo" class="mx-auto mb-4 h-16 w-auto"><h1 class="text-2xl font-bold text-slate-800">Welcome</h1><p class="text-slate-500">Sign in or create an account</p></div>
-            <div id="auth-message" class="hidden message-box mb-4 p-4 text-sm rounded-lg"></div>
-            <form id="auth-form"><div class="space-y-4"><input id="auth-email" type="email" placeholder="Enter your email" class="w-full px-4 py-2 border border-slate-300 rounded-lg" required><input id="auth-password" type="password" placeholder="Enter your password" class="w-full px-4 py-2 border border-slate-300 rounded-lg" required></div><p id="auth-error" class="text-red-500 text-sm mt-4 h-5"></p><div class="mt-6 flex flex-col sm:flex-row gap-3"><button type="button" id="login-btn" class="w-full bg-indigo-600 text-white font-semibold px-6 py-2 rounded-lg hover:bg-indigo-700">Login</button><button type="button" id="register-btn" class="w-full bg-slate-600 text-white font-semibold px-6 py-2 rounded-lg hover:bg-slate-700">Register</button></div></form>
+            <div class="text-center mb-8"><img src="https://i.ibb.co/b3y7t5R/logo1.png" alt="Samtech Solutions Logo" class="mx-auto mb-4 h-16 w-auto"><h1 class="text-2xl font-bold text-slate-800">Enter Access Password</h1></div>
+            <form id="auth-form"><div class="space-y-4"><input id="auth-password" type="password" placeholder="Enter shared password" class="w-full px-4 py-2 border border-slate-300 rounded-lg" required></div><p id="auth-error" class="text-red-500 text-sm mt-4 h-5"></p><div class="mt-6 flex"><button type="submit" id="login-btn" class="w-full bg-indigo-600 text-white font-semibold px-6 py-2 rounded-lg hover:bg-indigo-700">Enter</button></div></form>
         </div>
     </div>
+    
+    <!-- User Name Modal -->
+    <div id="name-prompt-modal" class="fixed inset-0 bg-black bg-opacity-70 flex items-center justify-center p-4 hidden">
+        <div class="bg-white dark:bg-slate-800 rounded-xl shadow-2xl p-6 w-full max-w-sm">
+            <h2 class="text-xl font-semibold mb-4 text-slate-900 dark:text-white">Enter Your Name</h2>
+            <p class="text-sm text-slate-600 dark:text-slate-400 mb-4">This name will be used to identify your records and comments.</p>
+            <form id="name-prompt-form"><div class="space-y-4"><input id="user-display-name" type="text" placeholder="Your Name or Initials" class="w-full px-4 py-2 border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-700 rounded-lg" required></div><div class="mt-6 flex justify-end"><button type="submit" class="bg-indigo-600 text-white font-semibold px-4 py-2 rounded-lg hover:bg-indigo-700">Continue</button></div></form>
+        </div>
+    </div>
+
 
     <!-- Main Application Container -->
     <div id="app-container" class="max-w-7xl mx-auto p-4 sm:p-6 lg:p-8">
       <div class="grid grid-cols-1 lg:grid-cols-4 gap-8">
-        
-        <aside class="lg:col-span-1">
-          <div class="sticky top-8">
-            <h2 class="text-lg font-bold mb-4 text-slate-900 dark:text-white">Categories</h2>
-            <nav id="category-menu" class="space-y-1"></nav>
-          </div>
-        </aside>
-
+        <aside class="lg:col-span-1"><div class="sticky top-8"><h2 class="text-lg font-bold mb-4 text-slate-900 dark:text-white">Categories</h2><nav id="category-menu" class="space-y-1"></nav></div></aside>
         <main class="lg:col-span-3">
             <header class="mb-6">
                 <div class="flex flex-wrap gap-4 justify-between items-center">
-                    <div><h1 class="text-3xl sm:text-4xl font-bold text-slate-900 dark:text-white">Collaborative Record Board</h1><p class="text-slate-600 dark:text-slate-400 mt-1">Share, discuss, and edit records in real-time.</p></div>
+                    <div><h1 class="text-3xl sm:text-4xl font-bold text-slate-900 dark:text-white">Collaborative Record Board</h1><p class="text-slate-600 dark:text-slate-400 mt-1">Share, discuss, and edit records.</p></div>
                     <div class="flex items-center gap-4">
                         <button id="add-new-record-btn" class="bg-indigo-600 text-white font-semibold px-4 py-2 rounded-lg hover:bg-indigo-700">Add New Record</button>
-                        <button id="dark-mode-toggle" class="p-2 rounded-full hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-500 dark:text-slate-400" title="Toggle Dark Mode"><svg id="sun-icon" xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z" /></svg><svg id="moon-icon" xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 hidden" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z" /></svg></button>
+                        <button id="dark-mode-toggle" class="p-2 rounded-full hover:bg-slate-200 dark:hover:bg-slate-700" title="Toggle Dark Mode"><svg id="sun-icon" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z" /></svg><svg id="moon-icon" class="h-6 w-6 hidden" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z" /></svg></button>
                         <button id="logout-btn" class="bg-red-500 text-white font-semibold px-4 py-2 rounded-lg hover:bg-red-600">Logout</button>
                     </div>
                 </div>
                 <div class="mt-4 flex flex-wrap gap-4 justify-between items-start bg-white dark:bg-slate-800 p-3 rounded-lg shadow-sm w-full">
-                    <div class="text-xs text-slate-500 dark:text-slate-400">Signed in as: <span id="user-email" class="font-mono font-semibold"></span></div>
-                    <div class="text-xs"><h3 class="font-semibold text-slate-600 dark:text-slate-300 mb-1">Currently Online:</h3><div id="presence-list" class="text-slate-500 dark:text-slate-400 flex flex-wrap gap-x-2 gap-y-1"></div></div>
+                    <div class="text-xs text-slate-500 dark:text-slate-400">Signed in as: <span id="user-name-display" class="font-mono font-semibold"></span></div>
                 </div>
             </header>
-            
             <div class="bg-white dark:bg-slate-800 p-4 rounded-xl shadow-lg mb-8 space-y-4">
                 <input id="search-input" type="search" placeholder="&#x1F50D; Search all record fields..." class="w-full px-4 py-2 border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-700 rounded-lg">
                 <div class="flex flex-wrap items-center gap-x-4 gap-y-2">
@@ -74,53 +73,31 @@
                     <div class="flex items-center gap-2"><span class="text-sm font-semibold">Sort by:</span><div id="sort-controls" class="flex gap-2"><button class="control-btn text-sm px-3 py-1 rounded-full border border-slate-300 dark:border-slate-600 active" data-sort="newest">Newest</button><button class="control-btn text-sm px-3 py-1 rounded-full border border-slate-300 dark:border-slate-600" data-sort="oldest">Oldest</button><button class="control-btn text-sm px-3 py-1 rounded-full border border-slate-300 dark:border-slate-600" data-sort="alpha">A-Z</button></div></div>
                 </div>
             </div>
-
-            <div id="records-container" class="space-y-6">
-                <p id="loading-state" class="text-slate-500 dark:text-slate-400">Loading records...</p>
-            </div>
+            <div id="records-container" class="space-y-6"><p id="loading-state" class="text-slate-500 dark:text-slate-400">Loading records...</p></div>
         </main>
       </div>
     </div>
 
     <!-- Modals -->
-    <div id="add-record-modal" class="fixed inset-0 bg-black bg-opacity-70 flex items-center justify-center p-4 hidden">
-        <div class="bg-white dark:bg-slate-800 rounded-xl shadow-2xl p-6 w-full max-w-lg">
-            <h2 class="text-xl font-semibold mb-4 text-slate-900 dark:text-white">Add New Record</h2>
-            <form id="add-record-form"><div class="mb-4"><label class="block text-sm font-medium mb-1">Category</label><div id="form-category-selector" class="grid grid-cols-3 gap-2"><button type="button" class="form-category-btn px-4 py-2 border rounded-lg" data-category="qa">Q&A</button><button type="button" class="form-category-btn px-4 py-2 border rounded-lg" data-category="common-fault">Common Faults</button><button type="button" class="form-category-btn px-4 py-2 border rounded-lg" data-category="general">General</button></div></div><div id="form-fields-container" class="space-y-4"></div><div class="mt-6 flex justify-end space-x-3"><button type="button" id="cancel-add" class="bg-slate-200 dark:bg-slate-600 text-slate-800 dark:text-slate-200 font-semibold px-4 py-2 rounded-lg hover:bg-slate-300 dark:hover:bg-slate-500">Cancel</button><button type="submit" id="add-record-submit" class="bg-indigo-600 text-white font-semibold px-4 py-2 rounded-lg hover:bg-indigo-700 disabled:opacity-50">Add Record</button></div></form>
-        </div>
-    </div>
-    <div id="edit-record-modal" class="fixed inset-0 bg-black bg-opacity-70 flex items-center justify-center p-4 hidden">
-        <div class="bg-white dark:bg-slate-800 rounded-xl shadow-2xl p-6 w-full max-w-lg">
-            <h2 class="text-xl font-semibold mb-4 text-slate-900 dark:text-white">Edit Record</h2>
-            <form id="edit-record-form"><input type="hidden" name="id"><div id="edit-form-fields-container" class="space-y-4"></div><div class="mt-6 flex justify-end space-x-3"><button type="button" id="cancel-edit" class="bg-slate-200 dark:bg-slate-600 text-slate-800 dark:text-slate-200 font-semibold px-4 py-2 rounded-lg hover:bg-slate-300 dark:hover:bg-slate-500">Cancel</button><button type="submit" id="edit-record-submit" class="bg-indigo-600 text-white font-semibold px-4 py-2 rounded-lg hover:bg-indigo-700 disabled:opacity-50">Save Changes</button></div></form>
-        </div>
-    </div>
-
+    <div id="add-record-modal" class="fixed inset-0 bg-black bg-opacity-70 flex items-center justify-center p-4 hidden"><div class="bg-white dark:bg-slate-800 rounded-xl shadow-2xl p-6 w-full max-w-lg"><h2 class="text-xl font-semibold mb-4 text-slate-900 dark:text-white">Add New Record</h2><form id="add-record-form"><div class="mb-4"><label class="block text-sm font-medium mb-1">Category</label><div id="form-category-selector" class="grid grid-cols-3 gap-2"><button type="button" class="form-category-btn px-4 py-2 border rounded-lg" data-category="qa">Q&A</button><button type="button" class="form-category-btn px-4 py-2 border rounded-lg" data-category="common-fault">Common Faults</button><button type="button" class="form-category-btn px-4 py-2 border rounded-lg" data-category="general">General</button></div></div><div id="form-fields-container" class="space-y-4"></div><div class="mt-6 flex justify-end space-x-3"><button type="button" id="cancel-add" class="bg-slate-200 dark:bg-slate-600 text-slate-800 dark:text-slate-200 font-semibold px-4 py-2 rounded-lg">Cancel</button><button type="submit" id="add-record-submit" class="bg-indigo-600 text-white font-semibold px-4 py-2 rounded-lg disabled:opacity-50">Add Record</button></div></form></div></div>
+    <div id="edit-record-modal" class="fixed inset-0 bg-black bg-opacity-70 flex items-center justify-center p-4 hidden"><div class="bg-white dark:bg-slate-800 rounded-xl shadow-2xl p-6 w-full max-w-lg"><h2 class="text-xl font-semibold mb-4 text-slate-900 dark:text-white">Edit Record</h2><form id="edit-record-form"><input type="hidden" name="id"><div id="edit-form-fields-container" class="space-y-4"></div><div class="mt-6 flex justify-end space-x-3"><button type="button" id="cancel-edit" class="bg-slate-200 dark:bg-slate-600 text-slate-800 dark:text-slate-200 font-semibold px-4 py-2 rounded-lg">Cancel</button><button type="submit" id="edit-record-submit" class="bg-indigo-600 text-white font-semibold px-4 py-2 rounded-lg disabled:opacity-50">Save Changes</button></div></form></div></div>
 
     <script type="module">
         import { initializeApp, getApps, getApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
-        import { getAuth, onAuthStateChanged, createUserWithEmailAndPassword, signInWithEmailAndPassword, signOut } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
-        import { getFirestore, doc, getDoc, collection, onSnapshot, addDoc, updateDoc, deleteDoc, arrayUnion, serverTimestamp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
-        import { getDatabase, ref, onValue, set, onDisconnect, serverTimestamp as dbServerTimestamp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-database.js";
-
+        import { getFirestore, doc, collection, onSnapshot, addDoc, updateDoc, deleteDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+        
         const firebaseConfig = { apiKey: "__API_KEY__", authDomain: "__AUTH_DOMAIN__", projectId: "__PROJECT_ID__", storageBucket: "__STORAGE_BUCKET__", messagingSenderId: "__MESSAGING_SENDER_ID__", appId: "__APP_ID__" };
         const appId = 'samtech-record-board';
+        const SHARED_PASSWORD = "__SHARED_PASSWORD__" || "samtech";
 
-        let app, auth, db, rtDb, userId, recordsUnsubscribe;
+        let app, db, recordsUnsubscribe;
         let allRecords = [];
-        let currentSort = 'newest', currentSearch = '', currentCategory = '', currentFilter = 'open';
+        let currentSort = 'newest', currentSearch = '', currentCategory = '', currentFilter = 'open', currentUserDisplayName = '';
 
         try {
             app = getApps().length ? getApp() : initializeApp(firebaseConfig);
-            auth = getAuth(app); db = getFirestore(app); rtDb = getDatabase(app);
-        } catch (e) {
-            console.error("Firebase initialization failed:", e);
-            // Make the error visible on the login screen itself
-            const authErrorEl = document.getElementById('auth-error');
-            if (authErrorEl) {
-                authErrorEl.textContent = 'CRITICAL: Firebase init failed. Check console.';
-            }
-        }
+            db = getFirestore(app);
+        } catch (e) { console.error("Firebase initialization failed:", e); }
 
         const dom = {
             authContainer: document.getElementById('auth-container'), appContainer: document.getElementById('app-container'),
@@ -128,64 +105,37 @@
             addNewRecordBtn: document.getElementById('add-new-record-btn'), cancelAdd: document.getElementById('cancel-add'),
             recordsContainer: document.getElementById('records-container'), loadingState: document.getElementById('loading-state'),
             searchInput: document.getElementById('search-input'), sortControls: document.getElementById('sort-controls'),
-            filterControls: document.getElementById('filter-controls'), userEmailSpan: document.getElementById('user-email'),
-            logoutBtn: document.getElementById('logout-btn'), presenceList: document.getElementById('presence-list'),
-            authErrorEl: document.getElementById('auth-error'), authMessageEl: document.getElementById('auth-message'),
-            loginBtn: document.getElementById('login-btn'), registerBtn: document.getElementById('register-btn'),
-            darkModeToggle: document.getElementById('dark-mode-toggle'), sunIcon: document.getElementById('sun-icon'),
-            moonIcon: document.getElementById('moon-icon'),
+            filterControls: document.getElementById('filter-controls'), userNameDisplay: document.getElementById('user-name-display'),
+            logoutBtn: document.getElementById('logout-btn'),
+            authForm: document.getElementById('auth-form'), authPasswordInput: document.getElementById('auth-password'), authErrorEl: document.getElementById('auth-error'),
+            darkModeToggle: document.getElementById('dark-mode-toggle'), sunIcon: document.getElementById('sun-icon'), moonIcon: document.getElementById('moon-icon'),
             categoryMenu: document.getElementById('category-menu'),
-            formCategorySelector: document.getElementById('form-category-selector'),
-            formFieldsContainer: document.getElementById('form-fields-container'),
-            editRecordModal: document.getElementById('edit-record-modal'),
-            editRecordForm: document.getElementById('edit-record-form'),
-            editFormFieldsContainer: document.getElementById('edit-form-fields-container'),
-            cancelEdit: document.getElementById('cancel-edit'),
+            formCategorySelector: document.getElementById('form-category-selector'), formFieldsContainer: document.getElementById('form-fields-container'),
+            editRecordModal: document.getElementById('edit-record-modal'), editRecordForm: document.getElementById('edit-record-form'),
+            editFormFieldsContainer: document.getElementById('edit-form-fields-container'), cancelEdit: document.getElementById('cancel-edit'),
+            namePromptModal: document.getElementById('name-prompt-modal'), namePromptForm: document.getElementById('name-prompt-form'),
         };
         
         const formFieldsTemplates = {
-            qa: `
-                <input name="title" type="text" placeholder="Q&A Title" class="w-full px-4 py-2 border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-700 rounded-lg" required>
-                <input name="qaId" type="text" placeholder="Q&A Question ID" pattern="\\d{8}" title="Must be 8 digits" class="w-full px-4 py-2 border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-700 rounded-lg" required>
-                <input name="modelNumber" type="text" placeholder="Model Number" class="w-full px-4 py-2 border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-700 rounded-lg">
-                <input name="serialNumber" type="text" placeholder="Serial Number" class="w-full px-4 py-2 border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-700 rounded-lg">
-                <input name="serviceOrderNumber" type="text" placeholder="Service Order Number" pattern="\\d{10}" title="Must be 10 digits" class="w-full px-4 py-2 border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-700 rounded-lg">
-                <input name="salesforceCaseNumber" type="text" placeholder="Salesforce Case Number" class="w-full px-4 py-2 border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-700 rounded-lg">
-                <textarea name="description" placeholder="Description" class="w-full px-4 py-2 border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-700 rounded-lg" rows="4"></textarea>
-            `,
-            'common-fault': `
-                <input name="title" type="text" placeholder="Title" class="w-full px-4 py-2 border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-700 rounded-lg" required>
-                <input name="modelNumber" type="text" placeholder="Model Number" class="w-full px-4 py-2 border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-700 rounded-lg">
-                <input name="serialNumber" type="text" placeholder="Serial Number" class="w-full px-4 py-2 border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-700 rounded-lg">
-                <input name="serviceOrderNumber" type="text" placeholder="Service Order Number" pattern="\\d{10}" title="Must be 10 digits" class="w-full px-4 py-2 border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-700 rounded-lg">
-                <input name="salesforceCaseNumber" type="text" placeholder="Salesforce Case Number" class="w-full px-4 py-2 border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-700 rounded-lg">
-                <textarea name="description" placeholder="Description" class="w-full px-4 py-2 border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-700 rounded-lg" rows="4"></textarea>
-            `,
-            general: `
-                <input name="title" type="text" placeholder="Title" class="w-full px-4 py-2 border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-700 rounded-lg" required>
-                <input name="modelNumber" type="text" placeholder="Model Number" class="w-full px-4 py-2 border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-700 rounded-lg">
-                <input name="serialNumber" type="text" placeholder="Serial Number" class="w-full px-4 py-2 border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-700 rounded-lg">
-                <input name="serviceOrderNumber" type="text" placeholder="Service Order Number" pattern="\\d{10}" title="Must be 10 digits" class="w-full px-4 py-2 border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-700 rounded-lg">
-                <input name="salesforceCaseNumber" type="text" placeholder="Salesforce Case Number" class="w-full px-4 py-2 border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-700 rounded-lg">
-                <textarea name="description" placeholder="Description" class="w-full px-4 py-2 border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-700 rounded-lg" rows="4"></textarea>
-            `
+            qa: `<input name="title" type="text" placeholder="Q&A Title" class="w-full px-4 py-2 border rounded-lg" required><input name="qaId" type="text" placeholder="Q&A Question ID" pattern="\\d{8}" title="Must be 8 digits" class="w-full px-4 py-2 border rounded-lg" required><input name="modelNumber" type="text" placeholder="Model Number" class="w-full px-4 py-2 border rounded-lg"><input name="serialNumber" type="text" placeholder="Serial Number" class="w-full px-4 py-2 border rounded-lg"><input name="serviceOrderNumber" type="text" placeholder="Service Order Number" pattern="\\d{10}" title="Must be 10 digits" class="w-full px-4 py-2 border rounded-lg"><input name="salesforceCaseNumber" type="text" placeholder="Salesforce Case Number" class="w-full px-4 py-2 border rounded-lg"><textarea name="description" placeholder="Description" class="w-full px-4 py-2 border rounded-lg" rows="4"></textarea>`,
+            'common-fault': `<input name="title" type="text" placeholder="Title" class="w-full px-4 py-2 border rounded-lg" required><input name="modelNumber" type="text" placeholder="Model Number" class="w-full px-4 py-2 border rounded-lg"><input name="serialNumber" type="text" placeholder="Serial Number" class="w-full px-4 py-2 border rounded-lg"><input name="serviceOrderNumber" type="text" placeholder="Service Order Number" pattern="\\d{10}" title="Must be 10 digits" class="w-full px-4 py-2 border rounded-lg"><input name="salesforceCaseNumber" type="text" placeholder="Salesforce Case Number" class="w-full px-4 py-2 border rounded-lg"><textarea name="description" placeholder="Description" class="w-full px-4 py-2 border rounded-lg" rows="4"></textarea>`,
+            general: `<input name="title" type="text" placeholder="Title" class="w-full px-4 py-2 border rounded-lg" required><input name="modelNumber" type="text" placeholder="Model Number" class="w-full px-4 py-2 border rounded-lg"><input name="serialNumber" type="text" placeholder="Serial Number" class="w-full px-4 py-2 border rounded-lg"><input name="serviceOrderNumber" type="text" placeholder="Service Order Number" pattern="\\d{10}" title="Must be 10 digits" class="w-full px-4 py-2 border rounded-lg"><input name="salesforceCaseNumber" type="text" placeholder="Salesforce Case Number" class="w-full px-4 py-2 border rounded-lg"><textarea name="description" placeholder="Description" class="w-full px-4 py-2 border rounded-lg" rows="4"></textarea>`
         };
         
         let currentFormCategory = 'qa';
         const setFormCategory = (category, container, record = {}) => {
+            currentFormCategory = category;
             container.innerHTML = formFieldsTemplates[category];
             for (const key in record) {
                 const input = container.querySelector(`[name="${key}"]`);
                 if (input) input.value = record[key];
             }
+            if (container.id === 'form-fields-container') {
+                dom.formCategorySelector.querySelectorAll('.form-category-btn').forEach(btn => btn.classList.toggle('active', btn.dataset.category === category));
+            }
         };
 
-        const formatDate = (timestamp) => {
-            if (!timestamp?.seconds) return 'N/A';
-            const date = new Date(timestamp.seconds * 1000);
-            return date.toLocaleDateString('en-GB'); // dd/mm/yyyy format
-        };
-        
+        const formatDate = (timestamp) => timestamp?.seconds ? new Date(timestamp.seconds * 1000).toLocaleDateString('en-GB') : 'N/A';
         const renderCategoryMenu = () => {
             dom.categoryMenu.innerHTML = '';
             const categories = { '': 'All Records', qa: 'Q&A', 'common-fault': 'Common Faults', general: 'General' };
@@ -202,73 +152,31 @@
         const renderRecordCard = (record) => {
             const card = document.createElement('div');
             card.className = `bg-white dark:bg-slate-800 p-5 rounded-xl shadow-lg transition-opacity ${record.isClosed ? 'opacity-60' : ''}`;
-            
-            const detailsHtml = `
-                ${record.qaId ? `<div class="flex"><dt class="w-1/3 font-semibold">Q&A ID:</dt><dd class="w-2/3 break-all">${record.qaId}</dd></div>` : ''}
-                ${record.modelNumber ? `<div class="flex"><dt class="w-1/3 font-semibold">Model #:</dt><dd class="w-2/3 break-all">${record.modelNumber}</dd></div>` : ''}
-                ${record.serialNumber ? `<div class="flex"><dt class="w-1/3 font-semibold">Serial #:</dt><dd class="w-2/3 break-all">${record.serialNumber}</dd></div>` : ''}
-                ${record.serviceOrderNumber ? `<div class="flex"><dt class="w-1/3 font-semibold">Service Order #:</dt><dd class="w-2/3 break-all">${record.serviceOrderNumber}</dd></div>` : ''}
-                ${record.salesforceCaseNumber ? `<div class="flex"><dt class="w-1/3 font-semibold">Salesforce Case #:</dt><dd class="w-2/3 break-all">${record.salesforceCaseNumber}</dd></div>` : ''}
-            `;
-
-            card.innerHTML = `
-                <div class="flex justify-between items-start">
-                    <div>
-                        <h3 class="text-lg font-semibold text-indigo-600 dark:text-indigo-400 break-all">${record.title}</h3>
-                        <div class="mt-2 flex flex-wrap gap-2 items-center">
-                           <span class="text-xs capitalize bg-gray-200 dark:bg-gray-700 text-gray-800 dark:text-gray-200 px-2 py-0.5 rounded-full">${record.category.replace('-', ' ')}</span>
-                           ${record.isClosed ? '<span class="text-xs font-bold bg-slate-500 text-white px-2 py-1 rounded-full">CLOSED</span>' : ''}
-                        </div>
-                    </div>
-                    ${record.addedBy === userId ? `<div class="actions flex-shrink-0 ml-4 space-x-2"><button class="edit-btn" title="Edit">&#9998;</button><button class="close-btn" title="${record.isClosed ? 'Re-open' : 'Close'}">${record.isClosed ? '&#x1F513;' : '&#x1F512;'}</button><button class="delete-btn" title="Delete">&#10006;</button></div>` : ''}
-                </div>
-                <div class="mt-4 pt-4 border-t border-slate-200 dark:border-slate-700 text-sm space-y-2">
-                    <dl class="flex flex-col space-y-1">${detailsHtml}</dl>
-                    ${record.description ? `<div class="pt-2"><p class="whitespace-pre-wrap">${record.description}</p></div>` : ''}
-                </div>
-                <p class="text-xs text-slate-400 dark:text-slate-500 mt-4">Added by <span class="font-mono">${record.addedByEmail}</span> on ${formatDate(record.createdAt)}</p>
-            `;
-            
-            if (record.addedBy === userId) {
+            const detailsHtml = `${record.qaId?`<div><dt class="font-semibold">Q&A ID:</dt><dd class="break-all">${record.qaId}</dd></div>`:''}${record.modelNumber?`<div><dt class="font-semibold">Model #:</dt><dd class="break-all">${record.modelNumber}</dd></div>`:''}${record.serialNumber?`<div><dt class="font-semibold">Serial #:</dt><dd class="break-all">${record.serialNumber}</dd></div>`:''}${record.serviceOrderNumber?`<div><dt class="font-semibold">Service Order #:</dt><dd class="break-all">${record.serviceOrderNumber}</dd></div>`:''}${record.salesforceCaseNumber?`<div><dt class="font-semibold">Salesforce Case #:</dt><dd class="break-all">${record.salesforceCaseNumber}</dd></div>`:''}`;
+            card.innerHTML = `<div class="flex justify-between items-start"><div><h3 class="text-lg font-semibold text-indigo-600 dark:text-indigo-400 break-all">${record.title}</h3><div class="mt-2 flex flex-wrap gap-2 items-center"><span class="text-xs capitalize bg-gray-200 dark:bg-gray-700 text-gray-800 dark:text-gray-200 px-2 py-0.5 rounded-full">${record.category.replace('-',' ')}</span>${record.isClosed?'<span class="text-xs font-bold bg-slate-500 text-white px-2 py-1 rounded-full">CLOSED</span>':''}</div></div>${record.addedBy===currentUserDisplayName?`<div class="actions flex-shrink-0 ml-4 space-x-2"><button class="edit-btn" title="Edit">&#9998;</button><button class="close-btn" title="${record.isClosed?'Re-open':'Close'}">${record.isClosed?'&#x1F513;':'&#x1F512;'}</button><button class="delete-btn" title="Delete">&#10006;</button></div>`:''}</div><div class="mt-4 pt-4 border-t border-slate-200 dark:border-slate-700 text-sm space-y-2"><dl class="grid grid-cols-1 md:grid-cols-2 gap-x-4 gap-y-1">${detailsHtml}</dl>${record.description?`<div class="pt-2"><p class="whitespace-pre-wrap">${record.description}</p></div>`:''}</div><p class="text-xs text-slate-400 dark:text-slate-500 mt-4">Added by <span class="font-mono">${record.addedBy}</span> on ${formatDate(record.createdAt)}</p>`;
+            if (record.addedBy === currentUserDisplayName) {
                  const actions = card.querySelector('.actions');
-                 actions.classList.add('text-slate-500', 'dark:text-slate-400');
-                 actions.querySelectorAll('button').forEach(btn => btn.classList.add('hover:text-indigo-600', 'dark:hover:text-indigo-400', 'transition'));
-                 actions.querySelector('.delete-btn').classList.add('hover:text-red-600', 'dark:hover:text-red-500');
-                 actions.querySelector('.close-btn').classList.add('hover:text-red-600', 'dark:hover:text-red-500');
-
-                 card.querySelector('.edit-btn').addEventListener('click', () => openEditModal(record));
-                 card.querySelector('.close-btn').addEventListener('click', () => updateDoc(doc(db, `/artifacts/${appId}/public/data/records`, record.id), { isClosed: !record.isClosed }));
-                 card.querySelector('.delete-btn').addEventListener('click', () => deleteDoc(doc(db, `/artifacts/${appId}/public/data/records`, record.id)));
+                 actions.classList.add('text-slate-500','dark:text-slate-400');
+                 actions.querySelectorAll('button').forEach(btn=>btn.classList.add('hover:text-indigo-600','dark:hover:text-indigo-400','transition'));
+                 actions.querySelector('.delete-btn').classList.add('hover:text-red-600','dark:hover:text-red-500');
+                 actions.querySelector('.close-btn').classList.add('hover:text-red-600','dark:hover:text-red-500');
+                 card.querySelector('.edit-btn').addEventListener('click',()=>openEditModal(record));
+                 card.querySelector('.close-btn').addEventListener('click',()=>updateDoc(doc(db,`/artifacts/${appId}/public/data/records`,record.id),{isClosed:!record.isClosed}));
+                 card.querySelector('.delete-btn').addEventListener('click',()=>deleteDoc(doc(db,`/artifacts/${appId}/public/data/records`,record.id)));
             }
             return card;
         };
         
         const renderRecords = () => {
-             dom.recordsContainer.innerHTML = '';
-            let filteredRecords = [...allRecords];
-
-            if (currentFilter === 'my' && userId) filteredRecords = filteredRecords.filter(r => r.addedBy === userId);
-            else if (currentFilter === 'open') filteredRecords = filteredRecords.filter(r => !r.isClosed);
-            else if (currentFilter === 'closed') filteredRecords = filteredRecords.filter(r => r.isClosed);
-            
-            if (currentSearch) {
-                 filteredRecords = filteredRecords.filter(r => {
-                    const searchable = Object.values(r).join(' ').toLowerCase();
-                    return searchable.includes(currentSearch);
-                 });
-            }
-            if (currentCategory) filteredRecords = filteredRecords.filter(r => r.category === currentCategory);
-
-            switch (currentSort) {
-                case 'oldest': filteredRecords.sort((a, b) => (a.createdAt?.seconds || 0) - (b.createdAt?.seconds || 0)); break;
-                case 'alpha': filteredRecords.sort((a, b) => a.title.localeCompare(b.title)); break;
-                case 'newest': default: filteredRecords.sort((a, b) => (b.createdAt?.seconds || 0) - (a.createdAt?.seconds || 0)); break;
-            }
-            
-            if (filteredRecords.length === 0) {
-                 dom.recordsContainer.innerHTML = `<p class="text-slate-500 dark:text-slate-400">No records match your current filters.</p>`; return;
-            }
-            filteredRecords.forEach(recordData => dom.recordsContainer.appendChild(renderRecordCard(recordData)));
+             dom.recordsContainer.innerHTML = ''; let filteredRecords = [...allRecords];
+            if (currentFilter==='my') filteredRecords = filteredRecords.filter(r=>r.addedBy===currentUserDisplayName);
+            else if (currentFilter==='open') filteredRecords = filteredRecords.filter(r=>!r.isClosed);
+            else if (currentFilter==='closed') filteredRecords = filteredRecords.filter(r=>r.isClosed);
+            if (currentSearch) filteredRecords=filteredRecords.filter(r=>Object.values(r).join(' ').toLowerCase().includes(currentSearch));
+            if (currentCategory) filteredRecords=filteredRecords.filter(r=>r.category===currentCategory);
+            switch(currentSort){case'oldest':filteredRecords.sort((a,b)=>(a.createdAt?.seconds||0)-(b.createdAt?.seconds||0));break;case'alpha':filteredRecords.sort((a,b)=>a.title.localeCompare(b.title));break;case'newest':default:filteredRecords.sort((a,b)=>(b.createdAt?.seconds||0)-(a.createdAt?.seconds||0));break;}
+            if (filteredRecords.length===0) dom.recordsContainer.innerHTML=`<p class="text-slate-500 dark:text-slate-400">No records match filters.</p>`;
+            else filteredRecords.forEach(recordData=>dom.recordsContainer.appendChild(renderRecordCard(recordData)));
         };
 
         const openEditModal = (record) => {
@@ -283,29 +191,13 @@
             recordsUnsubscribe = onSnapshot(q, (snapshot) => {
                 dom.loadingState.style.display = 'none';
                 allRecords = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-                renderRecords();
-                renderCategoryMenu();
+                renderRecords(); renderCategoryMenu();
             });
         };
 
-        const setupPresence = (user) => {
-            const userStatusDatabaseRef = ref(rtDb, '/status/' + user.uid);
-            const isOfflineForDatabase = { state: 'offline', email: user.email, last_changed: dbServerTimestamp() };
-            const isOnlineForDatabase = { state: 'online', email: user.email, last_changed: dbServerTimestamp() };
-            const connectedRef = ref(rtDb, '.info/connected');
-            onValue(connectedRef, (snap) => { if (snap.val()) onDisconnect(userStatusDatabaseRef).set(isOfflineForDatabase).then(() => set(userStatusDatabaseRef, isOnlineForDatabase)) });
-            const statusRef = ref(rtDb, '/status');
-            onValue(statusRef, (snapshot) => {
-                const onlineUsers = [];
-                snapshot.forEach(child => { if (child.val().state === 'online') onlineUsers.push(child.val().email) });
-                dom.presenceList.innerHTML = onlineUsers.length ? onlineUsers.map(email => `<span class="bg-green-100 dark:bg-green-900 text-green-800 dark:text-green-200 px-1.5 py-0.5 rounded-full">${email}</span>`).join('') : 'No one online.';
-            });
-        };
-        
-        const showApp = (user) => { userId = user.uid; dom.userEmailSpan.textContent = user.email; dom.authContainer.style.display = 'none'; dom.appContainer.style.display = 'block'; setupRecordsListener(); setupPresence(user); };
-        const showLogin = () => { userId = null; dom.authContainer.style.display = 'flex'; dom.appContainer.style.display = 'none'; if (recordsUnsubscribe) recordsUnsubscribe(); };
+        const showApp = () => { dom.authContainer.style.display = 'none'; dom.namePromptModal.classList.add('hidden'); dom.appContainer.style.display = 'block'; dom.userNameDisplay.textContent = currentUserDisplayName; setupRecordsListener(); };
+        const showLogin = () => { dom.authContainer.style.display = 'flex'; dom.appContainer.style.display = 'none'; if (recordsUnsubscribe) recordsUnsubscribe(); };
 
-        // --- EVENT LISTENERS ---
         dom.searchInput.addEventListener('input', (e) => { currentSearch = e.target.value.toLowerCase(); renderRecords(); });
         [dom.sortControls, dom.filterControls].forEach(container => {
             container.addEventListener('click', (e) => {
@@ -314,8 +206,7 @@
                     if (btn.dataset.sort) currentSort = btn.dataset.sort;
                     if (btn.dataset.filter) currentFilter = btn.dataset.filter;
                     container.querySelectorAll('.control-btn').forEach(b => b.classList.remove('active'));
-                    btn.classList.add('active');
-                    renderRecords();
+                    btn.classList.add('active'); renderRecords();
                 }
             });
         });
@@ -323,84 +214,69 @@
         dom.addNewRecordBtn.addEventListener('click', () => { setFormCategory('qa', dom.formFieldsContainer); dom.addRecordModal.classList.remove('hidden'); });
         dom.cancelAdd.addEventListener('click', () => dom.addRecordModal.classList.add('hidden'));
         dom.cancelEdit.addEventListener('click', () => dom.editRecordModal.classList.add('hidden'));
-
-        dom.formCategorySelector.addEventListener('click', (e) => {
-            if (e.target.matches('.form-category-btn')) setFormCategory(e.target.dataset.category, dom.formFieldsContainer);
-        });
+        dom.formCategorySelector.addEventListener('click', (e) => { if (e.target.matches('.form-category-btn')) setFormCategory(e.target.dataset.category, dom.formFieldsContainer); });
 
         dom.addRecordForm.addEventListener('submit', async (e) => {
-            e.preventDefault();
-            const submitBtn = e.target.querySelector('#add-record-submit');
-            const formData = new FormData(dom.addRecordForm);
-            const recordData = Object.fromEntries(formData.entries());
-            if (recordData.title && auth.currentUser) {
+            e.preventDefault(); const submitBtn = e.target.querySelector('#add-record-submit');
+            const formData = new FormData(dom.addRecordForm); const recordData = Object.fromEntries(formData.entries());
+            if (recordData.title && currentUserDisplayName) {
                 submitBtn.disabled = true; submitBtn.textContent = '...';
-                try {
-                    await addDoc(collection(db, `/artifacts/${appId}/public/data/records`), { ...recordData, category: currentFormCategory, addedBy: auth.currentUser.uid, addedByEmail: auth.currentUser.email, createdAt: serverTimestamp(), isClosed: false });
+                try { await addDoc(collection(db, `/artifacts/${appId}/public/data/records`), { ...recordData, category: currentFormCategory, addedBy: currentUserDisplayName, createdAt: serverTimestamp(), isClosed: false });
                     dom.addRecordForm.reset(); dom.addRecordModal.classList.add('hidden');
                 } finally { submitBtn.disabled = false; submitBtn.textContent = 'Add Record'; }
             }
         });
         dom.editRecordForm.addEventListener('submit', async (e) => {
-            e.preventDefault();
-            const submitBtn = e.target.querySelector('#edit-record-submit');
-            const formData = new FormData(dom.editRecordForm);
-            const recordData = Object.fromEntries(formData.entries());
-            const recordId = recordData.id;
-            delete recordData.id;
+            e.preventDefault(); const submitBtn = e.target.querySelector('#edit-record-submit');
+            const formData = new FormData(dom.editRecordForm); const recordData = Object.fromEntries(formData.entries());
+            const recordId = recordData.id; delete recordData.id;
             if (recordId && recordData.title) {
                 submitBtn.disabled = true; submitBtn.textContent = '...';
-                try {
-                    await updateDoc(doc(db, `/artifacts/${appId}/public/data/records`, recordId), recordData);
-                    dom.editRecordModal.classList.add('hidden');
-                } finally { submitBtn.disabled = false; submitBtn.textContent = 'Save Changes'; }
+                try { await updateDoc(doc(db, `/artifacts/${appId}/public/data/records`, recordId), recordData); dom.editRecordModal.classList.add('hidden'); } finally { submitBtn.disabled = false; submitBtn.textContent = 'Save Changes'; }
             }
         });
 
-        onAuthStateChanged(auth, (user) => {
-            dom.authMessageEl.classList.add('hidden');
-            dom.authErrorEl.textContent = '';
-            if (user) showApp(user); else showLogin();
+        dom.authForm.addEventListener('submit', (e) => {
+            e.preventDefault(); dom.authErrorEl.textContent = '';
+            if (dom.authPasswordInput.value === SHARED_PASSWORD) {
+                sessionStorage.setItem('isLoggedIn', 'true');
+                if (sessionStorage.getItem('displayName')) {
+                    currentUserDisplayName = sessionStorage.getItem('displayName');
+                    showApp();
+                } else {
+                    dom.namePromptModal.classList.remove('hidden');
+                }
+            } else { dom.authErrorEl.textContent = 'Incorrect password.'; }
         });
 
-        dom.loginBtn.addEventListener('click', async () => {
-            dom.authErrorEl.textContent = ''; dom.authMessageEl.classList.add('hidden');
-            if (!auth) {
-                dom.authErrorEl.textContent = 'Auth service not ready. Check API keys.';
-                return;
+        dom.namePromptForm.addEventListener('submit', (e) => {
+            e.preventDefault();
+            const name = document.getElementById('user-display-name').value.trim();
+            if (name) {
+                currentUserDisplayName = name;
+                sessionStorage.setItem('displayName', name);
+                showApp();
             }
-            try { 
-                await signInWithEmailAndPassword(auth, dom.authEmailInput.value, dom.authPasswordInput.value); 
-            } catch (error) { 
-                dom.authErrorEl.textContent = `Login failed: ${error.code || error.message}`; 
-            }
         });
 
-        dom.registerBtn.addEventListener('click', async () => {
-            dom.authErrorEl.textContent = ''; dom.authMessageEl.classList.add('hidden');
-            const email = dom.authEmailInput.value, password = dom.authPasswordInput.value;
-            if (!email.endsWith('@sam-tech.co.uk')) { dom.authErrorEl.textContent = `Registration only for @sam-tech.co.uk emails.`; return; }
-            try {
-                await createUserWithEmailAndPassword(auth, email, password);
-                showAuthMessage('Registration successful! Logging you in...', 'success');
-            } catch (error) { dom.authErrorEl.textContent = `Registration failed: ${error.code}`; }
-        });
-
-        dom.logoutBtn.addEventListener('click', () => signOut(auth));
+        dom.logoutBtn.addEventListener('click', () => { sessionStorage.clear(); showLogin(); });
         
         const applyTheme = () => {
             if (localStorage.getItem('theme') === 'dark') {
-                document.documentElement.classList.add('dark');
-                dom.sunIcon.classList.add('hidden'); dom.moonIcon.classList.remove('hidden');
+                document.documentElement.classList.add('dark'); dom.sunIcon.classList.add('hidden'); dom.moonIcon.classList.remove('hidden');
             } else {
-                document.documentElement.classList.remove('dark');
-                dom.sunIcon.classList.remove('hidden'); dom.moonIcon.classList.add('hidden');
+                document.documentElement.classList.remove('dark'); dom.sunIcon.classList.remove('hidden'); dom.moonIcon.classList.add('hidden');
             }
         };
-        dom.darkModeToggle.addEventListener('click', () => {
-            localStorage.setItem('theme', document.documentElement.classList.contains('dark') ? 'light' : 'dark');
-            applyTheme();
-        });
+        dom.darkModeToggle.addEventListener('click', () => { localStorage.setItem('theme', document.documentElement.classList.contains('dark') ? 'light' : 'dark'); applyTheme(); });
+        
+        // Initial Page Load
+        if (sessionStorage.getItem('isLoggedIn') === 'true' && sessionStorage.getItem('displayName')) {
+            currentUserDisplayName = sessionStorage.getItem('displayName');
+            showApp();
+        } else {
+            showLogin();
+        }
         applyTheme();
 
     </script>
