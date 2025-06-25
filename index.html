@@ -9,18 +9,23 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
     <style>
+        html { scroll-behavior: smooth; }
         body { font-family: 'Inter', sans-serif; background-color: #f1f5f9; }
+        .dark body { background-color: #0f172a; }
         .custom-scrollbar::-webkit-scrollbar { width: 8px; }
         .custom-scrollbar::-webkit-scrollbar-track { background: #f1f5f9; }
+        .dark .custom-scrollbar::-webkit-scrollbar-track { background: #1e293b; }
         .custom-scrollbar::-webkit-scrollbar-thumb { background: #94a3b8; border-radius: 4px; }
+        .dark .custom-scrollbar::-webkit-scrollbar-thumb { background: #475569; }
         .custom-scrollbar::-webkit-scrollbar-thumb:hover { background: #64748b; }
         #auth-container, #app-container { display: none; }
         .message-box { animation: fadeIn 0.3s ease-out; }
         @keyframes fadeIn { from { opacity: 0; transform: translateY(-10px); } to { opacity: 1; transform: translateY(0); } }
         .sort-btn.active { background-color: #4f46e5; color: white; }
+        .dark .sort-btn.active { background-color: #6366f1; }
     </style>
 </head>
-<body class="bg-slate-100 text-slate-800">
+<body class="text-slate-800 dark:text-slate-200">
 
     <!-- Authentication Container -->
     <div id="auth-container" class="min-h-screen flex items-center justify-center p-4">
@@ -51,43 +56,56 @@
         <header class="mb-6">
             <div class="flex justify-between items-start">
                 <div>
-                    <h1 class="text-3xl sm:text-4xl font-bold text-slate-900">Collaborative Link Board</h1>
-                    <p class="text-slate-600 mt-1">Share, discuss, and edit web links in real-time.</p>
+                    <h1 class="text-3xl sm:text-4xl font-bold text-slate-900 dark:text-white">Collaborative Link Board</h1>
+                    <p class="text-slate-600 dark:text-slate-400 mt-1">Share, discuss, and edit web links in real-time.</p>
                 </div>
-                <button id="logout-btn" class="bg-red-500 text-white font-semibold px-4 py-2 rounded-lg hover:bg-red-600">Logout</button>
+                <div class="flex items-center gap-4">
+                    <button id="dark-mode-toggle" class="p-2 rounded-full hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-500 dark:text-slate-400" title="Toggle Dark Mode">
+                        <!-- Sun Icon -->
+                        <svg id="sun-icon" xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z" /></svg>
+                        <!-- Moon Icon -->
+                        <svg id="moon-icon" xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 hidden" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z" /></svg>
+                    </button>
+                    <button id="logout-btn" class="bg-red-500 text-white font-semibold px-4 py-2 rounded-lg hover:bg-red-600">Logout</button>
+                </div>
             </div>
-            <div class="mt-4 flex flex-wrap gap-4 justify-between items-start bg-white p-3 rounded-lg shadow-sm">
-                <div class="text-xs text-slate-500">
+            <div class="mt-4 flex flex-wrap gap-4 justify-between items-start bg-white dark:bg-slate-800 p-3 rounded-lg shadow-sm">
+                <div class="text-xs text-slate-500 dark:text-slate-400">
                     Signed in as: <span id="user-email" class="font-mono font-semibold">Loading...</span>
                 </div>
                 <div class="text-xs">
-                    <h3 class="font-semibold text-slate-600 mb-1">Currently Online:</h3>
-                    <div id="presence-list" class="text-slate-500 flex flex-wrap gap-x-2 gap-y-1">No one online.</div>
+                    <h3 class="font-semibold text-slate-600 dark:text-slate-300 mb-1">Currently Online:</h3>
+                    <div id="presence-list" class="text-slate-500 dark:text-slate-400 flex flex-wrap gap-x-2 gap-y-1">No one online.</div>
                 </div>
             </div>
         </header>
         
-        <div class="bg-white p-6 rounded-xl shadow-lg mb-8">
-            <h2 class="text-xl font-semibold mb-4">Add a New Link</h2>
+        <div class="bg-white dark:bg-slate-800 p-6 rounded-xl shadow-lg mb-8">
+            <h2 class="text-xl font-semibold mb-4 text-slate-900 dark:text-white">Add a New Link</h2>
             <form id="add-link-form">
                 <div class="space-y-4">
-                    <input id="link-title" type="text" placeholder="Enter Q&A ID and Title" class="w-full px-4 py-2 border border-slate-300 rounded-lg" required>
-                    <input id="link-url" type="url" placeholder="Enter full URL (e.g., https://example.com)" class="w-full px-4 py-2 border border-slate-300 rounded-lg" required>
-                    <input id="link-tags" type="text" placeholder="Add tags, separated by commas (e.g. urgent, docs)" class="w-full px-4 py-2 border border-slate-300 rounded-lg">
+                    <input id="link-title" type="text" placeholder="Enter Q&A ID and Title" class="w-full px-4 py-2 border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-700 rounded-lg" required>
+                    <input id="link-url" type="url" placeholder="Enter full URL (e.g., https://example.com)" class="w-full px-4 py-2 border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-700 rounded-lg" required>
+                    <input id="link-tags" type="text" placeholder="Add tags, separated by commas (e.g. urgent, docs)" class="w-full px-4 py-2 border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-700 rounded-lg">
                 </div>
-                <button type="submit" class="mt-4 w-full sm:w-auto bg-indigo-600 text-white font-semibold px-6 py-2 rounded-lg hover:bg-indigo-700">Share Link</button>
+                <button type="submit" id="add-link-submit" class="mt-4 w-full sm:w-auto bg-indigo-600 text-white font-semibold px-6 py-2 rounded-lg hover:bg-indigo-700 disabled:opacity-50 disabled:cursor-wait">Share Link</button>
             </form>
         </div>
 
         <!-- Controls -->
-        <div class="bg-white p-4 rounded-xl shadow-lg mb-8 space-y-4">
-            <input id="search-input" type="search" placeholder="&#x1F50D; Search by title..." class="w-full px-4 py-2 border border-slate-300 rounded-lg">
+        <div class="bg-white dark:bg-slate-800 p-4 rounded-xl shadow-lg mb-8 space-y-4">
+            <input id="search-input" type="search" placeholder="&#x1F50D; Search by title..." class="w-full px-4 py-2 border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-700 rounded-lg">
             <div class="flex flex-wrap items-center gap-2">
-                <span class="text-sm font-semibold">Sort by:</span>
+                <span class="text-sm font-semibold">Show:</span>
+                <div id="filter-controls" class="flex flex-wrap gap-2">
+                     <button class="filter-btn text-sm px-3 py-1 rounded-full border border-slate-300 dark:border-slate-600 hover:bg-slate-100 dark:hover:bg-slate-700 active" data-filter="all">All Links</button>
+                     <button class="filter-btn text-sm px-3 py-1 rounded-full border border-slate-300 dark:border-slate-600 hover:bg-slate-100 dark:hover:bg-slate-700" data-filter="my">My Links</button>
+                </div>
+                <span class="text-sm font-semibold ml-4">Sort by:</span>
                 <div id="sort-controls" class="flex flex-wrap gap-2">
-                    <button class="sort-btn text-sm px-3 py-1 rounded-full border border-slate-300 hover:bg-slate-100 active" data-sort="newest">Newest</button>
-                    <button class="sort-btn text-sm px-3 py-1 rounded-full border border-slate-300 hover:bg-slate-100" data-sort="oldest">Oldest</button>
-                    <button class="sort-btn text-sm px-3 py-1 rounded-full border border-slate-300 hover:bg-slate-100" data-sort="alpha">A-Z</button>
+                    <button class="sort-btn text-sm px-3 py-1 rounded-full border border-slate-300 dark:border-slate-600 hover:bg-slate-100 dark:hover:bg-slate-700 active" data-sort="newest">Newest</button>
+                    <button class="sort-btn text-sm px-3 py-1 rounded-full border border-slate-300 dark:border-slate-600 hover:bg-slate-100 dark:hover:bg-slate-700" data-sort="oldest">Oldest</button>
+                    <button class="sort-btn text-sm px-3 py-1 rounded-full border border-slate-300 dark:border-slate-600 hover:bg-slate-100 dark:hover:bg-slate-700" data-sort="alpha">A-Z</button>
                 </div>
                  <div id="active-tag-filter" class="hidden ml-auto"></div>
             </div>
@@ -100,7 +118,24 @@
         </div>
     </div>
 
-    <!-- Edit Modal (omitted for brevity, but would be here) -->
+    <!-- Edit Link Modal -->
+    <div id="edit-modal" class="fixed inset-0 bg-black bg-opacity-70 flex items-center justify-center p-4 hidden">
+        <div class="bg-white dark:bg-slate-800 rounded-xl shadow-2xl p-6 w-full max-w-lg">
+            <h2 class="text-xl font-semibold mb-4 text-slate-900 dark:text-white">Edit Link</h2>
+            <form id="edit-link-form">
+                <input type="hidden" id="edit-link-id">
+                <div class="space-y-4">
+                    <input id="edit-link-title" type="text" placeholder="Enter Q&A ID and Title" class="w-full px-4 py-2 border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-700 rounded-lg" required>
+                    <input id="edit-link-url" type="url" placeholder="Enter full URL" class="w-full px-4 py-2 border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-700 rounded-lg" required>
+                    <input id="edit-link-tags" type="text" placeholder="Add tags, separated by commas" class="w-full px-4 py-2 border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-700 rounded-lg">
+                </div>
+                <div class="mt-6 flex justify-end space-x-3">
+                    <button type="button" id="cancel-edit" class="bg-slate-200 dark:bg-slate-600 text-slate-800 dark:text-slate-200 font-semibold px-4 py-2 rounded-lg hover:bg-slate-300 dark:hover:bg-slate-500">Cancel</button>
+                    <button type="submit" id="edit-link-submit" class="bg-indigo-600 text-white font-semibold px-4 py-2 rounded-lg hover:bg-indigo-700 disabled:opacity-50">Save Changes</button>
+                </div>
+            </form>
+        </div>
+    </div>
 
     <script type="module">
         import { initializeApp, getApps, getApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
@@ -116,6 +151,7 @@
         let currentSort = 'newest';
         let currentSearch = '';
         let currentTag = '';
+        let currentFilter = 'all';
 
         try {
             app = getApps().length ? getApp() : initializeApp(firebaseConfig);
@@ -126,22 +162,29 @@
             console.error("Firebase initialization failed:", e);
         }
 
-        const authContainer = document.getElementById('auth-container'), appContainer = document.getElementById('app-container'), addLinkForm = document.getElementById('add-link-form'), linksContainer = document.getElementById('links-container'), loadingState = document.getElementById('loading-state'), searchInput = document.getElementById('search-input'), sortControls = document.getElementById('sort-controls'), userEmailSpan = document.getElementById('user-email'), logoutBtn = document.getElementById('logout-btn'), presenceList = document.getElementById('presence-list'), activeTagFilter = document.getElementById('active-tag-filter'), authErrorEl = document.getElementById('auth-error'), authMessageEl = document.getElementById('auth-message'), loginBtn = document.getElementById('login-btn'), registerBtn = document.getElementById('register-btn');
+        const dom = { authContainer: document.getElementById('auth-container'), appContainer: document.getElementById('app-container'), addLinkForm: document.getElementById('add-link-form'), linksContainer: document.getElementById('links-container'), loadingState: document.getElementById('loading-state'), searchInput: document.getElementById('search-input'), sortControls: document.getElementById('sort-controls'), filterControls: document.getElementById('filter-controls'), userEmailSpan: document.getElementById('user-email'), logoutBtn: document.getElementById('logout-btn'), presenceList: document.getElementById('presence-list'), activeTagFilter: document.getElementById('active-tag-filter'), authErrorEl: document.getElementById('auth-error'), authMessageEl: document.getElementById('auth-message'), loginBtn: document.getElementById('login-btn'), registerBtn: document.getElementById('register-btn'), darkModeToggle: document.getElementById('dark-mode-toggle'), sunIcon: document.getElementById('sun-icon'), moonIcon: document.getElementById('moon-icon'), editModal: document.getElementById('edit-modal'), editLinkForm: document.getElementById('edit-link-form'), cancelEdit: document.getElementById('cancel-edit') };
 
         const showAuthMessage = (message, type = 'success') => {
-            authMessageEl.innerHTML = message;
+            dom.authMessageEl.innerHTML = message;
             let colors = 'bg-green-100 text-green-800';
             if (type === 'error') colors = 'bg-red-100 text-red-800';
-            authMessageEl.className = `message-box mb-4 p-4 text-sm rounded-lg ${colors}`;
-            authMessageEl.classList.remove('hidden');
+            dom.authMessageEl.className = `message-box mb-4 p-4 text-sm rounded-lg ${colors}`;
+            dom.authMessageEl.classList.remove('hidden');
         };
         
         const renderLinks = () => {
-            linksContainer.innerHTML = '';
+            dom.linksContainer.innerHTML = '';
             let filteredLinks = [...allLinks];
 
-            if (currentSearch) filteredLinks = filteredLinks.filter(link => link.title.toLowerCase().includes(currentSearch));
-            if (currentTag) filteredLinks = filteredLinks.filter(link => link.tags && link.tags.includes(currentTag));
+            if (currentFilter === 'my' && userId) {
+                 filteredLinks = filteredLinks.filter(link => link.addedBy === userId);
+            }
+            if (currentSearch) {
+                filteredLinks = filteredLinks.filter(link => link.title.toLowerCase().includes(currentSearch));
+            }
+            if (currentTag) {
+                filteredLinks = filteredLinks.filter(link => link.tags && link.tags.includes(currentTag));
+            }
 
             switch (currentSort) {
                 case 'oldest': filteredLinks.sort((a, b) => (a.createdAt?.seconds || 0) - (b.createdAt?.seconds || 0)); break;
@@ -150,71 +193,91 @@
             }
             
             if (filteredLinks.length === 0) {
-                 linksContainer.innerHTML = `<p class="text-slate-500">No links match your current filters.</p>`;
+                 dom.linksContainer.innerHTML = `<p class="text-slate-500 dark:text-slate-400">No links match your current filters.</p>`;
                  return;
             }
 
             filteredLinks.forEach(linkData => {
                 const card = document.createElement('div');
-                card.className = "bg-white p-5 rounded-xl shadow-lg";
+                card.className = "bg-white dark:bg-slate-800 p-5 rounded-xl shadow-lg";
                 let url = linkData.url;
                 if (!url.startsWith('http')) url = 'https://' + url;
 
                 card.innerHTML = `
                     <div class="flex justify-between items-start">
                         <div>
-                            <a href="${url}" target="_blank" rel="noopener noreferrer" class="text-lg font-semibold text-indigo-700 hover:underline break-all">${linkData.title}</a>
-                            <div class="mt-2 flex flex-wrap gap-2">${linkData.tags ? linkData.tags.map(tag => `<button class="tag-btn text-xs bg-sky-100 text-sky-800 px-2 py-0.5 rounded-full hover:bg-sky-200" data-tag="${tag}">${tag}</button>`).join('') : ''}</div>
-                            <p class="text-sm text-slate-500 break-all mt-2">${linkData.url}</p>
-                            <p class="text-xs text-slate-400 mt-1">Added by: <span class="font-mono">${linkData.addedByEmail}</span></p>
+                            <a href="${url}" target="_blank" rel="noopener noreferrer" class="text-lg font-semibold text-indigo-700 dark:text-indigo-400 hover:underline break-all">${linkData.title}</a>
+                            <div class="mt-2 flex flex-wrap gap-2">${linkData.tags ? linkData.tags.map(tag => `<button class="tag-btn text-xs bg-sky-100 dark:bg-sky-900 text-sky-800 dark:text-sky-200 px-2 py-0.5 rounded-full hover:bg-sky-200 dark:hover:bg-sky-800" data-tag="${tag}">${tag}</button>`).join('') : ''}</div>
+                            <p class="text-sm text-slate-500 dark:text-slate-400 break-all mt-2">${linkData.url}</p>
+                            <p class="text-xs text-slate-400 dark:text-slate-500 mt-1">Added by: <span class="font-mono">${linkData.addedByEmail}</span></p>
                         </div>
-                        ${linkData.addedBy === userId ? `<div class="flex-shrink-0 ml-4 space-x-2"><button class="delete-btn text-slate-500 hover:text-red-600 transition">&#10006;</button></div>` : ''}
+                        ${linkData.addedBy === userId ? `<div class="flex-shrink-0 ml-4 space-x-2"><button class="edit-btn text-slate-500 dark:text-slate-400 hover:text-indigo-600 dark:hover:text-indigo-400 transition">&#9998;</button><button class="delete-btn text-slate-500 dark:text-slate-400 hover:text-red-600 dark:hover:text-red-500 transition">&#10006;</button></div>` : ''}
                     </div>
-                    <div class="mt-4 pt-4 border-t border-slate-200">
+                    <div class="mt-4 pt-4 border-t border-slate-200 dark:border-slate-700">
                         <h4 class="text-sm font-semibold mb-2">Comments</h4>
-                        <div class="comments-list space-y-3 max-h-60 overflow-y-auto custom-scrollbar pr-2">${(linkData.comments && linkData.comments.length > 0) ? linkData.comments.map(c => `<div class="bg-slate-100 p-3 rounded-lg text-sm"><p class="break-words whitespace-pre-wrap">${c.text || ''}</p><p class="text-xs text-slate-500 mt-2">By: <span class="font-mono">${c.commentByEmail}</span></p></div>`).join('') : '<p class="text-xs text-slate-400">No comments yet.</p>'}</div>
-                        <form class="add-comment-form mt-3 flex items-start gap-2"><textarea placeholder="Add a comment..." class="flex-grow w-full text-sm px-3 py-2 border border-slate-300 rounded-lg" rows="2"></textarea><button type="submit" class="bg-slate-600 text-white font-semibold text-sm px-4 py-2 rounded-lg hover:bg-slate-700 flex-shrink-0">Post</button></form>
+                        <div class="comments-list space-y-3 max-h-60 overflow-y-auto custom-scrollbar pr-2">${(linkData.comments && linkData.comments.length > 0) ? linkData.comments.map(c => `<div class="bg-slate-100 dark:bg-slate-700 p-3 rounded-lg text-sm"><p class="break-words whitespace-pre-wrap">${c.text || ''}</p><p class="text-xs text-slate-500 dark:text-slate-400 mt-2">By: <span class="font-mono">${c.commentByEmail}</span></p></div>`).join('') : '<p class="text-xs text-slate-400 dark:text-slate-500">No comments yet.</p>'}</div>
+                        <form class="add-comment-form mt-3 flex items-start gap-2"><textarea placeholder="Add a comment..." class="flex-grow w-full text-sm px-3 py-2 border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-700 rounded-lg" rows="2"></textarea><button type="submit" class="bg-slate-600 text-white font-semibold text-sm px-4 py-2 rounded-lg hover:bg-slate-700 flex-shrink-0 disabled:opacity-50">Post</button></form>
                     </div>`;
                 
                 if (linkData.addedBy === userId) {
+                    card.querySelector('.edit-btn').addEventListener('click', () => openEditModal(linkData));
                     card.querySelector('.delete-btn').addEventListener('click', () => deleteDoc(doc(db, `/artifacts/${appId}/public/data/links`, linkData.id)));
                 }
-                card.querySelector('.add-comment-form').addEventListener('submit', (e) => {
+                card.querySelector('.add-comment-form').addEventListener('submit', async (e) => {
                     e.preventDefault();
-                    const textarea = e.target.querySelector('textarea');
+                    const form = e.target;
+                    const textarea = form.querySelector('textarea');
                     const text = textarea.value.trim();
+                    const submitBtn = form.querySelector('button');
                     if (!text || !auth.currentUser) return;
-                    const newComment = { text, commentBy: auth.currentUser.uid, commentByEmail: auth.currentUser.email, createdAt: new Date() };
-                    updateDoc(doc(db, `/artifacts/${appId}/public/data/links`, linkData.id), { comments: arrayUnion(newComment) });
-                    textarea.value = '';
+                    
+                    submitBtn.disabled = true;
+                    submitBtn.textContent = '...';
+                    try {
+                        const newComment = { text, commentBy: auth.currentUser.uid, commentByEmail: auth.currentUser.email, createdAt: new Date() };
+                        await updateDoc(doc(db, `/artifacts/${appId}/public/data/links`, linkData.id), { comments: arrayUnion(newComment) });
+                        textarea.value = '';
+                    } catch (error) {
+                        console.error("Failed to add comment: ", error);
+                    } finally {
+                        submitBtn.disabled = false;
+                        submitBtn.textContent = 'Post';
+                    }
                 });
 
-                card.querySelectorAll('.tag-btn').forEach(btn => {
-                    btn.addEventListener('click', () => {
-                        currentTag = btn.dataset.tag;
-                        activeTagFilter.innerHTML = `Filtering by tag: <strong class="bg-sky-100 text-sky-800 px-2 py-0.5 rounded-full">${currentTag}</strong> <button id="clear-tag-filter" class="ml-1 text-red-500 font-bold">✖</button>`;
-                        activeTagFilter.classList.remove('hidden');
-                        document.getElementById('clear-tag-filter').addEventListener('click', () => {
-                             currentTag = '';
-                             activeTagFilter.classList.add('hidden');
-                             renderLinks();
-                        });
-                        renderLinks();
+                card.querySelectorAll('.tag-btn').forEach(btn => btn.addEventListener('click', () => {
+                    currentTag = btn.dataset.tag;
+                    dom.activeTagFilter.innerHTML = `Filtering by: <strong class="bg-sky-100 dark:bg-sky-900 text-sky-800 dark:text-sky-200 px-2 py-0.5 rounded-full">${currentTag}</strong> <button id="clear-tag-filter" class="ml-1 text-red-500 font-bold">✖</button>`;
+                    dom.activeTagFilter.classList.remove('hidden');
+                    document.getElementById('clear-tag-filter').addEventListener('click', () => {
+                         currentTag = '';
+                         dom.activeTagFilter.classList.add('hidden');
+                         renderLinks();
                     });
-                });
+                    renderLinks();
+                }));
 
-                linksContainer.appendChild(card);
+                dom.linksContainer.appendChild(card);
             });
         };
+        
+        const openEditModal = (linkData) => {
+            const form = dom.editLinkForm;
+            form.querySelector('#edit-link-id').value = linkData.id;
+            form.querySelector('#edit-link-title').value = linkData.title;
+            form.querySelector('#edit-link-url').value = linkData.url;
+            form.querySelector('#edit-link-tags').value = linkData.tags ? linkData.tags.join(', ') : '';
+            dom.editModal.classList.remove('hidden');
+        }
 
         const setupLinksListener = () => {
             if (linksUnsubscribe) linksUnsubscribe();
             const q = collection(db, `/artifacts/${appId}/public/data/links`);
             linksUnsubscribe = onSnapshot(q, (snapshot) => {
-                loadingState.style.display = 'none';
+                dom.loadingState.style.display = 'none';
                 allLinks = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
                 renderLinks();
-            }, (error) => { console.error("Firestore snapshot error: ", error); loadingState.textContent = "Error loading links."});
+            });
         };
 
         const setupPresence = (user) => {
@@ -223,106 +286,153 @@
             const isOnlineForDatabase = { state: 'online', email: user.email, last_changed: dbServerTimestamp() };
             const connectedRef = ref(rtDb, '.info/connected');
             onValue(connectedRef, (snap) => {
-                if (snap.val() === true) {
-                    onDisconnect(userStatusDatabaseRef).set(isOfflineForDatabase).then(() => set(userStatusDatabaseRef, isOnlineForDatabase));
-                }
+                if (snap.val() === true) onDisconnect(userStatusDatabaseRef).set(isOfflineForDatabase).then(() => set(userStatusDatabaseRef, isOnlineForDatabase));
             });
             const statusRef = ref(rtDb, '/status');
             onValue(statusRef, (snapshot) => {
                 const onlineUsers = [];
-                snapshot.forEach(childSnapshot => {
-                    const userStatus = childSnapshot.val();
-                    if (userStatus.state === 'online') onlineUsers.push(userStatus.email);
-                });
-                presenceList.innerHTML = onlineUsers.length ? onlineUsers.map(email => `<span class="bg-green-100 text-green-800 px-1.5 py-0.5 rounded-full">${email}</span>`).join('') : 'No one online.';
+                snapshot.forEach(child => { if (child.val().state === 'online') onlineUsers.push(child.val().email) });
+                dom.presenceList.innerHTML = onlineUsers.length ? onlineUsers.map(email => `<span class="bg-green-100 dark:bg-green-900 text-green-800 dark:text-green-200 px-1.5 py-0.5 rounded-full">${email}</span>`).join('') : 'No one online.';
             });
         };
         
         const showApp = (user) => {
             userId = user.uid;
-            userEmailSpan.textContent = user.email;
-            authContainer.style.display = 'none';
-            appContainer.style.display = 'block';
+            dom.userEmailSpan.textContent = user.email;
+            dom.authContainer.style.display = 'none';
+            dom.appContainer.style.display = 'block';
             setupLinksListener();
             setupPresence(user);
         };
 
         const showLogin = () => {
             userId = null;
-            authContainer.style.display = 'flex';
-            appContainer.style.display = 'none';
-            if (linksUnsubscribe) {
-                linksUnsubscribe();
-                linksUnsubscribe = null;
-            }
+            dom.authContainer.style.display = 'flex';
+            dom.appContainer.style.display = 'none';
+            if (linksUnsubscribe) linksUnsubscribe();
         };
 
-        searchInput.addEventListener('input', (e) => { currentSearch = e.target.value.toLowerCase(); renderLinks(); });
-        sortControls.addEventListener('click', (e) => {
+        // --- EVENT LISTENERS ---
+        dom.searchInput.addEventListener('input', (e) => { currentSearch = e.target.value.toLowerCase(); renderLinks(); });
+        dom.sortControls.addEventListener('click', (e) => {
             if (e.target.classList.contains('sort-btn')) {
                 currentSort = e.target.dataset.sort;
-                sortControls.querySelectorAll('.sort-btn').forEach(btn => btn.classList.remove('active'));
+                dom.sortControls.querySelectorAll('.sort-btn').forEach(btn => btn.classList.remove('active'));
+                e.target.classList.add('active');
+                renderLinks();
+            }
+        });
+         dom.filterControls.addEventListener('click', (e) => {
+            if (e.target.classList.contains('filter-btn')) {
+                currentFilter = e.target.dataset.filter;
+                dom.filterControls.querySelectorAll('.filter-btn').forEach(btn => btn.classList.remove('active'));
                 e.target.classList.add('active');
                 renderLinks();
             }
         });
 
-        addLinkForm.addEventListener('submit', async (e) => {
+        dom.addLinkForm.addEventListener('submit', async (e) => {
             e.preventDefault();
+            const submitBtn = e.target.querySelector('#add-link-submit');
             const title = e.target.querySelector('#link-title').value.trim();
             const url = e.target.querySelector('#link-url').value.trim();
             const tagsRaw = e.target.querySelector('#link-tags').value.trim();
             if (title && url && auth.currentUser) {
-                const tags = tagsRaw ? tagsRaw.split(',').map(tag => tag.trim()).filter(Boolean) : [];
-                await addDoc(collection(db, `/artifacts/${appId}/public/data/links`), { title, url, tags, addedBy: auth.currentUser.uid, addedByEmail: auth.currentUser.email, createdAt: serverTimestamp(), comments: [] });
-                addLinkForm.reset();
+                submitBtn.disabled = true;
+                submitBtn.textContent = 'Sharing...';
+                try {
+                    const tags = tagsRaw ? tagsRaw.split(',').map(tag => tag.trim()).filter(Boolean) : [];
+                    await addDoc(collection(db, `/artifacts/${appId}/public/data/links`), { title, url, tags, addedBy: auth.currentUser.uid, addedByEmail: auth.currentUser.email, createdAt: serverTimestamp(), comments: [] });
+                    dom.addLinkForm.reset();
+                } catch (error) {
+                    console.error("Error adding link: ", error);
+                } finally {
+                    submitBtn.disabled = false;
+                    submitBtn.textContent = 'Share Link';
+                }
             }
         });
 
-        // --- PRIMARY AUTH LOGIC (SIMPLIFIED) ---
+        dom.editLinkForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const submitBtn = e.target.querySelector('#edit-link-submit');
+            const id = e.target.querySelector('#edit-link-id').value;
+            const title = e.target.querySelector('#edit-link-title').value.trim();
+            const url = e.target.querySelector('#edit-link-url').value.trim();
+            const tagsRaw = e.target.querySelector('#edit-link-tags').value.trim();
+            if (id && title && url) {
+                submitBtn.disabled = true;
+                try {
+                    const tags = tagsRaw ? tagsRaw.split(',').map(tag => tag.trim()).filter(Boolean) : [];
+                    await updateDoc(doc(db, `/artifacts/${appId}/public/data/links`, id), { title, url, tags });
+                    dom.editModal.classList.add('hidden');
+                } catch(error) {
+                    console.error("Error updating link: ", error);
+                } finally {
+                    submitBtn.disabled = false;
+                }
+            }
+        });
+        dom.cancelEdit.addEventListener('click', () => dom.editModal.classList.add('hidden'));
+
+        // --- PRIMARY AUTH LOGIC ---
         onAuthStateChanged(auth, (user) => {
-            authMessageEl.classList.add('hidden');
-            authErrorEl.textContent = '';
+            dom.authMessageEl.classList.add('hidden');
+            dom.authErrorEl.textContent = '';
             if (user) {
-                // If a user object exists, they are authenticated. Show the app.
                 showApp(user);
             } else {
-                // If no user object, show the login page.
                 showLogin();
             }
         });
 
-        loginBtn.addEventListener('click', async () => {
-            authErrorEl.textContent = '';
-            authMessageEl.classList.add('hidden');
+        dom.loginBtn.addEventListener('click', async () => {
+            dom.authErrorEl.textContent = '';
+            dom.authMessageEl.classList.add('hidden');
             try {
-                await signInWithEmailAndPassword(auth, authEmailInput.value, authPasswordInput.value);
-                // onAuthStateChanged will handle the UI switch automatically.
+                await signInWithEmailAndPassword(auth, dom.authEmailInput.value, dom.authPasswordInput.value);
             } catch (error) { 
-                authErrorEl.textContent = `Login failed: ${error.code}`; 
+                dom.authErrorEl.textContent = `Login failed: ${error.code}`; 
             }
         });
 
-        registerBtn.addEventListener('click', async () => {
-            authErrorEl.textContent = '';
-            authMessageEl.classList.add('hidden');
-            const email = authEmailInput.value;
-            const password = authPasswordInput.value;
+        dom.registerBtn.addEventListener('click', async () => {
+            dom.authErrorEl.textContent = '';
+            dom.authMessageEl.classList.add('hidden');
+            const email = dom.authEmailInput.value;
+            const password = dom.authPasswordInput.value;
             if (!email.endsWith('@sam-tech.co.uk')) {
-                authErrorEl.textContent = `Registration only for @sam-tech.co.uk emails.`; 
+                dom.authErrorEl.textContent = `Registration only for @sam-tech.co.uk emails.`; 
                 return;
             }
             try {
                 await createUserWithEmailAndPassword(auth, email, password);
-                // onAuthStateChanged will handle the UI switch automatically.
-                // You can optionally show a success message here, but it's not required.
-                showAuthMessage('Registration successful! You can now log in.', 'success');
+                // onAuthStateChanged will automatically log them in.
+                showAuthMessage('Registration successful! Logging you in...', 'success');
             } catch (error) { 
-                authErrorEl.textContent = `Registration failed: ${error.code}`; 
+                dom.authErrorEl.textContent = `Registration failed: ${error.code}`; 
             }
         });
 
-        logoutBtn.addEventListener('click', () => signOut(auth));
+        dom.logoutBtn.addEventListener('click', () => signOut(auth));
+        
+        // --- DARK MODE LOGIC ---
+        const applyTheme = () => {
+            if (localStorage.getItem('theme') === 'dark') {
+                document.documentElement.classList.add('dark');
+                dom.sunIcon.classList.add('hidden');
+                dom.moonIcon.classList.remove('hidden');
+            } else {
+                document.documentElement.classList.remove('dark');
+                dom.sunIcon.classList.remove('hidden');
+                dom.moonIcon.classList.add('hidden');
+            }
+        };
+        dom.darkModeToggle.addEventListener('click', () => {
+            localStorage.setItem('theme', document.documentElement.classList.contains('dark') ? 'light' : 'dark');
+            applyTheme();
+        });
+        applyTheme();
 
     </script>
 </body>
