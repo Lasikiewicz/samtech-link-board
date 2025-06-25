@@ -6,7 +6,7 @@ const appId = 'samtech-record-board';
 const SHARED_PASSWORD = "__SHARED_PASSWORD__" || "samtech";
 
 let app, db, recordsUnsubscribe;
-let fetchedRecords = [];
+let allRecords = []; // This will hold the full dataset from the current main filter
 let groupedFaults = {};
 let currentSort = 'newest', currentSearch = '', currentCategory = '', currentFilter = 'all', currentUserDisplayName = '';
 let recordToDelete = null;
@@ -60,7 +60,7 @@ const setFormCategory = (category, container, record = {}) => {
 const formatDateTime = (timestamp) => timestamp?.seconds ? new Date(timestamp.seconds * 1000).toLocaleString('en-GB', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' }) : 'N/A';
 
 const groupCommonFaults = () => {
-    const commonFaults = fetchedRecords.filter(r => r.category === 'common-fault');
+    const commonFaults = allRecords.filter(r => r.category === 'common-fault');
     const recordMap = new Map(commonFaults.map(r => [r.id, r]));
     const groups = new Map();
     const visited = new Set();
@@ -68,29 +68,25 @@ const groupCommonFaults = () => {
     for (const fault of commonFaults) {
         if (visited.has(fault.id)) continue;
         
-        let currentGroup = new Set([fault.id]);
+        let currentGroupIds = new Set([fault.id]);
         let queue = [fault];
+        visited.add(fault.id);
 
         while (queue.length > 0) {
             const currentFault = queue.shift();
-            visited.add(currentFault.id);
+            
+            const allRelated = [...(currentFault.relatedTo || []), ...(currentFault.relatedBy || [])];
 
-            currentFault.relatedTo?.forEach(related => {
-                if (recordMap.has(related.id) && !currentGroup.has(related.id)) {
-                    currentGroup.add(related.id);
+            for(const related of allRelated) {
+                 if (recordMap.has(related.id) && !visited.has(related.id)) {
+                    visited.add(related.id);
+                    currentGroupIds.add(related.id);
                     queue.push(recordMap.get(related.id));
-                }
-            });
-
-            for (const otherFault of commonFaults) {
-                if (otherFault.relatedTo?.some(r => r.id === currentFault.id) && !currentGroup.has(otherFault.id)) {
-                    currentGroup.add(otherFault.id);
-                    queue.push(otherFault);
                 }
             }
         }
         
-        const groupRecords = Array.from(currentGroup).map(id => recordMap.get(id));
+        const groupRecords = Array.from(currentGroupIds).map(id => recordMap.get(id));
         groupRecords.sort((a,b) => (a.createdAt?.seconds || 0) - (b.createdAt?.seconds || 0));
         const rootRecord = groupRecords[0];
         if (rootRecord) {
@@ -100,29 +96,48 @@ const groupCommonFaults = () => {
     groupedFaults = groups;
 };
 
+
 const renderCategoryMenu = () => {
     dom.categoryMenu.innerHTML = '';
     const categories = { '': 'All Records', qa: 'Q&A', 'common-fault': 'Common Faults', general: 'General' };
-    
-    Object.entries(categories).forEach(([key, value]) => {
-        const btn = document.createElement('button'); btn.textContent = value;
-        btn.className = `category-menu-item w-full text-left px-3 py-2 rounded-md text-sm hover:bg-slate-200 dark:hover:bg-slate-700`;
-        if (currentCategory === key) btn.classList.add('active');
-        btn.addEventListener('click', () => { currentCategory = key; currentFilter = 'all'; dom.filterControls.querySelector(`[data-filter="all"]`).click(); setupRecordsListener(); });
-        dom.categoryMenu.appendChild(btn);
 
-        if (key === 'common-fault') {
-            groupedFaults.forEach((group, groupId) => {
-                const subBtn = document.createElement('button');
-                subBtn.textContent = group.title;
-                subBtn.title = group.title;
-                subBtn.className = 'category-menu-item w-full text-left pl-6 pr-3 py-2 rounded-md text-sm truncate hover:bg-slate-200 dark:hover:bg-slate-700';
-                if (currentCategory === groupId) subBtn.classList.add('active');
-                subBtn.addEventListener('click', () => { currentCategory = groupId; currentFilter = 'all'; dom.filterControls.querySelector(`[data-filter="all"]`).click(); setupRecordsListener(); });
-                dom.categoryMenu.appendChild(subBtn);
-            });
-        }
-    });
+    const createBtn = (id, text, level = 0, isGroupTitle = false) => {
+        const btn = document.createElement('button');
+        btn.textContent = text;
+        btn.title = text;
+        btn.className = `category-menu-item w-full text-left px-3 py-2 rounded-md text-sm truncate hover:bg-slate-200 dark:hover:bg-slate-700`;
+        if (level > 0) btn.style.paddingLeft = `${0.75 + (level * 0.75)}rem`;
+        if (isGroupTitle) btn.classList.add('font-semibold');
+        if (currentCategory === id) btn.classList.add('active');
+        btn.addEventListener('click', () => { 
+            currentCategory = id; 
+            currentFilter = 'all'; // Reset to all when category changes
+            dom.filterControls.querySelectorAll('.control-btn').forEach(b => b.classList.remove('active'));
+            dom.filterControls.querySelector(`[data-filter="all"]`).classList.add('active');
+            setupRecordsListener();
+        });
+        return btn;
+    }
+
+    dom.categoryMenu.appendChild(createBtn('', 'All Records'));
+    dom.categoryMenu.appendChild(createBtn('qa', 'Q&A'));
+    const commonFaultsBtn = createBtn('common-fault', 'Common Faults');
+    dom.categoryMenu.appendChild(commonFaultsBtn);
+
+    if (groupedFaults.size > 0) {
+        const details = document.createElement('details');
+        details.className = 'pl-4';
+        details.innerHTML = `<summary class="cursor-pointer text-sm font-medium py-1">Linked Faults</summary>`;
+        const subList = document.createElement('div');
+        subList.className = 'ml-2 border-l border-slate-200 dark:border-slate-700';
+        groupedFaults.forEach((group, groupId) => {
+            const groupBtn = createBtn(groupId, group.title, 1, true);
+            subList.appendChild(groupBtn);
+        });
+        details.appendChild(subList);
+        dom.categoryMenu.appendChild(details);
+    }
+    dom.categoryMenu.appendChild(createBtn('general', 'General'));
 };
 
 const renderRecordCard = (record) => {
@@ -134,7 +149,7 @@ const renderRecordCard = (record) => {
     const detailsHtml = `${record.qaId?`<div><dt class="font-semibold">Q&A ID:</dt><dd class="break-all">${record.qaId}</dd></div>`:''}${record.modelNumber?`<div><dt class="font-semibold">Model Number:</dt><dd class="break-all">${record.modelNumber}</dd></div>`:''}${record.serialNumber?`<div><dt class="font-semibold">Serial Number:</dt><dd class="break-all">${record.serialNumber}</dd></div>`:''}${record.serviceOrderNumber?`<div><dt class="font-semibold">Service Order Number:</dt><dd class="break-all">${record.serviceOrderNumber}</dd></div>`:''}${record.salesforceCaseNumber?`<div><dt class="font-semibold">Salesforce Case Number:</dt><dd class="break-all">${record.salesforceCaseNumber}</dd></div>`:''}`;
     const categoryDisplayNames = { qa: 'Q&A', 'common-fault': 'Common Fault', general: 'General' };
     const categoryColors = { qa: '#5fcae2', 'common-fault': '#4892cf', general: '#3f57ab' };
-    const linkedRecordsHtml = record.relatedTo?.length > 0 ? `<div class="mt-2"><dt class="font-semibold">Linked Faults:</dt><dd>${record.relatedTo.map(r => `<span>${r.title}</span>`).join(', ')}</dd></div>` : '';
+    const linkedRecordsHtml = record.relatedTo?.length > 0 ? `<div class="mt-2"><dt class="font-semibold">Linked To:</dt><dd>${record.relatedTo.map(r => `<span>${r.title}</span>`).join(', ')}</dd></div>` : '';
 
     card.innerHTML = `<div class="collapsible-header flex justify-between items-start cursor-pointer record-header"><div class="flex items-center gap-3"><span class="text-xs capitalize text-white px-2 py-0.5 rounded-full" style="background-color: ${categoryColors[record.category] || '#64748b'}">${categoryDisplayNames[record.category] || record.category}</span><h3 class="text-lg font-semibold text-indigo-600 dark:text-indigo-400 break-all">${record.title}</h3></div><div class="flex items-center gap-2">${record.onSamsungTracker ? '<span class="text-xs font-bold bg-green-500 text-white px-2 py-1 rounded-full">Samsung Action Tracker</span>' : ''}${record.isClosed?'<span class="text-xs font-bold bg-slate-500 text-white px-2 py-1 rounded-full">CLOSED</span>':''}<div class="actions flex-shrink-0 ml-4 space-x-2"></div><svg class="chevron h-5 w-5 transition-transform" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" /></svg></div></div><div class="collapsible-content details-container"><div class="mt-4 pt-4 border-t border-slate-200 dark:border-slate-700 text-sm space-y-2"><dl class="grid grid-cols-1 md:grid-cols-2 gap-x-4 gap-y-1">${detailsHtml}${linkedRecordsHtml}</dl>${record.description?`<div class="pt-2"><p class="whitespace-pre-wrap">${record.description}</p></div>`:''}</div><div class="comments-section mt-4 pt-4 border-t border-slate-200 dark:border-slate-700"></div><p class="text-xs text-slate-400 dark:text-slate-500 mt-4">Added by <span class="font-mono">${record.addedBy}</span> on ${formatDateTime(record.createdAt)}</p></div>`;
     
@@ -186,11 +201,12 @@ const logUpdate = async (recordId) => { await updateDoc(doc(db, `/artifacts/${ap
 
 const renderRecords = () => {
      let recordsToDisplay = [...fetchedRecords];
-    if (currentCategory.length > 2) { // It's a group ID
-        const group = groupedFaults.get(currentCategory);
-        if(group) recordsToDisplay = group.records;
-    } else if(currentCategory) {
-        recordsToDisplay = recordsToDisplay.filter(r => r.category === currentCategory);
+    if (currentCategory) {
+        if(groupedFaults.has(currentCategory)) { // It's a group ID
+             recordsToDisplay = groupedFaults.get(currentCategory).records;
+        } else { // It's a standard category
+            recordsToDisplay = recordsToDisplay.filter(r => r.category === currentCategory);
+        }
     }
     if (currentSearch) recordsToDisplay = recordsToDisplay.filter(r => Object.values(r).join(' ').toLowerCase().includes(currentSearch));
     
@@ -217,7 +233,7 @@ const setupRecordsListener = () => {
     if (currentFilter === 'my') constraints.push(where('addedBy', '==', currentUserDisplayName));
     else if (currentFilter === 'open') constraints.push(where('isClosed', '==', false));
     else if (currentFilter === 'closed') constraints.push(where('isClosed', '==', true));
-    
+
     const sortField = currentSort === 'alpha' ? 'title' : 'createdAt';
     const sortDirection = currentSort === 'oldest' ? 'asc' : 'desc';
     constraints.push(orderBy(sortField, sortDirection));
@@ -280,27 +296,15 @@ dom.recordsContainer.addEventListener('submit', async (e) => {
 
 dom.formCategorySelector.addEventListener('click', (e) => { if (e.target.matches('.form-category-btn')) setFormCategory(e.target.dataset.category, dom.formFieldsContainer); });
 
-const findSimilarFaults = (newTitle, modelNumber) => {
-    return fetchedRecords.filter(r => {
-        if (r.category !== 'common-fault') return false;
-        if (r.modelNumber && r.modelNumber.toLowerCase() === modelNumber.toLowerCase()) return true;
-        const newWords = newTitle.toLowerCase().split(' ').filter(w => w.length > 3);
-        if(newWords.length === 0) return false;
-        const existingWords = r.title.toLowerCase().split(' ');
-        const matchCount = newWords.filter(word => existingWords.includes(word)).length;
-        return matchCount >= 2;
-    });
-};
-
 const createRecord = async (recordData, relatedTo = []) => {
      const submitBtn = dom.addRecordForm.querySelector('#add-record-submit');
      submitBtn.disabled = true; submitBtn.textContent = '...';
      try {
         recordData.onSamsungTracker = recordData.onSamsungTracker === 'on';
-        const newRecordRef = await addDoc(collection(db, `/artifacts/${appId}/public/data/records`), { ...recordData, category: currentFormCategory, addedBy: currentUserDisplayName, createdAt: serverTimestamp(), isClosed: false, comments: [], relatedTo });
+        const newRecordRef = await addDoc(collection(db, `/artifacts/${appId}/public/data/records`), { ...recordData, category: currentFormCategory, addedBy: currentUserDisplayName, createdAt: serverTimestamp(), isClosed: false, comments: [], relatedTo: [], relatedBy: relatedTo });
         for(const related of relatedTo) {
             const relatedDocRef = doc(db, `/artifacts/${appId}/public/data/records`, related.id);
-            await updateDoc(relatedDocRef, { relatedTo: arrayUnion({ id: newRecordRef.id, title: recordData.title }) });
+            await updateDoc(relatedDocRef, { relatedBy: arrayUnion({ id: newRecordRef.id, title: recordData.title }) });
         }
          dom.addRecordForm.reset(); dom.addRecordModal.classList.add('hidden');
      } finally { submitBtn.disabled = false; submitBtn.textContent = 'Add Record'; }
@@ -317,7 +321,7 @@ dom.addRecordForm.addEventListener('submit', async (e) => {
             pendingRecordData = recordData;
             dom.existingFaultsList.innerHTML = '';
             similarFaults.forEach(fault => {
-                const isLinked = fault.relatedTo?.length > 0;
+                const isLinked = fault.relatedTo?.length > 0 || fault.relatedBy?.length > 0;
                 dom.existingFaultsList.innerHTML += `<label class="flex items-center space-x-2"><input type="checkbox" value="${fault.id}" data-title="${fault.title}" class="related-fault-checkbox rounded"><span>${fault.title}${isLinked ? ' (Already linked)' : ''}</span></label>`;
             });
             dom.linkFaultModal.classList.remove('hidden'); return;
