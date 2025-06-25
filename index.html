@@ -68,7 +68,7 @@
             </header>
             
             <div class="bg-white dark:bg-slate-800 p-4 rounded-xl shadow-lg mb-8 space-y-4">
-                <input id="search-input" type="search" placeholder="&#x1F50D; Search by title..." class="w-full px-4 py-2 border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-700 rounded-lg">
+                <input id="search-input" type="search" placeholder="&#x1F50D; Search all record fields..." class="w-full px-4 py-2 border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-700 rounded-lg">
                 <div class="flex flex-wrap items-center gap-x-4 gap-y-2">
                     <div class="flex items-center gap-2"><span class="text-sm font-semibold">Show:</span><div id="filter-controls" class="flex gap-2"><button class="control-btn text-sm px-3 py-1 rounded-full border border-slate-300 dark:border-slate-600 active" data-filter="open">Open</button><button class="control-btn text-sm px-3 py-1 rounded-full border border-slate-300 dark:border-slate-600" data-filter="closed">Closed</button><button class="control-btn text-sm px-3 py-1 rounded-full border border-slate-300 dark:border-slate-600" data-filter="all">All</button><button class="control-btn text-sm px-3 py-1 rounded-full border border-slate-300 dark:border-slate-600" data-filter="my">My Records</button></div></div>
                     <div class="flex items-center gap-2"><span class="text-sm font-semibold">Sort by:</span><div id="sort-controls" class="flex gap-2"><button class="control-btn text-sm px-3 py-1 rounded-full border border-slate-300 dark:border-slate-600 active" data-sort="newest">Newest</button><button class="control-btn text-sm px-3 py-1 rounded-full border border-slate-300 dark:border-slate-600" data-sort="oldest">Oldest</button><button class="control-btn text-sm px-3 py-1 rounded-full border border-slate-300 dark:border-slate-600" data-sort="alpha">A-Z</button></div></div>
@@ -86,25 +86,16 @@
     <div id="add-record-modal" class="fixed inset-0 bg-black bg-opacity-70 flex items-center justify-center p-4 hidden">
         <div class="bg-white dark:bg-slate-800 rounded-xl shadow-2xl p-6 w-full max-w-lg">
             <h2 class="text-xl font-semibold mb-4 text-slate-900 dark:text-white">Add New Record</h2>
-            <form id="add-record-form">
-                <div class="mb-4">
-                    <label class="block text-sm font-medium mb-1">Category</label>
-                    <div id="form-category-selector" class="grid grid-cols-3 gap-2">
-                        <button type="button" class="form-category-btn px-4 py-2 border rounded-lg" data-category="qa">Q&A</button>
-                        <button type="button" class="form-category-btn px-4 py-2 border rounded-lg" data-category="common-fault">Common Faults</button>
-                        <button type="button" class="form-category-btn px-4 py-2 border rounded-lg" data-category="general">General</button>
-                    </div>
-                </div>
-
-                <div id="form-fields-container" class="space-y-4"></div>
-
-                <div class="mt-6 flex justify-end space-x-3">
-                    <button type="button" id="cancel-add" class="bg-slate-200 dark:bg-slate-600 text-slate-800 dark:text-slate-200 font-semibold px-4 py-2 rounded-lg hover:bg-slate-300 dark:hover:bg-slate-500">Cancel</button>
-                    <button type="submit" id="add-record-submit" class="bg-indigo-600 text-white font-semibold px-4 py-2 rounded-lg hover:bg-indigo-700 disabled:opacity-50">Add Record</button>
-                </div>
-            </form>
+            <form id="add-record-form"><div class="mb-4"><label class="block text-sm font-medium mb-1">Category</label><div id="form-category-selector" class="grid grid-cols-3 gap-2"><button type="button" class="form-category-btn px-4 py-2 border rounded-lg" data-category="qa">Q&A</button><button type="button" class="form-category-btn px-4 py-2 border rounded-lg" data-category="common-fault">Common Faults</button><button type="button" class="form-category-btn px-4 py-2 border rounded-lg" data-category="general">General</button></div></div><div id="form-fields-container" class="space-y-4"></div><div class="mt-6 flex justify-end space-x-3"><button type="button" id="cancel-add" class="bg-slate-200 dark:bg-slate-600 text-slate-800 dark:text-slate-200 font-semibold px-4 py-2 rounded-lg hover:bg-slate-300 dark:hover:bg-slate-500">Cancel</button><button type="submit" id="add-record-submit" class="bg-indigo-600 text-white font-semibold px-4 py-2 rounded-lg hover:bg-indigo-700 disabled:opacity-50">Add Record</button></div></form>
         </div>
     </div>
+    <div id="edit-record-modal" class="fixed inset-0 bg-black bg-opacity-70 flex items-center justify-center p-4 hidden">
+        <div class="bg-white dark:bg-slate-800 rounded-xl shadow-2xl p-6 w-full max-w-lg">
+            <h2 class="text-xl font-semibold mb-4 text-slate-900 dark:text-white">Edit Record</h2>
+            <form id="edit-record-form"><input type="hidden" name="id"><div id="edit-form-fields-container" class="space-y-4"></div><div class="mt-6 flex justify-end space-x-3"><button type="button" id="cancel-edit" class="bg-slate-200 dark:bg-slate-600 text-slate-800 dark:text-slate-200 font-semibold px-4 py-2 rounded-lg hover:bg-slate-300 dark:hover:bg-slate-500">Cancel</button><button type="submit" id="edit-record-submit" class="bg-indigo-600 text-white font-semibold px-4 py-2 rounded-lg hover:bg-indigo-700 disabled:opacity-50">Save Changes</button></div></form>
+        </div>
+    </div>
+
 
     <script type="module">
         import { initializeApp, getApps, getApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
@@ -113,7 +104,7 @@
         import { getDatabase, ref, onValue, set, onDisconnect, serverTimestamp as dbServerTimestamp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-database.js";
 
         const firebaseConfig = { apiKey: "__API_KEY__", authDomain: "__AUTH_DOMAIN__", projectId: "__PROJECT_ID__", storageBucket: "__STORAGE_BUCKET__", messagingSenderId: "__MESSAGING_SENDER_ID__", appId: "__APP_ID__" };
-        const appId = 'samtech-record-board'; // Updated App ID
+        const appId = 'samtech-record-board';
 
         let app, auth, db, rtDb, userId, recordsUnsubscribe;
         let allRecords = [];
@@ -138,7 +129,11 @@
             moonIcon: document.getElementById('moon-icon'),
             categoryMenu: document.getElementById('category-menu'),
             formCategorySelector: document.getElementById('form-category-selector'),
-            formFieldsContainer: document.getElementById('form-fields-container')
+            formFieldsContainer: document.getElementById('form-fields-container'),
+            editRecordModal: document.getElementById('edit-record-modal'),
+            editRecordForm: document.getElementById('edit-record-form'),
+            editFormFieldsContainer: document.getElementById('edit-form-fields-container'),
+            cancelEdit: document.getElementById('cancel-edit'),
         };
         
         const formFieldsTemplates = {
@@ -170,12 +165,18 @@
         };
         
         let currentFormCategory = 'qa';
-        const setFormCategory = (category) => {
-            currentFormCategory = category;
-            dom.formFieldsContainer.innerHTML = formFieldsTemplates[category];
-            dom.formCategorySelector.querySelectorAll('.form-category-btn').forEach(btn => {
-                btn.classList.toggle('active', btn.dataset.category === category);
-            });
+        const setFormCategory = (category, container, record = {}) => {
+            container.innerHTML = formFieldsTemplates[category];
+            for (const key in record) {
+                const input = container.querySelector(`[name="${key}"]`);
+                if (input) input.value = record[key];
+            }
+        };
+
+        const formatDate = (timestamp) => {
+            if (!timestamp?.seconds) return 'N/A';
+            const date = new Date(timestamp.seconds * 1000);
+            return date.toLocaleDateString('en-GB'); // dd/mm/yyyy format
         };
         
         const renderCategoryMenu = () => {
@@ -192,31 +193,47 @@
         };
         
         const renderRecordCard = (record) => {
-            const detailsHtml = `
-                ${record.qaId ? `<div class="flex"><dt class="w-1/3 font-semibold">Q&A ID:</dt><dd class="w-2/3">${record.qaId}</dd></div>` : ''}
-                ${record.modelNumber ? `<div class="flex"><dt class="w-1/3 font-semibold">Model #:</dt><dd class="w-2/3">${record.modelNumber}</dd></div>` : ''}
-                ${record.serialNumber ? `<div class="flex"><dt class="w-1/3 font-semibold">Serial #:</dt><dd class="w-2/3">${record.serialNumber}</dd></div>` : ''}
-                ${record.serviceOrderNumber ? `<div class="flex"><dt class="w-1/3 font-semibold">Service Order #:</dt><dd class="w-2/3">${record.serviceOrderNumber}</dd></div>` : ''}
-                ${record.salesforceCaseNumber ? `<div class="flex"><dt class="w-1/3 font-semibold">Salesforce Case #:</dt><dd class="w-2/3">${record.salesforceCaseNumber}</dd></div>` : ''}
-            `;
+            const card = document.createElement('div');
+            card.className = `bg-white dark:bg-slate-800 p-5 rounded-xl shadow-lg transition-opacity ${record.isClosed ? 'opacity-60' : ''}`;
             
-            return `
+            const detailsHtml = `
+                ${record.qaId ? `<div class="flex"><dt class="w-1/3 font-semibold">Q&A ID:</dt><dd class="w-2/3 break-all">${record.qaId}</dd></div>` : ''}
+                ${record.modelNumber ? `<div class="flex"><dt class="w-1/3 font-semibold">Model #:</dt><dd class="w-2/3 break-all">${record.modelNumber}</dd></div>` : ''}
+                ${record.serialNumber ? `<div class="flex"><dt class="w-1/3 font-semibold">Serial #:</dt><dd class="w-2/3 break-all">${record.serialNumber}</dd></div>` : ''}
+                ${record.serviceOrderNumber ? `<div class="flex"><dt class="w-1/3 font-semibold">Service Order #:</dt><dd class="w-2/3 break-all">${record.serviceOrderNumber}</dd></div>` : ''}
+                ${record.salesforceCaseNumber ? `<div class="flex"><dt class="w-1/3 font-semibold">Salesforce Case #:</dt><dd class="w-2/3 break-all">${record.salesforceCaseNumber}</dd></div>` : ''}
+            `;
+
+            card.innerHTML = `
                 <div class="flex justify-between items-start">
                     <div>
                         <h3 class="text-lg font-semibold text-indigo-600 dark:text-indigo-400 break-all">${record.title}</h3>
-                        <div class="mt-2 flex flex-wrap gap-2">
-                           <span class="text-xs bg-gray-200 dark:bg-gray-700 text-gray-800 dark:text-gray-200 px-2 py-0.5 rounded-full">${record.category}</span>
+                        <div class="mt-2 flex flex-wrap gap-2 items-center">
+                           <span class="text-xs capitalize bg-gray-200 dark:bg-gray-700 text-gray-800 dark:text-gray-200 px-2 py-0.5 rounded-full">${record.category.replace('-', ' ')}</span>
                            ${record.isClosed ? '<span class="text-xs font-bold bg-slate-500 text-white px-2 py-1 rounded-full">CLOSED</span>' : ''}
                         </div>
                     </div>
-                    ${record.addedBy === userId ? `<div class="flex-shrink-0 ml-4 space-x-2">...</div>` : ''}
+                    ${record.addedBy === userId ? `<div class="actions flex-shrink-0 ml-4 space-x-2"><button class="edit-btn" title="Edit">&#9998;</button><button class="close-btn" title="${record.isClosed ? 'Re-open' : 'Close'}">${record.isClosed ? '&#x1F513;' : '&#x1F512;'}</button><button class="delete-btn" title="Delete">&#10006;</button></div>` : ''}
                 </div>
                 <div class="mt-4 pt-4 border-t border-slate-200 dark:border-slate-700 text-sm space-y-2">
                     <dl class="flex flex-col space-y-1">${detailsHtml}</dl>
                     ${record.description ? `<div class="pt-2"><p class="whitespace-pre-wrap">${record.description}</p></div>` : ''}
                 </div>
-                <p class="text-xs text-slate-400 dark:text-slate-500 mt-4">Added by: <span class="font-mono">${record.addedByEmail}</span></p>
+                <p class="text-xs text-slate-400 dark:text-slate-500 mt-4">Added by <span class="font-mono">${record.addedByEmail}</span> on ${formatDate(record.createdAt)}</p>
             `;
+            
+            if (record.addedBy === userId) {
+                 const actions = card.querySelector('.actions');
+                 actions.classList.add('text-slate-500', 'dark:text-slate-400');
+                 actions.querySelectorAll('button').forEach(btn => btn.classList.add('hover:text-indigo-600', 'dark:hover:text-indigo-400', 'transition'));
+                 actions.querySelector('.delete-btn').classList.add('hover:text-red-600', 'dark:hover:text-red-500');
+                 actions.querySelector('.close-btn').classList.add('hover:text-red-600', 'dark:hover:text-red-500');
+
+                 card.querySelector('.edit-btn').addEventListener('click', () => openEditModal(record));
+                 card.querySelector('.close-btn').addEventListener('click', () => updateDoc(doc(db, `/artifacts/${appId}/public/data/records`, record.id), { isClosed: !record.isClosed }));
+                 card.querySelector('.delete-btn').addEventListener('click', () => deleteDoc(doc(db, `/artifacts/${appId}/public/data/records`, record.id)));
+            }
+            return card;
         };
         
         const renderRecords = () => {
@@ -227,7 +244,12 @@
             else if (currentFilter === 'open') filteredRecords = filteredRecords.filter(r => !r.isClosed);
             else if (currentFilter === 'closed') filteredRecords = filteredRecords.filter(r => r.isClosed);
             
-            if (currentSearch) filteredRecords = filteredRecords.filter(r => r.title.toLowerCase().includes(currentSearch));
+            if (currentSearch) {
+                 filteredRecords = filteredRecords.filter(r => {
+                    const searchable = Object.values(r).join(' ').toLowerCase();
+                    return searchable.includes(currentSearch);
+                 });
+            }
             if (currentCategory) filteredRecords = filteredRecords.filter(r => r.category === currentCategory);
 
             switch (currentSort) {
@@ -239,13 +261,13 @@
             if (filteredRecords.length === 0) {
                  dom.recordsContainer.innerHTML = `<p class="text-slate-500 dark:text-slate-400">No records match your current filters.</p>`; return;
             }
+            filteredRecords.forEach(recordData => dom.recordsContainer.appendChild(renderRecordCard(recordData)));
+        };
 
-            filteredRecords.forEach(recordData => {
-                const card = document.createElement('div');
-                card.className = `bg-white dark:bg-slate-800 p-5 rounded-xl shadow-lg`;
-                card.innerHTML = renderRecordCard(recordData);
-                dom.recordsContainer.appendChild(card);
-            });
+        const openEditModal = (record) => {
+            dom.editRecordForm.querySelector('[name="id"]').value = record.id;
+            setFormCategory(record.category, dom.editFormFieldsContainer, record);
+            dom.editRecordModal.classList.remove('hidden');
         };
         
         const setupRecordsListener = () => {
@@ -291,35 +313,40 @@
             });
         });
         
-        dom.addNewRecordBtn.addEventListener('click', () => { setFormCategory('qa'); dom.addRecordModal.classList.remove('hidden'); });
+        dom.addNewRecordBtn.addEventListener('click', () => { setFormCategory('qa', dom.formFieldsContainer); dom.addRecordModal.classList.remove('hidden'); });
         dom.cancelAdd.addEventListener('click', () => dom.addRecordModal.classList.add('hidden'));
+        dom.cancelEdit.addEventListener('click', () => dom.editRecordModal.classList.add('hidden'));
+
         dom.formCategorySelector.addEventListener('click', (e) => {
-            if (e.target.matches('.form-category-btn')) {
-                setFormCategory(e.target.dataset.category);
-            }
+            if (e.target.matches('.form-category-btn')) setFormCategory(e.target.dataset.category, dom.formFieldsContainer);
         });
 
         dom.addRecordForm.addEventListener('submit', async (e) => {
             e.preventDefault();
             const submitBtn = e.target.querySelector('#add-record-submit');
-            const formData = new FormData(e.target);
+            const formData = new FormData(dom.addRecordForm);
             const recordData = Object.fromEntries(formData.entries());
-
             if (recordData.title && auth.currentUser) {
                 submitBtn.disabled = true; submitBtn.textContent = '...';
                 try {
-                    const dataToSave = {
-                        ...recordData,
-                        category: currentFormCategory,
-                        addedBy: auth.currentUser.uid,
-                        addedByEmail: auth.currentUser.email,
-                        createdAt: serverTimestamp(),
-                        isClosed: false
-                    };
-                    await addDoc(collection(db, `/artifacts/${appId}/public/data/records`), dataToSave);
-                    dom.addRecordForm.reset();
-                    dom.addRecordModal.classList.add('hidden');
+                    await addDoc(collection(db, `/artifacts/${appId}/public/data/records`), { ...recordData, category: currentFormCategory, addedBy: auth.currentUser.uid, addedByEmail: auth.currentUser.email, createdAt: serverTimestamp(), isClosed: false });
+                    dom.addRecordForm.reset(); dom.addRecordModal.classList.add('hidden');
                 } finally { submitBtn.disabled = false; submitBtn.textContent = 'Add Record'; }
+            }
+        });
+        dom.editRecordForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const submitBtn = e.target.querySelector('#edit-record-submit');
+            const formData = new FormData(dom.editRecordForm);
+            const recordData = Object.fromEntries(formData.entries());
+            const recordId = recordData.id;
+            delete recordData.id;
+            if (recordId && recordData.title) {
+                submitBtn.disabled = true; submitBtn.textContent = '...';
+                try {
+                    await updateDoc(doc(db, `/artifacts/${appId}/public/data/records`, recordId), recordData);
+                    dom.editRecordModal.classList.add('hidden');
+                } finally { submitBtn.disabled = false; submitBtn.textContent = 'Save Changes'; }
             }
         });
 
