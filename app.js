@@ -6,7 +6,7 @@ const appId = 'samtech-record-board';
 const SHARED_PASSWORD = "__SHARED_PASSWORD__" || "samtech";
 
 let app, db, recordsUnsubscribe;
-let allRecords = []; 
+let allRecords = [];
 let groupedFaults = new Map();
 let currentSort = 'newest', currentSearch = '', currentCategory = '', currentFilter = 'all', currentUserDisplayName = '';
 let recordToDelete = null;
@@ -113,7 +113,7 @@ const renderCategoryMenu = () => {
         if (currentCategory === id) btn.classList.add('active');
         btn.addEventListener('click', () => { 
             currentCategory = id; 
-            currentFilter = id === 'action-tracker' ? 'open' : 'all'; // Default to open for tracker
+            currentFilter = id === 'action-tracker' ? 'open' : 'all'; 
             dom.filterControls.querySelectorAll('.control-btn').forEach(b => b.classList.remove('active'));
             dom.filterControls.querySelector(`[data-filter="${currentFilter}"]`).classList.add('active');
             setupRecordsListener();
@@ -121,25 +121,20 @@ const renderCategoryMenu = () => {
         return btn;
     }
 
-    dom.categoryMenu.appendChild(createBtn('', 'All Records'));
-    dom.categoryMenu.appendChild(createBtn('action-tracker', 'Samsung Action Tracker'));
-    
     Object.entries(categories).forEach(([key, value]) => {
-        if(key === '') return;
         dom.categoryMenu.appendChild(createBtn(key, value));
-        const details = document.createElement('details');
-        details.className = 'pl-4';
-        details.innerHTML = `<summary class="cursor-pointer text-sm font-medium py-1">Closed</summary>`;
-        details.appendChild(createBtn(`${key}-closed`, 'View Closed', 1));
-        dom.categoryMenu.appendChild(details);
-
+        if (key !== '') {
+            const details = document.createElement('details');
+            details.className = 'pl-4';
+            details.innerHTML = `<summary class="cursor-pointer text-sm font-medium py-1">Closed</summary>`;
+            details.appendChild(createBtn(`${key}-closed`, 'View Closed', 1));
+            dom.categoryMenu.appendChild(details);
+        }
         if (key === 'common-fault' && groupedFaults.size > 0) {
             const linkedDetails = document.createElement('details');
             linkedDetails.className = 'pl-4';
             linkedDetails.innerHTML = `<summary class="cursor-pointer text-sm font-medium py-1">Linked Faults</summary>`;
-            if (groupedFaults.has(currentCategory)) {
-                linkedDetails.open = true;
-            }
+            if (groupedFaults.has(currentCategory)) linkedDetails.open = true;
             const subList = document.createElement('div');
             subList.className = 'ml-2 border-l border-slate-200 dark:border-slate-700';
             groupedFaults.forEach((group, groupId) => subList.appendChild(createBtn(groupId, group.title, 1, true)));
@@ -147,6 +142,8 @@ const renderCategoryMenu = () => {
             dom.categoryMenu.appendChild(linkedDetails);
         }
     });
+    
+    dom.categoryMenu.appendChild(createBtn('action-tracker', 'Samsung Action Tracker'));
 };
 
 const getRecordGroupId = (recordId) => {
@@ -167,7 +164,7 @@ const renderRecordCard = (record) => {
     const categoryColors = { qa: '#5fcae2', 'common-fault': '#4892cf', general: '#3f57ab' };
     const groupId = getRecordGroupId(record.id);
     const linkedRecordsHtml = groupId ? `<div class="mt-2"><dt class="font-semibold">Linked Faults:</dt><dd><button class="linked-fault-btn text-indigo-600 dark:text-indigo-400 underline" data-group-id="${groupId}">View Group</button></dd></div>` : '';
-    const descriptionHtml = record.description ? `<div class="pt-2 font-semibold">Description:</div><p class="whitespace-pre-wrap">${record.description}</p>` : '<div class="pt-2 font-semibold">No Description Provided</div>';
+    const descriptionHtml = `<div class="pt-2 font-semibold">Description:</div><p class="whitespace-pre-wrap">${record.description || 'N/A'}</p>`;
 
     const trackerBadge = record.onSamsungTracker ? `<span class="text-xs font-bold bg-green-500 text-white px-2 py-1 rounded-full">Samsung Action Tracker</span>` : '';
     const closedBadge = record.isClosed ? `<span class="text-xs font-bold bg-slate-500 text-white px-2 py-1 rounded-full">CLOSED</span>` : '';
@@ -299,6 +296,7 @@ const setupRecordsListener = () => {
 const showApp = () => { dom.authContainer.style.display = 'none'; dom.namePromptModal.classList.add('hidden'); dom.appContainer.style.display = 'block'; dom.userNameDisplay.textContent = currentUserDisplayName; setupRecordsListener(); };
 const showLogin = () => { dom.authContainer.style.display = 'flex'; dom.appContainer.style.display = 'none'; if (recordsUnsubscribe) recordsUnsubscribe(); };
 
+// --- MAIN EVENT DELEGATION LISTENER ---
 dom.recordsContainer.addEventListener('click', async (e) => {
     const recordCard = e.target.closest('.record-card');
     if (!recordCard) return;
@@ -306,16 +304,16 @@ dom.recordsContainer.addEventListener('click', async (e) => {
     let record = allRecords.find(r => r.id === recordId);
     if (!record) return;
 
-    if (e.target.closest('.record-header') && !e.target.closest('.actions')) {
-        const isCurrentlyExpanded = recordCard.classList.contains('expanded');
-        if (!isCurrentlyExpanded) {
-            expandedRecordIds.add(recordId);
-        } else {
-            expandedRecordIds.delete(recordId);
+    if (e.target.closest('.record-header')) {
+        if (!e.target.closest('.actions')) {
+            const isCurrentlyExpanded = recordCard.classList.contains('expanded');
+            if (!isCurrentlyExpanded) {
+                expandedRecordIds.add(recordId);
+            } else {
+                expandedRecordIds.delete(recordId);
+            }
+            renderRecords(); // Re-render to apply expanded state
         }
-        recordCard.classList.toggle('expanded');
-        recordCard.querySelector('.comments-section')?.classList.toggle('expanded', !isCurrentlyExpanded);
-
     } else if(e.target.closest('.comments-section > .collapsible-header')) {
         e.target.closest('.comments-section').classList.toggle('expanded');
     } else if(e.target.classList.contains('edit-comment-btn')) {
