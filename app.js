@@ -185,8 +185,36 @@ const renderRecordCard = (record) => {
     const categoryColors = { qa: '#5fcae2', 'common-fault': '#4892cf', general: '#3f57ab' };
     const groupId = getRecordGroupId(record.id);
     const linkedRecordsHtml = groupId ? `<div class="mt-2"><dt class="font-semibold">Linked Faults:</dt><dd><button class="linked-fault-btn text-indigo-600 dark:text-indigo-400 underline" data-group-id="${groupId}">View Group</button></dd></div>` : '';
+    const descriptionHtml = record.description ? `<div class="pt-2 font-semibold">Description:</div><p class="whitespace-pre-wrap">${record.description}</p>` : '<div class="pt-2 font-semibold">No Description Provided</div>';
 
-    card.innerHTML = `<div class="collapsible-header flex justify-between items-start cursor-pointer record-header"><div class="flex items-center gap-3"><span class="text-xs capitalize text-white px-2 py-0.5 rounded-full" style="background-color: ${categoryColors[record.category] || '#64748b'}">${categoryDisplayNames[record.category] || record.category}</span><h3 class="text-lg font-semibold text-indigo-600 dark:text-indigo-400 break-all">${record.title}</h3></div><div class="flex items-center gap-2">${record.onSamsungTracker ? '<span class="text-xs font-bold bg-green-500 text-white px-2 py-1 rounded-full">Samsung Action Tracker</span>' : ''}${record.isClosed?'<span class="text-xs font-bold bg-slate-500 text-white px-2 py-1 rounded-full">CLOSED</span><span class="text-xs text-slate-500 dark:text-slate-400">${calculateDaysOpen(record)}</span>`:`<span class="text-xs text-slate-500 dark:text-slate-400">${calculateDaysOpen(record)}</span>`}<div class="actions flex-shrink-0 ml-4 space-x-2"></div><svg class="chevron h-5 w-5 transition-transform" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" /></svg></div></div><div class="collapsible-content details-container"><div class="mt-4 pt-4 border-t border-slate-200 dark:border-slate-700 text-sm space-y-2"><dl class="grid grid-cols-1 md:grid-cols-2 gap-x-4 gap-y-1">${detailsHtml}${linkedRecordsHtml}</dl><div class="pt-2 font-semibold">Description:</div><p class="whitespace-pre-wrap">${record.description || 'N/A'}</p></div><div class="comments-section mt-4 pt-4 border-t border-slate-200 dark:border-slate-700"></div><p class="text-xs text-slate-400 dark:text-slate-500 mt-4">Added by <span class="font-mono">${record.addedBy}</span> on ${formatDateTime(record.createdAt)}</p></div>`;
+
+    card.innerHTML = `
+        <div class="collapsible-header flex justify-between items-start cursor-pointer record-header">
+            <div class="flex items-center gap-3">
+                <span class="text-xs capitalize text-white px-2 py-0.5 rounded-full" style="background-color: ${categoryColors[record.category] || '#64748b'}">${categoryDisplayNames[record.category] || record.category}</span>
+                <h3 class="text-lg font-semibold text-indigo-600 dark:text-indigo-400 break-all">${record.title}</h3>
+            </div>
+            <div class="flex items-center gap-2">
+                ${record.onSamsungTracker ? '<span class="text-xs font-bold bg-green-500 text-white px-2 py-1 rounded-full">Samsung Action Tracker</span>' : ''}
+                ${record.isClosed ? `<span class="text-xs font-bold bg-slate-500 text-white px-2 py-1 rounded-full">CLOSED</span><span class="text-xs text-slate-500 dark:text-slate-400">${calculateDaysOpen(record)}</span>` : `<span class="text-xs text-slate-500 dark:text-slate-400">${calculateDaysOpen(record)}</span>`}
+                <div class="actions flex-shrink-0 ml-4 space-x-2"></div>
+                <svg class="chevron h-5 w-5 transition-transform" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" /></svg>
+            </div>
+        </div>
+        <div class="collapsible-content details-container">
+            <div class="mt-4 pt-4 border-t border-slate-200 dark:border-slate-700 text-sm space-y-2">
+                <dl class="grid grid-cols-1 md:grid-cols-2 gap-x-4 gap-y-1">${detailsHtml}${linkedRecordsHtml}</dl>
+                ${descriptionHtml}
+            </div>
+            <div class="comments-section mt-4 pt-4 border-t border-slate-200 dark:border-slate-700"></div>
+            <p class="text-xs text-slate-400 dark:text-slate-500 mt-4">Added by <span class="font-mono">${record.addedBy}</span> on ${formatDateTime(record.createdAt)}</p>
+        </div>`;
+    
+    const actions = card.querySelector('.actions');
+    actions.innerHTML = `<button class="time-btn" title="Edit Timestamp">&#x1F4C5;</button><button class="edit-btn" title="Edit">&#9998;</button><button class="close-btn" title="${record.isClosed ? 'Re-open' : 'Close'}">${record.isClosed ? '&#x1F513;' : '&#x1F512;'}</button>`;
+    actions.classList.add('text-slate-500', 'dark:text-slate-400');
+    actions.querySelectorAll('button').forEach(btn => btn.classList.add('hover:text-indigo-600', 'dark:hover:text-indigo-400', 'transition'));
+    actions.querySelector('.close-btn').classList.add('hover:text-red-600', 'dark:hover:text-red-500');
     
     return card;
 };
@@ -196,11 +224,11 @@ const renderComments = (container, record) => {
     
     const commentsList = container.querySelector('.comments-list');
     if (record.comments && record.comments.length > 0) {
-         const sortedComments = record.comments.map(c => ({...c, date: c.createdAt?.seconds ? new Date(c.createdAt.seconds * 1000) : new Date() })).sort((a,b) => a.date - b.date);
-        sortedComments.forEach((comment, index) => {
+         const sortedComments = record.comments.map((c, index) => ({...c, originalIndex: index, date: c.createdAt?.seconds ? new Date(c.createdAt.seconds * 1000) : new Date() })).sort((a,b) => a.date - b.date);
+        sortedComments.forEach((comment) => {
             const commentDiv = document.createElement('div');
             commentDiv.className = 'bg-slate-100 dark:bg-slate-700 p-3 rounded-lg text-sm';
-            commentDiv.innerHTML = `<p class="text-xs text-slate-500 dark:text-slate-400 mb-1">By: <span class="font-mono">${comment.addedBy}</span> at ${formatDateTime(comment.createdAt)}</p><div class="comment-body flex justify-between items-start"><p class="comment-text break-words whitespace-pre-wrap flex-grow">${comment.text || ''}</p><div class="comment-actions flex-shrink-0 ml-2 space-x-2"><button class="edit-comment-btn" data-index="${index}" title="Edit">&#9998;</button><button class="delete-comment-btn" data-index="${index}" title="Delete">&#10006;</button></div></div>`;
+            commentDiv.innerHTML = `<p class="text-xs text-slate-500 dark:text-slate-400 mb-1">By: <span class="font-mono">${comment.addedBy}</span> at ${formatDateTime(comment.createdAt)}</p><div class="comment-body flex justify-between items-start"><p class="comment-text break-words whitespace-pre-wrap flex-grow">${comment.text || ''}</p><div class="comment-actions flex-shrink-0 ml-2 space-x-2"><button class="edit-comment-btn" data-index="${comment.originalIndex}" title="Edit">&#9998;</button><button class="delete-comment-btn" data-index="${comment.originalIndex}" title="Delete">&#10006;</button></div></div>`;
             commentsList.appendChild(commentDiv);
         });
     } else { commentsList.innerHTML = '<p class="text-xs text-slate-400 dark:text-slate-500">No comments yet.</p>'; }
@@ -268,7 +296,6 @@ const setupRecordsListener = () => {
 const showApp = () => { dom.authContainer.style.display = 'none'; dom.namePromptModal.classList.add('hidden'); dom.appContainer.style.display = 'block'; dom.userNameDisplay.textContent = currentUserDisplayName; setupRecordsListener(); };
 const showLogin = () => { dom.authContainer.style.display = 'flex'; dom.appContainer.style.display = 'none'; if (recordsUnsubscribe) recordsUnsubscribe(); };
 
-// --- MAIN EVENT DELEGATION LISTENER ---
 dom.recordsContainer.addEventListener('click', async (e) => {
     const recordCard = e.target.closest('.record-card');
     if (!recordCard) return;
@@ -278,7 +305,7 @@ dom.recordsContainer.addEventListener('click', async (e) => {
 
     if (e.target.closest('.record-header') && !e.target.closest('.actions')) {
         const isCurrentlyExpanded = recordCard.classList.contains('expanded');
-        if(!groupedFaults.has(currentCategory)) { // Only collapse others if not in a group view
+        if(!groupedFaults.has(currentCategory)) {
              dom.recordsContainer.querySelectorAll('.record-card').forEach(c => c.classList.remove('expanded'));
              expandedRecordIds.clear();
         }
@@ -320,10 +347,13 @@ dom.recordsContainer.addEventListener('click', async (e) => {
     } else if (e.target.classList.contains('cancel-comment-btn')) {
         renderComments(e.target.closest('.comments-section'), record);
         e.target.closest('.comments-section').classList.add('expanded');
+    } else if (e.target.classList.contains('linked-fault-btn')) {
+        e.stopPropagation();
+        const groupId = e.target.dataset.groupId;
+        dom.categoryMenu.querySelector(`[data-id="${groupId}"]`).click();
     } else {
         const actions = e.target.closest('.actions');
         if (!actions) return;
-        
         if(e.target.closest('.edit-btn')) { e.stopPropagation(); openEditModal(record); }
         if(e.target.closest('.close-btn')) { e.stopPropagation(); updateDoc(doc(db,`/artifacts/${appId}/public/data/records`,record.id),{isClosed:!record.isClosed, closedAt: !record.isClosed ? Timestamp.now() : null }); }
         if(e.target.closest('.time-btn')) { e.stopPropagation(); openTimeEditModal(record); }
