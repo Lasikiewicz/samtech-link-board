@@ -128,32 +128,30 @@
 
         const authContainer = document.getElementById('auth-container'), appContainer = document.getElementById('app-container'), authForm = document.getElementById('auth-form'), authEmailInput = document.getElementById('auth-email'), authPasswordInput = document.getElementById('auth-password'), addLinkForm = document.getElementById('add-link-form'), linksContainer = document.getElementById('links-container'), loadingState = document.getElementById('loading-state'), searchInput = document.getElementById('search-input'), sortControls = document.getElementById('sort-controls'), userEmailSpan = document.getElementById('user-email'), logoutBtn = document.getElementById('logout-btn'), presenceList = document.getElementById('presence-list'), activeTagFilter = document.getElementById('active-tag-filter'), authErrorEl = document.getElementById('auth-error'), authMessageEl = document.getElementById('auth-message'), loginBtn = document.getElementById('login-btn'), registerBtn = document.getElementById('register-btn');
 
+        const showAuthMessage = (message, type = 'success') => {
+            authMessageEl.innerHTML = message;
+            let colors = 'bg-green-100 text-green-800'; // Default to success
+            if (type === 'warning') colors = 'bg-yellow-100 text-yellow-800';
+            if (type === 'error') colors = 'bg-red-100 text-red-800';
+            authMessageEl.className = `message-box mb-4 p-4 text-sm rounded-lg ${colors}`;
+            authMessageEl.classList.remove('hidden');
+        };
+
         const renderLinks = () => {
             linksContainer.innerHTML = '';
             let filteredLinks = [...allLinks];
 
-            // 1. Filter by search term
             if (currentSearch) {
                 filteredLinks = filteredLinks.filter(link => link.title.toLowerCase().includes(currentSearch));
             }
-
-            // 2. Filter by tag
             if (currentTag) {
                 filteredLinks = filteredLinks.filter(link => link.tags && link.tags.includes(currentTag));
             }
 
-            // 3. Sort
             switch (currentSort) {
-                case 'oldest':
-                    filteredLinks.sort((a, b) => (a.createdAt?.seconds || 0) - (b.createdAt?.seconds || 0));
-                    break;
-                case 'alpha':
-                    filteredLinks.sort((a, b) => a.title.localeCompare(b.title));
-                    break;
-                case 'newest':
-                default:
-                    filteredLinks.sort((a, b) => (b.createdAt?.seconds || 0) - (a.createdAt?.seconds || 0));
-                    break;
+                case 'oldest': filteredLinks.sort((a, b) => (a.createdAt?.seconds || 0) - (b.createdAt?.seconds || 0)); break;
+                case 'alpha': filteredLinks.sort((a, b) => a.title.localeCompare(b.title)); break;
+                case 'newest': default: filteredLinks.sort((a, b) => (b.createdAt?.seconds || 0) - (a.createdAt?.seconds || 0)); break;
             }
             
             if (filteredLinks.length === 0) {
@@ -253,7 +251,6 @@
             });
         };
 
-        // Event Listeners for controls
         searchInput.addEventListener('input', (e) => { currentSearch = e.target.value.toLowerCase(); renderLinks(); });
         sortControls.addEventListener('click', (e) => {
             if (e.target.classList.contains('sort-btn')) {
@@ -276,9 +273,9 @@
             }
         });
 
-        // Auth Logic
         onAuthStateChanged(auth, (user) => {
             authMessageEl.classList.add('hidden');
+            authErrorEl.textContent = '';
             if (user && user.emailVerified) {
                 userId = user.uid;
                 userEmailSpan.textContent = user.email;
@@ -291,10 +288,17 @@
                 appContainer.style.display = 'none';
                 if (linksUnsubscribe) linksUnsubscribe();
                 if (user && !user.emailVerified) {
-                     const msg = `A verification link was sent to <strong>${user.email}</strong>. Please check your inbox. <br><br> <button id="resend-verification-btn" class="font-semibold underline hover:text-yellow-900">Resend email</button>`;
-                     authMessageEl.innerHTML = msg;
-                     authMessageEl.className = 'message-box mb-4 p-4 text-sm rounded-lg bg-yellow-100 text-yellow-800';
-                     document.getElementById('resend-verification-btn')?.addEventListener('click', () => sendEmailVerification(user));
+                     const msg = `A verification link was sent to <strong>${user.email}</strong>. Please check your inbox and spam folder. <br><br> <button id="resend-verification-btn" class="font-semibold underline hover:text-yellow-900">Resend verification email</button>`;
+                     showAuthMessage(msg, 'warning');
+                     document.getElementById('resend-verification-btn')?.addEventListener('click', async () => {
+                         try {
+                            await sendEmailVerification(user);
+                            showAuthMessage('A new verification email has been successfully sent. Please check your spam folder.', 'success');
+                         } catch (error) {
+                            console.error("Error resending verification email:", error);
+                            showAuthMessage(`Failed to resend verification email. Error: ${error.code}. Please try again in a few moments.`, 'error');
+                         }
+                     });
                 }
             }
         });
@@ -303,10 +307,9 @@
             authErrorEl.textContent = '';
             authMessageEl.classList.add('hidden');
             try {
-                // We just sign in. onAuthStateChanged will handle the UI update.
                 await signInWithEmailAndPassword(auth, authEmailInput.value, authPasswordInput.value);
             } catch (error) { 
-                authErrorEl.textContent = error.message; 
+                authErrorEl.textContent = `Login failed: ${error.code}`; 
             }
         });
 
@@ -322,11 +325,10 @@
             try {
                 const userCredential = await createUserWithEmailAndPassword(auth, email, password);
                 await sendEmailVerification(userCredential.user);
-                await signOut(auth); // Sign out so they have to verify before logging in.
-                authMessageEl.innerHTML = `Registration successful! A verification link has been sent to <strong>${email}</strong>.`;
-                authMessageEl.className = 'message-box mb-4 p-4 text-sm rounded-lg bg-green-100 text-green-800';
+                await signOut(auth);
+                showAuthMessage(`Registration successful! A verification link has been sent to <strong>${email}</strong>. Please check your spam folder.`, 'success');
             } catch (error) { 
-                authErrorEl.textContent = error.message; 
+                authErrorEl.textContent = `Registration failed: ${error.code}`; 
             }
         });
 
