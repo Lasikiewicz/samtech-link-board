@@ -211,6 +211,18 @@ dom.recordsContainer.addEventListener('submit', async (e) => {
 
 dom.formCategorySelector.addEventListener('click', (e) => { if (e.target.matches('.form-category-btn')) setFormCategory(e.target.dataset.category, dom.formFieldsContainer); });
 
+const findSimilarFaults = (newTitle) => {
+    const significantWords = newTitle.toLowerCase().split(' ').filter(w => w.length > 3);
+    if(significantWords.length === 0) return [];
+
+    return fetchedRecords.filter(r => {
+        if (r.category !== 'common-fault') return false;
+        const existingTitleWords = r.title.toLowerCase().split(' ');
+        const matchCount = significantWords.filter(word => existingTitleWords.includes(word)).length;
+        return matchCount >= 2; // Consider it similar if 2 or more significant words match
+    });
+};
+
 const createRecord = async (recordData, relatedTo = []) => {
      const submitBtn = dom.addRecordForm.querySelector('#add-record-submit');
      submitBtn.disabled = true; submitBtn.textContent = '...';
@@ -218,8 +230,8 @@ const createRecord = async (recordData, relatedTo = []) => {
         recordData.onSamsungTracker = recordData.onSamsungTracker === 'on';
         const newRecordRef = await addDoc(collection(db, `/artifacts/${appId}/public/data/records`), { ...recordData, category: currentFormCategory, addedBy: currentUserDisplayName, createdAt: serverTimestamp(), isClosed: false, comments: [], relatedTo });
         for(const related of relatedTo) {
-            const relatedRef = doc(db, `/artifacts/${appId}/public/data/records`, related.id);
-            await updateDoc(relatedRef, { relatedTo: arrayUnion({ id: newRecordRef.id, title: recordData.title }) });
+            const relatedDocRef = doc(db, `/artifacts/${appId}/public/data/records`, related.id);
+            await updateDoc(relatedDocRef, { relatedTo: arrayUnion({ id: newRecordRef.id, title: recordData.title }) });
         }
          dom.addRecordForm.reset(); dom.addRecordModal.classList.add('hidden');
      } finally { submitBtn.disabled = false; submitBtn.textContent = 'Add Record'; }
@@ -230,15 +242,14 @@ dom.addRecordForm.addEventListener('submit', async (e) => {
     const formData = new FormData(dom.addRecordForm); const recordData = Object.fromEntries(formData.entries());
     if (!recordData.title || !currentUserDisplayName) return;
     
-    if (currentFormCategory === 'common-fault' && recordData.modelNumber) {
-        const q = query(collection(db, `/artifacts/${appId}/public/data/records`), where("category", "==", "common-fault"), where("modelNumber", "==", recordData.modelNumber));
-        const querySnapshot = await getDocs(q);
-        if (!querySnapshot.empty) {
+    if (currentFormCategory === 'common-fault') {
+        const similarFaults = findSimilarFaults(recordData.title);
+        if (similarFaults.length > 0) {
             pendingRecordData = recordData;
             dom.existingFaultsList.innerHTML = '';
-            querySnapshot.forEach(doc => {
-                const isLinked = doc.data().relatedTo?.length > 0;
-                dom.existingFaultsList.innerHTML += `<label class="flex items-center space-x-2"><input type="checkbox" value="${doc.id}" data-title="${doc.data().title}" class="related-fault-checkbox rounded"><span>${doc.data().title}${isLinked ? ' (Already linked)' : ''}</span></label>`;
+            similarFaults.forEach(fault => {
+                const isLinked = fault.relatedTo?.length > 0;
+                dom.existingFaultsList.innerHTML += `<label class="flex items-center space-x-2"><input type="checkbox" value="${fault.id}" data-title="${fault.title}" class="related-fault-checkbox rounded"><span>${fault.title}${isLinked ? ' (Already linked)' : ''}</span></label>`;
             });
             dom.linkFaultModal.classList.remove('hidden'); return;
         }
