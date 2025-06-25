@@ -423,12 +423,25 @@ dom.editRecordForm.addEventListener('submit', async (e) => {
     e.preventDefault(); const submitBtn = e.target.querySelector('#edit-record-submit');
     const formData = new FormData(dom.editRecordForm); const recordData = Object.fromEntries(formData.entries());
     recordData.onSamsungTracker = recordData.onSamsungTracker === 'on';
-    const recordId = recordData.id; delete recordData.id;
-    if (recordId && recordData.title) {
-        submitBtn.disabled = true; submitBtn.textContent = '...';
-        try { await updateDoc(doc(db, `/artifacts/${appId}/public/data/records`, recordId), recordData); dom.editRecordModal.classList.add('hidden');
-        } finally { submitBtn.disabled = false; submitBtn.textContent = 'Save Changes'; }
+    const recordId = recordData.id;
+    delete recordData.id; // Remove ID from data to be updated
+
+    if (!recordId) {
+        console.error("Edit record: No record ID found for update.");
+        return; // Stop execution if no ID
     }
+    // The 'title' field is marked as 'required' in HTML, but adding a JS check for robustness.
+    if (!recordData.title) {
+        console.error("Edit record: Title is empty. Please ensure the title field is filled.");
+        return; // Stop execution if title is empty
+    }
+
+    submitBtn.disabled = true; submitBtn.textContent = '...';
+    try { await updateDoc(doc(db, `/artifacts/${appId}/public/data/records`, recordId), recordData); dom.editRecordModal.classList.add('hidden');
+    } catch (error) {
+        console.error("Error updating record:", error);
+        // Optionally, provide user feedback here, e.g., alert("Failed to save changes. Check console for details.");
+    } finally { submitBtn.disabled = false; submitBtn.textContent = 'Save Changes'; }
 });
  dom.editTimeForm.addEventListener('submit', async (e) => {
     e.preventDefault();
