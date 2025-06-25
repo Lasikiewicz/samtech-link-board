@@ -67,7 +67,7 @@
             <div class="bg-white dark:bg-slate-800 p-4 rounded-xl shadow-lg mb-8 space-y-4">
                 <input id="search-input" type="search" placeholder="&#x1F50D; Search all record fields..." class="w-full px-4 py-2 border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-700 rounded-lg">
                 <div class="flex flex-wrap items-center gap-x-4 gap-y-2">
-                    <div class="flex items-center gap-2"><span class="text-sm font-semibold">Show:</span><div id="filter-controls" class="flex gap-2"><button class="control-btn text-sm px-3 py-1 rounded-full border border-slate-300 dark:border-slate-600 active" data-filter="open">Open</button><button class="control-btn text-sm px-3 py-1 rounded-full border border-slate-300 dark:border-slate-600" data-filter="closed">Closed</button><button class="control-btn text-sm px-3 py-1 rounded-full border border-slate-300 dark:border-slate-600" data-filter="all">All</button><button class="control-btn text-sm px-3 py-1 rounded-full border border-slate-300 dark:border-slate-600" data-filter="my">My Records</button></div></div>
+                    <div class="flex items-center gap-2"><span class="text-sm font-semibold">Show:</span><div id="filter-controls" class="flex gap-2"><button class="control-btn text-sm px-3 py-1 rounded-full border border-slate-300 dark:border-slate-600" data-filter="open">Open</button><button class="control-btn text-sm px-3 py-1 rounded-full border border-slate-300 dark:border-slate-600" data-filter="closed">Closed</button><button class="control-btn text-sm px-3 py-1 rounded-full border border-slate-300 dark:border-slate-600 active" data-filter="all">All</button><button class="control-btn text-sm px-3 py-1 rounded-full border border-slate-300 dark:border-slate-600" data-filter="my">My Records</button></div></div>
                     <div class="flex items-center gap-2"><span class="text-sm font-semibold">Sort by:</span><div id="sort-controls" class="flex gap-2"><button class="control-btn text-sm px-3 py-1 rounded-full border border-slate-300 dark:border-slate-600 active" data-sort="newest">Newest</button><button class="control-btn text-sm px-3 py-1 rounded-full border border-slate-300 dark:border-slate-600" data-sort="oldest">Oldest</button><button class="control-btn text-sm px-3 py-1 rounded-full border border-slate-300 dark:border-slate-600" data-sort="alpha">A-Z</button></div></div>
                 </div>
             </div>
@@ -89,7 +89,7 @@
 
         let app, db, recordsUnsubscribe;
         let fetchedRecords = [];
-        let currentSort = 'newest', currentSearch = '', currentCategory = '', currentFilter = 'open', currentUserDisplayName = '';
+        let currentSort = 'newest', currentSearch = '', currentCategory = '', currentFilter = 'all', currentUserDisplayName = '';
 
         try { app = getApps().length ? getApp() : initializeApp(firebaseConfig); db = getFirestore(app); } catch (e) { console.error("Firebase init failed:", e); }
 
@@ -162,7 +162,7 @@
             }
             dom.recordsContainer.innerHTML = '';
             if (recordsToDisplay.length === 0) {
-                 dom.recordsContainer.innerHTML = `<p class="text-slate-500 dark:text-slate-400">No records match your search.</p>`; return;
+                 dom.recordsContainer.innerHTML = `<p class="text-slate-500 dark:text-slate-400">No records match your current filters.</p>`; return;
             }
             recordsToDisplay.forEach(recordData => dom.recordsContainer.appendChild(renderRecordCard(recordData)));
         };
@@ -211,6 +211,9 @@
                 if (btn) {
                     if (btn.dataset.sort) currentSort = btn.dataset.sort;
                     if (btn.dataset.filter) currentFilter = btn.dataset.filter;
+                    // Reset search when main filters change
+                    dom.searchInput.value = '';
+                    currentSearch = '';
                     container.querySelectorAll('.control-btn').forEach(b => b.classList.remove('active'));
                     btn.classList.add('active');
                     setupRecordsListener(); // Re-fetch from Firestore with new query
