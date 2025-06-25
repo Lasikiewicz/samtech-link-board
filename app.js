@@ -1,5 +1,5 @@
 import { initializeApp, getApps, getApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
-import { getFirestore, doc, getDoc, collection, onSnapshot, addDoc, updateDoc, deleteDoc, serverTimestamp, query, where, orderBy, arrayUnion, arrayRemove, Timestamp, getDocs } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+import { getFirestore, doc, getDoc, collection, onSnapshot, addDoc, updateDoc, deleteDoc, serverTimestamp, query, where, orderBy, arrayUnion, arrayRemove, Timestamp, getDocs, runTransaction } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
 const firebaseConfig = { apiKey: "__API_KEY__", authDomain: "__AUTH_DOMAIN__", projectId: "__PROJECT_ID__", storageBucket: "__STORAGE_BUCKET__", messagingSenderId: "__MESSAGING_SENDER_ID__", appId: "__APP_ID__" };
 const appId = 'samtech-record-board';
@@ -97,7 +97,6 @@ const groupCommonFaults = () => {
     groupedFaults = groups;
 };
 
-
 const renderCategoryMenu = () => {
     dom.categoryMenu.innerHTML = '';
     const categories = { '': 'All Records', qa: 'Q&A', 'common-fault': 'Common Faults', general: 'General' };
@@ -123,13 +122,15 @@ const renderCategoryMenu = () => {
 
     dom.categoryMenu.appendChild(createBtn('', 'All Records'));
     dom.categoryMenu.appendChild(createBtn('qa', 'Q&A'));
-    const commonFaultsBtn = createBtn('common-fault', 'Common Faults');
-    dom.categoryMenu.appendChild(commonFaultsBtn);
+    dom.categoryMenu.appendChild(createBtn('common-fault', 'Common Faults'));
 
     if (groupedFaults.size > 0) {
         const details = document.createElement('details');
         details.className = 'pl-4';
         details.innerHTML = `<summary class="cursor-pointer text-sm font-medium py-1">Linked Faults</summary>`;
+        if (groupedFaults.has(currentCategory)) {
+            details.open = true;
+        }
         const subList = document.createElement('div');
         subList.className = 'ml-2 border-l border-slate-200 dark:border-slate-700';
         groupedFaults.forEach((group, groupId) => {
@@ -163,7 +164,6 @@ const renderRecordCard = (record) => {
     const groupId = getRecordGroupId(record.id);
     const linkedRecordsHtml = groupId ? `<div class="mt-2"><dt class="font-semibold">Linked Faults:</dt><dd><button class="linked-fault-btn text-indigo-600 dark:text-indigo-400 underline" data-group-id="${groupId}">View Group</button></dd></div>` : '';
 
-
     card.innerHTML = `<div class="collapsible-header flex justify-between items-start cursor-pointer record-header"><div class="flex items-center gap-3"><span class="text-xs capitalize text-white px-2 py-0.5 rounded-full" style="background-color: ${categoryColors[record.category] || '#64748b'}">${categoryDisplayNames[record.category] || record.category}</span><h3 class="text-lg font-semibold text-indigo-600 dark:text-indigo-400 break-all">${record.title}</h3></div><div class="flex items-center gap-2">${record.onSamsungTracker ? '<span class="text-xs font-bold bg-green-500 text-white px-2 py-1 rounded-full">Samsung Action Tracker</span>' : ''}${record.isClosed?'<span class="text-xs font-bold bg-slate-500 text-white px-2 py-1 rounded-full">CLOSED</span>':''}<div class="actions flex-shrink-0 ml-4 space-x-2"></div><svg class="chevron h-5 w-5 transition-transform" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" /></svg></div></div><div class="collapsible-content details-container"><div class="mt-4 pt-4 border-t border-slate-200 dark:border-slate-700 text-sm space-y-2"><dl class="grid grid-cols-1 md:grid-cols-2 gap-x-4 gap-y-1">${detailsHtml}${linkedRecordsHtml}</dl>${record.description?`<div class="pt-2"><p class="whitespace-pre-wrap">${record.description}</p></div>`:''}</div><div class="comments-section mt-4 pt-4 border-t border-slate-200 dark:border-slate-700"></div><p class="text-xs text-slate-400 dark:text-slate-500 mt-4">Added by <span class="font-mono">${record.addedBy}</span> on ${formatDateTime(record.createdAt)}</p></div>`;
     
     card.querySelector('.record-header').addEventListener('click', (e) => {
@@ -182,13 +182,12 @@ const renderRecordCard = (record) => {
     if(card.classList.contains('expanded')) card.querySelector('.comments-section')?.classList.add('expanded');
 
     const actions = card.querySelector('.actions');
-    actions.innerHTML = `<button class="time-btn" title="Edit Timestamp">&#x1F4C5;</button><button class="update-btn" title="Log Update">&#x1F4DD;</button><button class="edit-btn" title="Edit">&#9998;</button><button class="close-btn" title="${record.isClosed?'Re-open':'Close'}">${record.isClosed?'&#x1F513;':'&#x1F512;'}</button>`;
+    actions.innerHTML = `<button class="time-btn" title="Edit Timestamp">&#x1F4C5;</button><button class="edit-btn" title="Edit">&#9998;</button><button class="close-btn" title="${record.isClosed?'Re-open':'Close'}">${record.isClosed?'&#x1F513;':'&#x1F512;'}</button>`;
     actions.classList.add('text-slate-500','dark:text-slate-400');
     actions.querySelectorAll('button').forEach(btn=>btn.classList.add('hover:text-indigo-600','dark:hover:text-indigo-400','transition'));
     actions.querySelector('.close-btn').classList.add('hover:text-red-600','dark:hover:text-red-500');
     actions.querySelector('.edit-btn').addEventListener('click',(e)=>{ e.stopPropagation(); openEditModal(record); });
     actions.querySelector('.close-btn').addEventListener('click',(e)=>{ e.stopPropagation(); updateDoc(doc(db,`/artifacts/${appId}/public/data/records`,record.id),{isClosed:!record.isClosed}); });
-    actions.querySelector('.update-btn').addEventListener('click',(e)=>{ e.stopPropagation(); logUpdate(record.id); });
     actions.querySelector('.time-btn').addEventListener('click',(e)=>{ e.stopPropagation(); openTimeEditModal(record); });
     
     const linkedFaultBtn = card.querySelector('.linked-fault-btn');
@@ -210,16 +209,14 @@ const renderComments = (container, record) => {
     const commentsList = container.querySelector('.comments-list');
     if (record.comments && record.comments.length > 0) {
          const sortedComments = record.comments.map(c => ({...c, date: c.createdAt?.seconds ? new Date(c.createdAt.seconds * 1000) : new Date() })).sort((a,b) => a.date - b.date);
-        sortedComments.forEach((comment) => {
+        sortedComments.forEach((comment, index) => {
             const commentDiv = document.createElement('div');
             commentDiv.className = 'bg-slate-100 dark:bg-slate-700 p-3 rounded-lg text-sm';
-            commentDiv.innerHTML = `<p class="text-xs text-slate-500 dark:text-slate-400 mb-1">By: <span class="font-mono">${comment.addedBy}</span> at ${formatDateTime(comment.createdAt)}</p><p class="comment-text break-words whitespace-pre-wrap flex-grow">${comment.text || ''}</p>`;
+            commentDiv.innerHTML = `<p class="text-xs text-slate-500 dark:text-slate-400 mb-1">By: <span class="font-mono">${comment.addedBy}</span> at ${formatDateTime(comment.createdAt)}</p><div class="comment-body flex justify-between items-start"><p class="comment-text break-words whitespace-pre-wrap flex-grow">${comment.text || ''}</p>${comment.addedBy === currentUserDisplayName ? `<div class="comment-actions flex-shrink-0 ml-2 space-x-2"><button class="edit-comment-btn" data-index="${index}" title="Edit">&#9998;</button><button class="delete-comment-btn" data-index="${index}" title="Delete">&#10006;</button></div>` : ''}</div>`;
             commentsList.appendChild(commentDiv);
         });
     } else { commentsList.innerHTML = '<p class="text-xs text-slate-400 dark:text-slate-500">No comments yet.</p>'; }
 };
-
-const logUpdate = async (recordId) => { await updateDoc(doc(db, `/artifacts/${appId}/public/data/records`, recordId), { comments: arrayUnion({ text: `Record updated`, addedBy: currentUserDisplayName, createdAt: Timestamp.now() }) }); };
 
 const renderRecords = () => {
      let recordsToDisplay = [...allRecords];
@@ -237,54 +234,7 @@ const renderRecords = () => {
     recordsToDisplay.forEach(recordData => dom.recordsContainer.appendChild(renderRecordCard(recordData)));
 };
 
-const openEditModal = (record) => {
-    dom.editRecordForm.querySelector('[name="id"]').value = record.id;
-    setFormCategory(record.category, dom.editFormFieldsContainer, record);
-    
-    // Add unlink functionality
-    if (record.category === 'common-fault') {
-        const allRelated = [...(record.relatedTo || []), ...(record.relatedBy || [])];
-        if (allRelated.length > 0) {
-            const unlinkContainer = document.createElement('div');
-            unlinkContainer.className = "mt-4 pt-4 border-t border-slate-200 dark:border-slate-700";
-            unlinkContainer.innerHTML = `<h3 class="text-md font-semibold mb-2">Linked Records</h3>`;
-            const list = document.createElement('ul');
-            list.className = "space-y-1";
-            allRelated.forEach(related => {
-                const item = document.createElement('li');
-                item.className = "flex justify-between items-center";
-                item.innerHTML = `<span>${related.title}</span><button type="button" class="unlink-btn text-red-500 text-xs hover:underline" data-unlink-id="${related.id}" data-unlink-title="${related.title}">Unlink</button>`;
-                list.appendChild(item);
-            });
-            unlinkContainer.appendChild(list);
-            dom.editFormFieldsContainer.appendChild(unlinkContainer);
-        }
-    }
-    
-    dom.editRecordModal.classList.remove('hidden');
-};
-
-const unlinkFaults = async (recordId, unlinkId, unlinkTitle) => {
-    const recordRef = doc(db, `/artifacts/${appId}/public/data/records`, recordId);
-    const unlinkRef = doc(db, `/artifacts/${appId}/public/data/records`, unlinkId);
-    const recordSnap = await getDoc(recordRef);
-    const recordData = recordSnap.data();
-
-    // Remove from current record's arrays
-    await updateDoc(recordRef, {
-        relatedTo: arrayRemove({id: unlinkId, title: unlinkTitle}),
-        relatedBy: arrayRemove({id: unlinkId, title: unlinkTitle})
-    });
-
-    // Remove from the other record's arrays
-    await updateDoc(unlinkRef, {
-        relatedTo: arrayRemove({id: recordId, title: recordData.title}),
-        relatedBy: arrayRemove({id: recordId, title: recordData.title})
-    });
-    
-    dom.editRecordModal.classList.add('hidden'); // Close modal after unlinking
-};
-
+const openEditModal = (record) => { dom.editRecordForm.querySelector('[name="id"]').value = record.id; setFormCategory(record.category, dom.editFormFieldsContainer, record); dom.editRecordModal.classList.remove('hidden'); };
 const openTimeEditModal = (record) => {
     const form = dom.editTimeForm;
     form.querySelector('[name="id"]').value = record.id;
@@ -350,52 +300,67 @@ dom.deleteRecordBtn.addEventListener('click', () => { recordToDelete = dom.editR
 dom.cancelDelete.addEventListener('click', () => { recordToDelete = null; dom.confirmDeleteModal.classList.add('hidden'); });
 dom.confirmDeleteBtn.addEventListener('click', async () => { if (recordToDelete) { await deleteDoc(doc(db, `/artifacts/${appId}/public/data/records`, recordToDelete)); dom.editRecordModal.classList.add('hidden'); dom.confirmDeleteModal.classList.add('hidden'); recordToDelete = null; } });
 
-dom.recordsContainer.addEventListener('submit', async (e) => {
+dom.recordsContainer.addEventListener('click', (e) => {
+    const recordCard = e.target.closest('.record-card');
+    if (!recordCard) return;
+    const recordId = recordCard.dataset.id;
+
     if (e.target.classList.contains('add-comment-form')) {
         e.preventDefault();
         const form = e.target; const textarea = form.querySelector('textarea'); const text = textarea.value.trim(); const submitBtn = form.querySelector('button');
-        const card = form.closest('.record-card');
-        const recordId = card.dataset.id;
         if (!text || !currentUserDisplayName) return;
         submitBtn.disabled = true; submitBtn.textContent = '...';
-        try {
-            await updateDoc(doc(db, `/artifacts/${appId}/public/data/records`, recordId), { comments: arrayUnion({ text, addedBy: currentUserDisplayName, createdAt: Timestamp.now() }) });
-            textarea.value = '';
-            expandedRecordIds.add(recordId); // Keep it expanded
-        } finally { submitBtn.disabled = false; submitBtn.textContent = 'Post'; }
+        updateDoc(doc(db, `/artifacts/${appId}/public/data/records`, recordId), { comments: arrayUnion({ text, addedBy: currentUserDisplayName, createdAt: Timestamp.now() }) })
+            .then(() => {
+                textarea.value = '';
+                expandedRecordIds.add(recordId); // Keep it expanded
+            })
+            .finally(() => { submitBtn.disabled = false; submitBtn.textContent = 'Post'; });
+    }
+    else if (e.target.classList.contains('edit-comment-btn')) {
+        const commentBody = e.target.closest('.comment-body');
+        const commentIndex = parseInt(e.target.dataset.index);
+        const currentText = commentBody.querySelector('.comment-text').textContent;
+        commentBody.innerHTML = `<textarea class="edit-comment-textarea flex-grow w-full text-sm p-2 border rounded">${currentText}</textarea><div class="flex flex-col ml-2 space-y-1"><button class="save-comment-btn text-xs bg-green-500 text-white px-2 py-1 rounded" data-index="${commentIndex}">Save</button><button class="cancel-comment-btn text-xs bg-gray-500 text-white px-2 py-1 rounded">Cancel</button></div>`;
+    }
+    else if(e.target.classList.contains('save-comment-btn')) {
+         const commentIndex = parseInt(e.target.dataset.index);
+         const newText = e.target.closest('.comment-body').querySelector('.edit-comment-textarea').value;
+         runTransaction(db, async (transaction) => {
+             const recordRef = doc(db, `/artifacts/${appId}/public/data/records`, recordId);
+             const recordDoc = await transaction.get(recordRef);
+             if(!recordDoc.exists()) throw "Document does not exist!";
+             const comments = recordDoc.data().comments;
+             comments[commentIndex].text = newText;
+             transaction.update(recordRef, { comments });
+         });
+    }
+    else if(e.target.classList.contains('delete-comment-btn')) {
+        const commentIndex = parseInt(e.target.dataset.index);
+        runTransaction(db, async (transaction) => {
+             const recordRef = doc(db, `/artifacts/${appId}/public/data/records`, recordId);
+             const recordDoc = await transaction.get(recordRef);
+             if(!recordDoc.exists()) throw "Document does not exist!";
+             const comments = recordDoc.data().comments;
+             comments.splice(commentIndex, 1);
+             transaction.update(recordRef, { comments });
+         });
+    }
+    else if (e.target.classList.contains('cancel-comment-btn')) {
+        const record = fetchedRecords.find(r => r.id === recordId);
+        if (record) renderComments(e.target.closest('.comments-section'), record);
     }
 });
 
-dom.editRecordModal.addEventListener('click', (e) => {
-    if(e.target.classList.contains('unlink-btn')) {
-        const recordId = dom.editRecordForm.querySelector('[name="id"]').value;
-        const unlinkId = e.target.dataset.unlinkId;
-        const unlinkTitle = e.target.dataset.unlinkTitle;
-        unlinkFaults(recordId, unlinkId, unlinkTitle);
-    }
-});
 
 dom.formCategorySelector.addEventListener('click', (e) => { if (e.target.matches('.form-category-btn')) setFormCategory(e.target.dataset.category, dom.formFieldsContainer); });
-
-const findSimilarFaults = (newTitle, modelNumber) => {
-    const modelNum = modelNumber?.toLowerCase() || '';
-    return allRecords.filter(r => {
-        if (r.category !== 'common-fault') return false;
-        if (r.modelNumber && modelNumber && r.modelNumber.toLowerCase() === modelNum) return true;
-        const newWords = newTitle.toLowerCase().split(' ').filter(w => w.length > 3);
-        if(newWords.length === 0) return false;
-        const existingWords = r.title.toLowerCase().split(' ');
-        const matchCount = newWords.filter(word => existingWords.includes(word)).length;
-        return matchCount >= 2;
-    });
-};
 
 const createRecord = async (recordData, relatedTo = []) => {
      const submitBtn = dom.addRecordForm.querySelector('#add-record-submit');
      submitBtn.disabled = true; submitBtn.textContent = '...';
      try {
         recordData.onSamsungTracker = recordData.onSamsungTracker === 'on';
-        const newRecordRef = await addDoc(collection(db, `/artifacts/${appId}/public/data/records`), { ...recordData, category: currentFormCategory, addedBy: currentUserDisplayName, createdAt: serverTimestamp(), isClosed: false, comments: [], relatedTo: relatedTo, relatedBy: [] });
+        const newRecordRef = await addDoc(collection(db, `/artifacts/${appId}/public/data/records`), { ...recordData, category: currentFormCategory, addedBy: currentUserDisplayName, createdAt: serverTimestamp(), isClosed: false, comments: [], relatedTo: [], relatedBy: relatedTo });
         for(const related of relatedTo) {
             const relatedDocRef = doc(db, `/artifacts/${appId}/public/data/records`, related.id);
             await updateDoc(relatedDocRef, { relatedBy: arrayUnion({ id: newRecordRef.id, title: recordData.title }) });
@@ -449,6 +414,15 @@ dom.editRecordForm.addEventListener('submit', async (e) => {
     if (id && newDate) {
          await updateDoc(doc(db, `/artifacts/${appId}/public/data/records`, id), { createdAt: Timestamp.fromDate(newDate) });
          dom.editTimeModal.classList.add('hidden');
+    }
+});
+
+dom.editRecordModal.addEventListener('click', (e) => {
+    if(e.target.classList.contains('unlink-btn')) {
+        const recordId = dom.editRecordForm.querySelector('[name="id"]').value;
+        const unlinkId = e.target.dataset.unlinkId;
+        const unlinkTitle = e.target.dataset.unlinkTitle;
+        unlinkFaults(recordId, unlinkId, unlinkTitle);
     }
 });
 
