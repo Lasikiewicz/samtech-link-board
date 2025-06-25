@@ -251,7 +251,6 @@
             });
         };
 
-        // --- NEW, SIMPLIFIED UI SWITCHING FUNCTIONS ---
         const showApp = (user) => {
             userId = user.uid;
             userEmailSpan.textContent = user.email;
@@ -271,7 +270,6 @@
             }
         };
 
-        // --- EVENT LISTENERS ---
         searchInput.addEventListener('input', (e) => { currentSearch = e.target.value.toLowerCase(); renderLinks(); });
         sortControls.addEventListener('click', (e) => {
             if (e.target.classList.contains('sort-btn')) {
@@ -295,19 +293,24 @@
         });
 
         // --- PRIMARY AUTH LOGIC ---
-        onAuthStateChanged(auth, (user) => {
+        onAuthStateChanged(auth, async (user) => {
             authMessageEl.classList.add('hidden');
             authErrorEl.textContent = '';
+
             if (user) {
-                 if (user.emailVerified) {
-                    showApp(user);
+                // *** FIX: Force a reload of the user object to get the latest emailVerified state ***
+                await user.reload();
+                const freshUser = auth.currentUser; // Use the reloaded user object
+
+                 if (freshUser.emailVerified) {
+                    showApp(freshUser);
                  } else {
-                    showLogin(); // Show login page but with a warning
-                    const msg = `Your email <strong>${user.email}</strong> is not verified. Please check your inbox and spam folder. <br><br> <button id="resend-verification-btn" class="font-semibold underline hover:text-yellow-900">Resend verification email</button>`;
+                    showLogin();
+                    const msg = `Your email <strong>${freshUser.email}</strong> is not verified. Please check your inbox and spam folder. <br><br> <button id="resend-verification-btn" class="font-semibold underline hover:text-yellow-900">Resend verification email</button>`;
                     showAuthMessage(msg, 'warning');
                     document.getElementById('resend-verification-btn')?.addEventListener('click', async () => {
                         try {
-                            await sendEmailVerification(user);
+                            await sendEmailVerification(freshUser);
                             showAuthMessage('A new verification email has been successfully sent. Please check your spam folder.', 'success');
                         } catch (error) {
                             console.error("Error resending verification email:", error);
