@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Collaborative Record Board</title>
+    <title>Samtech Tracker</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -26,6 +26,9 @@
         .dark .category-menu-item.active { background-color: #312e81; color: #a5b4fc; }
         .form-category-btn.active { background-color: #4f46e5; color: white; }
         .dark .form-category-btn.active { background-color: #6366f1; }
+        .details-container { max-height: 0; overflow: hidden; transition: max-height 0.5s ease-in-out; }
+        .record-card.expanded .details-container { max-height: 1000px; /* Adjust as needed */ }
+        .record-card.expanded .chevron { transform: rotate(180deg); }
     </style>
 </head>
 <body class="text-slate-800 dark:text-slate-200">
@@ -49,19 +52,16 @@
 
     <div id="app-container" class="max-w-7xl mx-auto p-4 sm:p-6 lg:p-8">
       <div class="grid grid-cols-1 lg:grid-cols-4 gap-8">
-        <aside class="lg:col-span-1"><div class="sticky top-8"><h2 class="text-lg font-bold mb-4 text-slate-900 dark:text-white">Categories</h2><nav id="category-menu" class="space-y-1"></nav></div></aside>
+        <aside class="lg:col-span-1"><div class="sticky top-8"><div class="mb-4 text-xs text-slate-500 dark:text-slate-400">Signed in as: <span id="user-name-display" class="font-mono font-semibold"></span></div><h2 class="text-lg font-bold mb-4 text-slate-900 dark:text-white">Categories</h2><nav id="category-menu" class="space-y-1"></nav></div></aside>
         <main class="lg:col-span-3">
             <header class="mb-6">
                 <div class="flex flex-wrap gap-4 justify-between items-center">
-                    <div><h1 class="text-3xl sm:text-4xl font-bold text-slate-900 dark:text-white">Collaborative Record Board</h1><p class="text-slate-600 dark:text-slate-400 mt-1">Share, discuss, and edit records.</p></div>
+                    <div><h1 class="text-3xl sm:text-4xl font-bold text-slate-900 dark:text-white">Samtech Tracker</h1></div>
                     <div class="flex items-center gap-4">
                         <button id="add-new-record-btn" class="bg-indigo-600 text-white font-semibold px-4 py-2 rounded-lg hover:bg-indigo-700">Add New Record</button>
                         <button id="dark-mode-toggle" class="p-2 rounded-full hover:bg-slate-200 dark:hover:bg-slate-700" title="Toggle Dark Mode"><svg id="sun-icon" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z" /></svg><svg id="moon-icon" class="h-6 w-6 hidden" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z" /></svg></button>
                         <button id="logout-btn" class="bg-red-500 text-white font-semibold px-4 py-2 rounded-lg hover:bg-red-600">Logout</button>
                     </div>
-                </div>
-                <div class="mt-4 flex flex-wrap gap-4 justify-between items-start bg-white dark:bg-slate-800 p-3 rounded-lg shadow-sm w-full">
-                    <div class="text-xs text-slate-500 dark:text-slate-400">Signed in as: <span id="user-name-display" class="font-mono font-semibold"></span></div>
                 </div>
             </header>
             <div class="bg-white dark:bg-slate-800 p-4 rounded-xl shadow-lg mb-8 space-y-4">
@@ -76,12 +76,14 @@
       </div>
     </div>
 
+    <!-- Modals -->
     <div id="add-record-modal" class="fixed inset-0 bg-black bg-opacity-70 flex items-center justify-center p-4 hidden"><div class="bg-white dark:bg-slate-800 rounded-xl shadow-2xl p-6 w-full max-w-lg"><h2 class="text-xl font-semibold mb-4 text-slate-900 dark:text-white">Add New Record</h2><form id="add-record-form"><div class="mb-4"><label class="block text-sm font-medium mb-1">Category</label><div id="form-category-selector" class="grid grid-cols-3 gap-2"><button type="button" class="form-category-btn px-4 py-2 border rounded-lg" data-category="qa">Q&A</button><button type="button" class="form-category-btn px-4 py-2 border rounded-lg" data-category="common-fault">Common Faults</button><button type="button" class="form-category-btn px-4 py-2 border rounded-lg" data-category="general">General</button></div></div><div id="form-fields-container" class="space-y-4"></div><div class="mt-6 flex justify-end space-x-3"><button type="button" id="cancel-add" class="bg-slate-200 dark:bg-slate-600 text-slate-800 dark:text-slate-200 font-semibold px-4 py-2 rounded-lg">Cancel</button><button type="submit" id="add-record-submit" class="bg-indigo-600 text-white font-semibold px-4 py-2 rounded-lg disabled:opacity-50">Add Record</button></div></form></div></div>
     <div id="edit-record-modal" class="fixed inset-0 bg-black bg-opacity-70 flex items-center justify-center p-4 hidden"><div class="bg-white dark:bg-slate-800 rounded-xl shadow-2xl p-6 w-full max-w-lg"><h2 class="text-xl font-semibold mb-4 text-slate-900 dark:text-white">Edit Record</h2><form id="edit-record-form"><input type="hidden" name="id"><div id="edit-form-fields-container" class="space-y-4"></div><div class="mt-6 flex justify-end space-x-3"><button type="button" id="cancel-edit" class="bg-slate-200 dark:bg-slate-600 text-slate-800 dark:text-slate-200 font-semibold px-4 py-2 rounded-lg">Cancel</button><button type="submit" id="edit-record-submit" class="bg-indigo-600 text-white font-semibold px-4 py-2 rounded-lg disabled:opacity-50">Save Changes</button></div></form></div></div>
+    <div id="edit-time-modal" class="fixed inset-0 bg-black bg-opacity-70 flex items-center justify-center p-4 hidden"><div class="bg-white dark:bg-slate-800 rounded-xl shadow-2xl p-6 w-full max-w-sm"><h2 class="text-xl font-semibold mb-4 text-slate-900 dark:text-white">Edit Timestamp</h2><form id="edit-time-form"><input type="hidden" name="id"><div class="space-y-4"><input id="edit-time-input" type="datetime-local" class="w-full p-2 border rounded-lg"></div><div class="mt-6 flex justify-end space-x-3"><button type="button" id="cancel-time-edit" class="bg-slate-200 dark:bg-slate-600 font-semibold px-4 py-2 rounded-lg">Cancel</button><button type="submit" id="save-time-edit" class="bg-indigo-600 text-white font-semibold px-4 py-2 rounded-lg">Save Time</button></div></form></div></div>
 
     <script type="module">
         import { initializeApp, getApps, getApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
-        import { getFirestore, doc, getDoc, collection, onSnapshot, addDoc, updateDoc, deleteDoc, serverTimestamp, query, where, orderBy, arrayUnion } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+        import { getFirestore, doc, collection, onSnapshot, addDoc, updateDoc, deleteDoc, serverTimestamp, query, where, orderBy, arrayUnion, Timestamp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
         
         const firebaseConfig = { apiKey: "__API_KEY__", authDomain: "__AUTH_DOMAIN__", projectId: "__PROJECT_ID__", storageBucket: "__STORAGE_BUCKET__", messagingSenderId: "__MESSAGING_SENDER_ID__", appId: "__APP_ID__" };
         const appId = 'samtech-record-board';
@@ -107,6 +109,8 @@
             formCategorySelector: document.getElementById('form-category-selector'), formFieldsContainer: document.getElementById('form-fields-container'),
             editRecordModal: document.getElementById('edit-record-modal'), editRecordForm: document.getElementById('edit-record-form'),
             editFormFieldsContainer: document.getElementById('edit-form-fields-container'), cancelEdit: document.getElementById('cancel-edit'),
+            editTimeModal: document.getElementById('edit-time-modal'), editTimeForm: document.getElementById('edit-time-form'),
+            cancelTimeEdit: document.getElementById('cancel-time-edit'),
             namePromptModal: document.getElementById('name-prompt-modal'), namePromptForm: document.getElementById('name-prompt-form'),
         };
         
@@ -124,10 +128,7 @@
             if (container.id === 'form-fields-container') dom.formCategorySelector.querySelectorAll('.form-category-btn').forEach(btn => btn.classList.toggle('active', btn.dataset.category === category));
         };
 
-        const formatDateTime = (timestamp) => {
-            if (!timestamp?.seconds) return 'N/A';
-            return new Date(timestamp.seconds * 1000).toLocaleString('en-GB', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' });
-        };
+        const formatDateTime = (timestamp) => timestamp?.seconds ? new Date(timestamp.seconds * 1000).toLocaleString('en-GB', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' }) : 'N/A';
         const renderCategoryMenu = () => {
             dom.categoryMenu.innerHTML = '';
             const categories = { '': 'All Records', qa: 'Q&A', 'common-fault': 'Common Faults', general: 'General' };
@@ -142,25 +143,29 @@
         
         const renderRecordCard = (record) => {
             const card = document.createElement('div');
-            card.className = `bg-white dark:bg-slate-800 p-5 rounded-xl shadow-lg transition-opacity ${record.isClosed ? 'opacity-60' : ''}`;
-            const detailsHtml = `${record.qaId?`<div><dt class="font-semibold">Q&A ID:</dt><dd class="break-all">${record.qaId}</dd></div>`:''}${record.modelNumber?`<div><dt class="font-semibold">Model #:</dt><dd class="break-all">${record.modelNumber}</dd></div>`:''}${record.serialNumber?`<div><dt class="font-semibold">Serial #:</dt><dd class="break-all">${record.serialNumber}</dd></div>`:''}${record.serviceOrderNumber?`<div><dt class="font-semibold">Service Order #:</dt><dd class="break-all">${record.serviceOrderNumber}</dd></div>`:''}${record.salesforceCaseNumber?`<div><dt class="font-semibold">Salesforce Case #:</dt><dd class="break-all">${record.salesforceCaseNumber}</dd></div>`:''}`;
+            card.className = `record-card bg-white dark:bg-slate-800 p-5 rounded-xl shadow-lg transition-all ${record.isClosed ? 'opacity-60' : ''}`;
+            const detailsHtml = `${record.qaId?`<div><dt class="font-semibold">Q&A ID:</dt><dd class="break-all">${record.qaId}</dd></div>`:''}${record.modelNumber?`<div><dt class="font-semibold">Model Number:</dt><dd class="break-all">${record.modelNumber}</dd></div>`:''}${record.serialNumber?`<div><dt class="font-semibold">Serial Number:</dt><dd class="break-all">${record.serialNumber}</dd></div>`:''}${record.serviceOrderNumber?`<div><dt class="font-semibold">Service Order Number:</dt><dd class="break-all">${record.serviceOrderNumber}</dd></div>`:''}${record.salesforceCaseNumber?`<div><dt class="font-semibold">Salesforce Case Number:</dt><dd class="break-all">${record.salesforceCaseNumber}</dd></div>`:''}`;
             const categoryDisplayNames = { qa: 'Q&A', 'common-fault': 'Common Fault', general: 'General' };
 
-            card.innerHTML = `<div class="flex justify-between items-start"><div><h3 class="text-lg font-semibold text-indigo-600 dark:text-indigo-400 break-all">${record.title}</h3><div class="mt-2 flex flex-wrap gap-2 items-center"><span class="text-xs capitalize bg-gray-200 dark:bg-gray-700 text-gray-800 dark:text-gray-200 px-2 py-0.5 rounded-full">${categoryDisplayNames[record.category] || record.category}</span>${record.isClosed?'<span class="text-xs font-bold bg-slate-500 text-white px-2 py-1 rounded-full">CLOSED</span>':''}</div></div>${record.addedBy===currentUserDisplayName?`<div class="actions flex-shrink-0 ml-4 space-x-2"><button class="update-btn" title="Log Update">&#x1F4DD;</button><button class="edit-btn" title="Edit">&#9998;</button><button class="close-btn" title="${record.isClosed?'Re-open':'Close'}">${record.isClosed?'&#x1F513;':'&#x1F512;'}</button><button class="delete-btn" title="Delete">&#10006;</button></div>`:''}</div><div class="mt-4 pt-4 border-t border-slate-200 dark:border-slate-700 text-sm space-y-2"><dl class="grid grid-cols-1 md:grid-cols-2 gap-x-4 gap-y-1">${detailsHtml}</dl>${record.description?`<div class="pt-2"><p class="whitespace-pre-wrap">${record.description}</p></div>`:''}</div><div class="comments-section mt-4 pt-4 border-t border-slate-200 dark:border-slate-700"></div><p class="text-xs text-slate-400 dark:text-slate-500 mt-4">Added by <span class="font-mono">${record.addedBy}</span> on ${formatDateTime(record.createdAt)}</p>`;
-
+            card.innerHTML = `<div class="flex justify-between items-start cursor-pointer record-header"><div><h3 class="text-lg font-semibold text-indigo-600 dark:text-indigo-400 break-all">${record.title}</h3><div class="mt-2 flex flex-wrap gap-2 items-center"><span class="text-xs capitalize bg-gray-200 dark:bg-gray-700 text-gray-800 dark:text-gray-200 px-2 py-0.5 rounded-full">${categoryDisplayNames[record.category] || record.category}</span>${record.isClosed?'<span class="text-xs font-bold bg-slate-500 text-white px-2 py-1 rounded-full">CLOSED</span>':''}</div></div><div class="flex items-center gap-2"><div class="actions flex-shrink-0 ml-4 space-x-2"></div><svg class="chevron h-5 w-5 transition-transform" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" /></svg></div></div><div class="details-container"><div class="mt-4 pt-4 border-t border-slate-200 dark:border-slate-700 text-sm space-y-2"><dl class="grid grid-cols-1 md:grid-cols-2 gap-x-4 gap-y-1">${detailsHtml}</dl>${record.description?`<div class="pt-2"><p class="whitespace-pre-wrap">${record.description}</p></div>`:''}</div><div class="comments-section mt-4 pt-4 border-t border-slate-200 dark:border-slate-700"></div><p class="text-xs text-slate-400 dark:text-slate-500 mt-4">Added by <span class="font-mono">${record.addedBy}</span> on ${formatDateTime(record.createdAt)}</p></div>`;
+            
+            card.querySelector('.record-header').addEventListener('click', () => card.classList.toggle('expanded'));
+            
             const commentsSection = card.querySelector('.comments-section');
             renderComments(commentsSection, record);
 
             if (record.addedBy === currentUserDisplayName) {
                  const actions = card.querySelector('.actions');
+                 actions.innerHTML = `<button class="time-btn" title="Edit Timestamp">&#x1F4C5;</button><button class="update-btn" title="Log Update">&#x1F4DD;</button><button class="edit-btn" title="Edit">&#9998;</button><button class="close-btn" title="${record.isClosed?'Re-open':'Close'}">${record.isClosed?'&#x1F513;':'&#x1F512;'}</button><button class="delete-btn" title="Delete">&#10006;</button>`;
                  actions.classList.add('text-slate-500','dark:text-slate-400');
                  actions.querySelectorAll('button').forEach(btn=>btn.classList.add('hover:text-indigo-600','dark:hover:text-indigo-400','transition'));
                  actions.querySelector('.delete-btn').classList.add('hover:text-red-600','dark:hover:text-red-500');
                  actions.querySelector('.close-btn').classList.add('hover:text-red-600','dark:hover:text-red-500');
-                 card.querySelector('.edit-btn').addEventListener('click',()=>openEditModal(record));
-                 card.querySelector('.close-btn').addEventListener('click',()=>updateDoc(doc(db,`/artifacts/${appId}/public/data/records`,record.id),{isClosed:!record.isClosed}));
-                 card.querySelector('.delete-btn').addEventListener('click',()=>deleteDoc(doc(db,`/artifacts/${appId}/public/data/records`,record.id)));
-                 card.querySelector('.update-btn').addEventListener('click',()=>logUpdate(record.id));
+                 card.querySelector('.edit-btn').addEventListener('click',(e)=>{ e.stopPropagation(); openEditModal(record); });
+                 card.querySelector('.close-btn').addEventListener('click',(e)=>{ e.stopPropagation(); updateDoc(doc(db,`/artifacts/${appId}/public/data/records`,record.id),{isClosed:!record.isClosed}); });
+                 card.querySelector('.delete-btn').addEventListener('click',(e)=>{ e.stopPropagation(); deleteDoc(doc(db,`/artifacts/${appId}/public/data/records`,record.id)); });
+                 card.querySelector('.update-btn').addEventListener('click',(e)=>{ e.stopPropagation(); logUpdate(record.id); });
+                 card.querySelector('.time-btn').addEventListener('click',(e)=>{ e.stopPropagation(); openTimeEditModal(record); });
             }
             return card;
         };
@@ -170,10 +175,7 @@
             const commentsList = container.querySelector('.comments-list');
             
             if (record.comments && record.comments.length > 0) {
-                 const sortedComments = record.comments
-                    .map(c => ({...c, createdAt: c.createdAt.seconds ? new Date(c.createdAt.seconds * 1000) : c.createdAt }))
-                    .sort((a,b) => a.createdAt - b.createdAt);
-                    
+                 const sortedComments = record.comments.map(c => ({...c, date: c.createdAt?.seconds ? new Date(c.createdAt.seconds * 1000) : new Date() })).sort((a,b) => a.date - b.date);
                 sortedComments.forEach((comment) => {
                     const commentDiv = document.createElement('div');
                     commentDiv.className = 'bg-slate-100 dark:bg-slate-700 p-3 rounded-lg text-sm';
@@ -183,10 +185,7 @@
             } else {
                 commentsList.innerHTML = '<p class="text-xs text-slate-400 dark:text-slate-500">No comments yet.</p>';
             }
-            
-            if (!record.isClosed) {
-                container.querySelector('.add-comment-form').addEventListener('submit', (e) => addComment(e, record.id));
-            }
+            if (!record.isClosed) container.querySelector('.add-comment-form').addEventListener('submit', (e) => addComment(e, record.id));
         };
         
         const addComment = async (e, recordId) => {
@@ -195,18 +194,14 @@
             if (!text || !currentUserDisplayName) return;
             submitBtn.disabled = true; submitBtn.textContent = '...';
             try {
-                const newComment = { text, addedBy: currentUserDisplayName, createdAt: serverTimestamp() };
-                await updateDoc(doc(db, `/artifacts/${appId}/public/data/records`, recordId), { comments: arrayUnion(newComment) });
+                await updateDoc(doc(db, `/artifacts/${appId}/public/data/records`, recordId), { comments: arrayUnion({ text, addedBy: currentUserDisplayName, createdAt: serverTimestamp() }) });
                 textarea.value = '';
             } finally { submitBtn.disabled = false; submitBtn.textContent = 'Post'; }
         };
 
         const logUpdate = async (recordId) => {
-             const updateText = `Record updated at ${new Date().toLocaleString('en-GB')}`;
-             const newComment = { text: updateText, addedBy: currentUserDisplayName, createdAt: serverTimestamp() };
-             try {
-                await updateDoc(doc(db, `/artifacts/${appId}/public/data/records`, recordId), { comments: arrayUnion(newComment) });
-             } catch(error) { console.error("Failed to log update:", error); }
+             const updateText = `Record updated`;
+             await updateDoc(doc(db, `/artifacts/${appId}/public/data/records`, recordId), { comments: arrayUnion({ text: updateText, addedBy: currentUserDisplayName, createdAt: serverTimestamp() }) });
         };
         
         const renderRecords = () => {
@@ -217,12 +212,17 @@
             recordsToDisplay.forEach(recordData => dom.recordsContainer.appendChild(renderRecordCard(recordData)));
         };
 
-        const openEditModal = (record) => {
-            dom.editRecordForm.querySelector('[name="id"]').value = record.id;
-            setFormCategory(record.category, dom.editFormFieldsContainer, record);
-            dom.editRecordModal.classList.remove('hidden');
+        const openEditModal = (record) => { dom.editRecordForm.querySelector('[name="id"]').value = record.id; setFormCategory(record.category, dom.editFormFieldsContainer, record); dom.editRecordModal.classList.remove('hidden'); };
+        const openTimeEditModal = (record) => {
+            const form = dom.editTimeForm;
+            form.querySelector('[name="id"]').value = record.id;
+            const date = record.createdAt.seconds ? new Date(record.createdAt.seconds * 1000) : new Date();
+            // Format to YYYY-MM-DDTHH:MM
+            const localISOString = new Date(date.getTime() - (date.getTimezoneOffset() * 60000)).toISOString().slice(0, 16);
+            form.querySelector('#edit-time-input').value = localISOString;
+            dom.editTimeModal.classList.remove('hidden');
         };
-        
+
         const setupRecordsListener = () => {
             if (recordsUnsubscribe) recordsUnsubscribe();
             dom.loadingState.style.display = 'block';
@@ -244,10 +244,7 @@
                 fetchedRecords = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
                 renderRecords();
                 renderCategoryMenu();
-            }, (error) => {
-                console.error("Firestore snapshot error:", error);
-                dom.loadingState.innerHTML = `<p class="text-red-500">Error loading data. A required index is likely missing. Please check the browser console (F12) for a link to create it.</p>`;
-            });
+            }, (error) => { console.error("Firestore error:", error); dom.loadingState.innerHTML = `<p class="text-red-500">Error loading data. A required index is likely missing. Check console (F12) for a link.</p>`; });
         };
         
         const showApp = () => { dom.authContainer.style.display = 'none'; dom.namePromptModal.classList.add('hidden'); dom.appContainer.style.display = 'block'; dom.userNameDisplay.textContent = currentUserDisplayName; setupRecordsListener(); };
@@ -271,6 +268,7 @@
         dom.addNewRecordBtn.addEventListener('click', () => { setFormCategory('qa', dom.formFieldsContainer); dom.addRecordModal.classList.remove('hidden'); });
         dom.cancelAdd.addEventListener('click', () => dom.addRecordModal.classList.add('hidden'));
         dom.cancelEdit.addEventListener('click', () => dom.editRecordModal.classList.add('hidden'));
+        dom.cancelTimeEdit.addEventListener('click', () => dom.editTimeModal.classList.add('hidden'));
 
         dom.formCategorySelector.addEventListener('click', (e) => { if (e.target.matches('.form-category-btn')) setFormCategory(e.target.dataset.category, dom.formFieldsContainer); });
 
@@ -293,6 +291,15 @@
                 submitBtn.disabled = true; submitBtn.textContent = '...';
                 try { await updateDoc(doc(db, `/artifacts/${appId}/public/data/records`, recordId), recordData); dom.editRecordModal.classList.add('hidden');
                 } finally { submitBtn.disabled = false; submitBtn.textContent = 'Save Changes'; }
+            }
+        });
+         dom.editTimeForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const id = e.target.querySelector('[name="id"]').value;
+            const newDate = new Date(e.target.querySelector('#edit-time-input').value);
+            if (id && newDate) {
+                 await updateDoc(doc(db, `/artifacts/${appId}/public/data/records`, id), { createdAt: Timestamp.fromDate(newDate) });
+                 dom.editTimeModal.classList.add('hidden');
             }
         });
 
