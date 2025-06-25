@@ -7,6 +7,7 @@ const SHARED_PASSWORD = "__SHARED_PASSWORD__" || "samtech";
 
 let app, db, recordsUnsubscribe;
 let fetchedRecords = [];
+let groupedFaults = {};
 let currentSort = 'newest', currentSearch = '', currentCategory = '', currentFilter = 'all', currentUserDisplayName = '';
 let recordToDelete = null;
 let expandedRecordIds = new Set();
@@ -56,15 +57,72 @@ const setFormCategory = (category, container, record = {}) => {
 };
 
 const formatDateTime = (timestamp) => timestamp?.seconds ? new Date(timestamp.seconds * 1000).toLocaleString('en-GB', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' }) : 'N/A';
+
+const groupCommonFaults = () => {
+    const commonFaults = fetchedRecords.filter(r => r.category === 'common-fault');
+    const recordMap = new Map(commonFaults.map(r => [r.id, r]));
+    const groups = new Map();
+    const visited = new Set();
+
+    for (const fault of commonFaults) {
+        if (visited.has(fault.id)) continue;
+        
+        let currentGroup = new Set([fault.id]);
+        let queue = [fault];
+
+        while (queue.length > 0) {
+            const currentFault = queue.shift();
+            visited.add(currentFault.id);
+
+            // Find records that this fault is related to
+            currentFault.relatedTo?.forEach(related => {
+                if (recordMap.has(related.id) && !currentGroup.has(related.id)) {
+                    currentGroup.add(related.id);
+                    queue.push(recordMap.get(related.id));
+                }
+            });
+
+            // Find records that are related to this fault
+            for (const otherFault of commonFaults) {
+                if (otherFault.relatedTo?.some(r => r.id === currentFault.id) && !currentGroup.has(otherFault.id)) {
+                    currentGroup.add(otherFault.id);
+                    queue.push(otherFault);
+                }
+            }
+        }
+        
+        const groupRecords = Array.from(currentGroup).map(id => recordMap.get(id));
+        groupRecords.sort((a,b) => (a.createdAt?.seconds || 0) - (b.createdAt?.seconds || 0));
+        const rootRecord = groupRecords[0];
+        if (rootRecord) {
+            groups.set(rootRecord.id, { title: rootRecord.title, records: groupRecords });
+        }
+    }
+    groupedFaults = groups;
+};
+
 const renderCategoryMenu = () => {
     dom.categoryMenu.innerHTML = '';
     const categories = { '': 'All Records', qa: 'Q&A', 'common-fault': 'Common Faults', general: 'General' };
+    
     Object.entries(categories).forEach(([key, value]) => {
         const btn = document.createElement('button'); btn.textContent = value;
         btn.className = `category-menu-item w-full text-left px-3 py-2 rounded-md text-sm hover:bg-slate-200 dark:hover:bg-slate-700`;
         if (currentCategory === key) btn.classList.add('active');
-        btn.addEventListener('click', () => { currentCategory = key; setupRecordsListener(); renderCategoryMenu(); });
+        btn.addEventListener('click', () => { currentCategory = key; currentFilter = 'all'; dom.filterControls.querySelector(`[data-filter="all"]`).click(); setupRecordsListener(); });
         dom.categoryMenu.appendChild(btn);
+
+        if (key === 'common-fault') {
+            groupedFaults.forEach((group, groupId) => {
+                const subBtn = document.createElement('button');
+                subBtn.textContent = group.title;
+                subBtn.title = group.title;
+                subBtn.className = 'category-menu-item w-full text-left pl-6 pr-3 py-2 rounded-md text-sm truncate hover:bg-slate-200 dark:hover:bg-slate-700';
+                if (currentCategory === groupId) subBtn.classList.add('active');
+                subBtn.addEventListener('click', () => { currentCategory = groupId; currentFilter = 'all'; dom.filterControls.querySelector(`[data-filter="all"]`).click(); setupRecordsListener(); });
+                dom.categoryMenu.appendChild(subBtn);
+            });
+        }
     });
 };
 
@@ -79,17 +137,23 @@ const renderRecordCard = (record) => {
     const categoryColors = { qa: '#5fcae2', 'common-fault': '#4892cf', general: '#3f57ab' };
     const linkedRecordsHtml = record.relatedTo?.length > 0 ? `<div class="mt-2"><dt class="font-semibold">Linked Faults:</dt><dd>${record.relatedTo.map(r => `<span>${r.title}</span>`).join(', ')}</dd></div>` : '';
 
-    card.innerHTML = `<div class="collapsible-header flex justify-between items-start cursor-pointer record-header"><div class="flex items-center gap-3"><span class="text-xs capitalize text-white px-2 py-0.5 rounded-full" style="background-color: ${categoryColors[record.category] || '#64748b'}">${categoryDisplayNames[record.category] || record.category}</span><h3 class="text-lg font-semibold text-indigo-600 dark:text-indigo-400 break-all">${record.title}</h3></div><div class="flex items-center gap-2">${record.onSamsungTracker ? '<span class="text-xs font-bold bg-green-500 text-white px-2 py-1 rounded-full">SAT</span>' : ''}${record.isClosed?'<span class="text-xs font-bold bg-slate-500 text-white px-2 py-1 rounded-full">CLOSED</span>':''}<div class="actions flex-shrink-0 ml-4 space-x-2"></div><svg class="chevron h-5 w-5 transition-transform" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" /></svg></div></div><div class="collapsible-content details-container"><div class="mt-4 pt-4 border-t border-slate-200 dark:border-slate-700 text-sm space-y-2"><dl class="grid grid-cols-1 md:grid-cols-2 gap-x-4 gap-y-1">${detailsHtml}${linkedRecordsHtml}</dl>${record.description?`<div class="pt-2"><p class="whitespace-pre-wrap">${record.description}</p></div>`:''}</div><div class="comments-section mt-4 pt-4 border-t border-slate-200 dark:border-slate-700"></div><p class="text-xs text-slate-400 dark:text-slate-500 mt-4">Added by <span class="font-mono">${record.addedBy}</span> on ${formatDateTime(record.createdAt)}</p></div>`;
+    card.innerHTML = `<div class="collapsible-header flex justify-between items-start cursor-pointer record-header"><div class="flex items-center gap-3"><span class="text-xs capitalize text-white px-2 py-0.5 rounded-full" style="background-color: ${categoryColors[record.category] || '#64748b'}">${categoryDisplayNames[record.category] || record.category}</span><h3 class="text-lg font-semibold text-indigo-600 dark:text-indigo-400 break-all">${record.title}</h3></div><div class="flex items-center gap-2">${record.onSamsungTracker ? '<span class="text-xs font-bold bg-green-500 text-white px-2 py-1 rounded-full">Samsung Action Tracker</span>' : ''}${record.isClosed?'<span class="text-xs font-bold bg-slate-500 text-white px-2 py-1 rounded-full">CLOSED</span>':''}<div class="actions flex-shrink-0 ml-4 space-x-2"></div><svg class="chevron h-5 w-5 transition-transform" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" /></svg></div></div><div class="collapsible-content details-container"><div class="mt-4 pt-4 border-t border-slate-200 dark:border-slate-700 text-sm space-y-2"><dl class="grid grid-cols-1 md:grid-cols-2 gap-x-4 gap-y-1">${detailsHtml}${linkedRecordsHtml}</dl>${record.description?`<div class="pt-2"><p class="whitespace-pre-wrap">${record.description}</p></div>`:''}</div><div class="comments-section mt-4 pt-4 border-t border-slate-200 dark:border-slate-700"></div><p class="text-xs text-slate-400 dark:text-slate-500 mt-4">Added by <span class="font-mono">${record.addedBy}</span> on ${formatDateTime(record.createdAt)}</p></div>`;
     
     card.querySelector('.record-header').addEventListener('click', (e) => {
         if (!e.target.closest('.actions')) {
             card.classList.toggle('expanded');
-            card.querySelector('.comments-section')?.classList.toggle('expanded', card.classList.contains('expanded'));
-            if (card.classList.contains('expanded')) expandedRecordIds.add(record.id); else expandedRecordIds.delete(record.id);
+            if (card.classList.contains('expanded')) {
+                expandedRecordIds.add(record.id);
+                card.querySelector('.comments-section')?.classList.add('expanded');
+            } else {
+                expandedRecordIds.delete(record.id);
+            }
         }
     });
     
     renderComments(card.querySelector('.comments-section'), record);
+    if(card.classList.contains('expanded')) card.querySelector('.comments-section')?.classList.add('expanded');
+
 
     const actions = card.querySelector('.actions');
     actions.innerHTML = `<button class="time-btn" title="Edit Timestamp">&#x1F4C5;</button><button class="update-btn" title="Log Update">&#x1F4DD;</button><button class="edit-btn" title="Edit">&#9998;</button><button class="close-btn" title="${record.isClosed?'Re-open':'Close'}">${record.isClosed?'&#x1F513;':'&#x1F512;'}</button>`;
@@ -124,6 +188,15 @@ const logUpdate = async (recordId) => { await updateDoc(doc(db, `/artifacts/${ap
 
 const renderRecords = () => {
      let recordsToDisplay = [...fetchedRecords];
+    if (currentCategory.length > 2) { // It's a group ID, not a short category key
+        const group = groupedFaults.get(currentCategory);
+        if(group) {
+            recordsToDisplay = group.records;
+        }
+    } else if(currentCategory) {
+        recordsToDisplay = recordsToDisplay.filter(r => r.category === currentCategory);
+    }
+
     if (currentSearch) recordsToDisplay = recordsToDisplay.filter(r => Object.values(r).join(' ').toLowerCase().includes(currentSearch));
     dom.recordsContainer.innerHTML = '';
     if (recordsToDisplay.length === 0) { dom.recordsContainer.innerHTML = `<p class="text-slate-500 dark:text-slate-400">No records match your current filters.</p>`; return; }
@@ -148,7 +221,6 @@ const setupRecordsListener = () => {
     if (currentFilter === 'my') constraints.push(where('addedBy', '==', currentUserDisplayName));
     else if (currentFilter === 'open') constraints.push(where('isClosed', '==', false));
     else if (currentFilter === 'closed') constraints.push(where('isClosed', '==', true));
-    if (currentCategory) constraints.push(where('category', '==', currentCategory));
 
     const sortField = currentSort === 'alpha' ? 'title' : 'createdAt';
     const sortDirection = currentSort === 'oldest' ? 'asc' : 'desc';
@@ -159,6 +231,7 @@ const setupRecordsListener = () => {
     recordsUnsubscribe = onSnapshot(q, (snapshot) => {
         dom.loadingState.style.display = 'none';
         fetchedRecords = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+        groupCommonFaults();
         renderRecords();
         renderCategoryMenu();
     }, (error) => { console.error("Firestore error:", error); dom.loadingState.innerHTML = `<p class="text-red-500">Error loading data. A required index is likely missing. Check console (F12) for a link.</p>`; });
@@ -211,15 +284,15 @@ dom.recordsContainer.addEventListener('submit', async (e) => {
 
 dom.formCategorySelector.addEventListener('click', (e) => { if (e.target.matches('.form-category-btn')) setFormCategory(e.target.dataset.category, dom.formFieldsContainer); });
 
-const findSimilarFaults = (newTitle) => {
-    const significantWords = newTitle.toLowerCase().split(' ').filter(w => w.length > 3);
-    if(significantWords.length === 0) return [];
-
+const findSimilarFaults = (newTitle, modelNumber) => {
     return fetchedRecords.filter(r => {
         if (r.category !== 'common-fault') return false;
-        const existingTitleWords = r.title.toLowerCase().split(' ');
-        const matchCount = significantWords.filter(word => existingTitleWords.includes(word)).length;
-        return matchCount >= 2; // Consider it similar if 2 or more significant words match
+        if (r.modelNumber && r.modelNumber === modelNumber) return true;
+        const newWords = newTitle.toLowerCase().split(' ').filter(w => w.length > 3);
+        if(newWords.length === 0) return false;
+        const existingWords = r.title.toLowerCase().split(' ');
+        const matchCount = newWords.filter(word => existingWords.includes(word)).length;
+        return matchCount >= 2;
     });
 };
 
@@ -243,7 +316,7 @@ dom.addRecordForm.addEventListener('submit', async (e) => {
     if (!recordData.title || !currentUserDisplayName) return;
     
     if (currentFormCategory === 'common-fault') {
-        const similarFaults = findSimilarFaults(recordData.title);
+        const similarFaults = findSimilarFaults(recordData.title, recordData.modelNumber);
         if (similarFaults.length > 0) {
             pendingRecordData = recordData;
             dom.existingFaultsList.innerHTML = '';
