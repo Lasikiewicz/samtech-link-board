@@ -251,6 +251,27 @@
             });
         };
 
+        // --- NEW, SIMPLIFIED UI SWITCHING FUNCTIONS ---
+        const showApp = (user) => {
+            userId = user.uid;
+            userEmailSpan.textContent = user.email;
+            authContainer.style.display = 'none';
+            appContainer.style.display = 'block';
+            setupLinksListener();
+            setupPresence(user);
+        };
+
+        const showLogin = () => {
+            userId = null;
+            authContainer.style.display = 'flex';
+            appContainer.style.display = 'none';
+            if (linksUnsubscribe) {
+                linksUnsubscribe();
+                linksUnsubscribe = null;
+            }
+        };
+
+        // --- EVENT LISTENERS ---
         searchInput.addEventListener('input', (e) => { currentSearch = e.target.value.toLowerCase(); renderLinks(); });
         sortControls.addEventListener('click', (e) => {
             if (e.target.classList.contains('sort-btn')) {
@@ -273,33 +294,29 @@
             }
         });
 
+        // --- PRIMARY AUTH LOGIC ---
         onAuthStateChanged(auth, (user) => {
             authMessageEl.classList.add('hidden');
             authErrorEl.textContent = '';
-            if (user && user.emailVerified) {
-                userId = user.uid;
-                userEmailSpan.textContent = user.email;
-                authContainer.style.display = 'none';
-                appContainer.style.display = 'block';
-                setupLinksListener();
-                setupPresence(user);
-            } else {
-                authContainer.style.display = 'flex';
-                appContainer.style.display = 'none';
-                if (linksUnsubscribe) linksUnsubscribe();
-                if (user && !user.emailVerified) {
-                     const msg = `A verification link was sent to <strong>${user.email}</strong>. Please check your inbox and spam folder. <br><br> <button id="resend-verification-btn" class="font-semibold underline hover:text-yellow-900">Resend verification email</button>`;
-                     showAuthMessage(msg, 'warning');
-                     document.getElementById('resend-verification-btn')?.addEventListener('click', async () => {
-                         try {
+            if (user) {
+                 if (user.emailVerified) {
+                    showApp(user);
+                 } else {
+                    showLogin(); // Show login page but with a warning
+                    const msg = `Your email <strong>${user.email}</strong> is not verified. Please check your inbox and spam folder. <br><br> <button id="resend-verification-btn" class="font-semibold underline hover:text-yellow-900">Resend verification email</button>`;
+                    showAuthMessage(msg, 'warning');
+                    document.getElementById('resend-verification-btn')?.addEventListener('click', async () => {
+                        try {
                             await sendEmailVerification(user);
                             showAuthMessage('A new verification email has been successfully sent. Please check your spam folder.', 'success');
-                         } catch (error) {
+                        } catch (error) {
                             console.error("Error resending verification email:", error);
                             showAuthMessage(`Failed to resend verification email. Error: ${error.code}. Please try again in a few moments.`, 'error');
-                         }
-                     });
-                }
+                        }
+                    });
+                 }
+            } else {
+                showLogin();
             }
         });
 
@@ -307,6 +324,7 @@
             authErrorEl.textContent = '';
             authMessageEl.classList.add('hidden');
             try {
+                // We just sign in. onAuthStateChanged will handle all UI updates.
                 await signInWithEmailAndPassword(auth, authEmailInput.value, authPasswordInput.value);
             } catch (error) { 
                 authErrorEl.textContent = `Login failed: ${error.code}`; 
