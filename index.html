@@ -113,7 +113,14 @@
         try {
             app = getApps().length ? getApp() : initializeApp(firebaseConfig);
             auth = getAuth(app); db = getFirestore(app); rtDb = getDatabase(app);
-        } catch (e) { console.error("Firebase initialization failed:", e); }
+        } catch (e) {
+            console.error("Firebase initialization failed:", e);
+            // Make the error visible on the login screen itself
+            const authErrorEl = document.getElementById('auth-error');
+            if (authErrorEl) {
+                authErrorEl.textContent = 'CRITICAL: Firebase init failed. Check console.';
+            }
+        }
 
         const dom = {
             authContainer: document.getElementById('auth-container'), appContainer: document.getElementById('app-container'),
@@ -358,7 +365,15 @@
 
         dom.loginBtn.addEventListener('click', async () => {
             dom.authErrorEl.textContent = ''; dom.authMessageEl.classList.add('hidden');
-            try { await signInWithEmailAndPassword(auth, dom.authEmailInput.value, dom.authPasswordInput.value); } catch (error) { dom.authErrorEl.textContent = `Login failed: ${error.code}`; }
+            if (!auth) {
+                dom.authErrorEl.textContent = 'Auth service not ready. Check API keys.';
+                return;
+            }
+            try { 
+                await signInWithEmailAndPassword(auth, dom.authEmailInput.value, dom.authPasswordInput.value); 
+            } catch (error) { 
+                dom.authErrorEl.textContent = `Login failed: ${error.code || error.message}`; 
+            }
         });
 
         dom.registerBtn.addEventListener('click', async () => {
