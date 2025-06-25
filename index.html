@@ -52,7 +52,7 @@
     </div>
 
 
-    <div id="app-container" class="max-w-7xl mx-auto p-4 sm:p-6 lg:p-8">
+    <div id="app-container" class="mx-auto p-4 sm:p-6 lg:p-8" style="max-width: 100rem;">
       <div class="grid grid-cols-1 lg:grid-cols-4 gap-8">
         <aside class="lg:col-span-1"><div class="sticky top-8"><div class="mb-4 text-xs text-slate-500 dark:text-slate-400">Signed in as: <span id="user-name-display" class="font-mono font-semibold"></span></div><h2 class="text-lg font-bold mb-4 text-slate-900 dark:text-white">Categories</h2><nav id="category-menu" class="space-y-1"></nav></div></aside>
         <main class="lg:col-span-3">
@@ -66,7 +66,7 @@
                     </div>
                 </div>
             </header>
-            <div class="bg-white dark:bg-slate-800 p-4 rounded-xl shadow-lg mb-8 space-y-4">
+            <div class="bg-white dark:bg-slate-800 p-4 rounded-xl shadow-lg mb-4 space-y-4">
                 <input id="search-input" type="search" placeholder="&#x1F50D; Search all record fields..." class="w-full px-4 py-2 border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-700 rounded-lg">
                 <div class="flex flex-wrap items-center gap-x-4 gap-y-2">
                     <div class="flex items-center gap-2"><span class="text-sm font-semibold">Show:</span><div id="filter-controls" class="flex gap-2"><button class="control-btn text-sm px-3 py-1 rounded-full border border-slate-300 dark:border-slate-600" data-filter="open">Open</button><button class="control-btn text-sm px-3 py-1 rounded-full border border-slate-300 dark:border-slate-600" data-filter="closed">Closed</button><button class="control-btn text-sm px-3 py-1 rounded-full border border-slate-300 dark:border-slate-600 active" data-filter="all">All</button><button class="control-btn text-sm px-3 py-1 rounded-full border border-slate-300 dark:border-slate-600" data-filter="my">My Records</button></div></div>
@@ -78,6 +78,7 @@
       </div>
     </div>
 
+    <!-- Modals -->
     <div id="add-record-modal" class="fixed inset-0 bg-black bg-opacity-70 flex items-center justify-center p-4 hidden"><div class="bg-white dark:bg-slate-800 rounded-xl shadow-2xl p-6 w-full max-w-lg"><h2 class="text-xl font-semibold mb-4 text-slate-900 dark:text-white">Add New Record</h2><form id="add-record-form"><div class="mb-4"><label class="block text-sm font-medium mb-1">Category</label><div id="form-category-selector" class="grid grid-cols-3 gap-2"><button type="button" class="form-category-btn px-4 py-2 border rounded-lg" data-category="qa">Q&A</button><button type="button" class="form-category-btn px-4 py-2 border rounded-lg" data-category="common-fault">Common Faults</button><button type="button" class="form-category-btn px-4 py-2 border rounded-lg" data-category="general">General</button></div></div><div id="form-fields-container" class="space-y-4"></div><div class="mt-6 flex justify-end space-x-3"><button type="button" id="cancel-add" class="bg-slate-200 dark:bg-slate-600 text-slate-800 dark:text-slate-200 font-semibold px-4 py-2 rounded-lg">Cancel</button><button type="submit" id="add-record-submit" class="bg-indigo-600 text-white font-semibold px-4 py-2 rounded-lg disabled:opacity-50">Add Record</button></div></form></div></div>
     <div id="edit-record-modal" class="fixed inset-0 bg-black bg-opacity-70 flex items-center justify-center p-4 hidden"><div class="bg-white dark:bg-slate-800 rounded-xl shadow-2xl p-6 w-full max-w-lg"><h2 class="text-xl font-semibold mb-4 text-slate-900 dark:text-white">Edit Record</h2><form id="edit-record-form"><input type="hidden" name="id"><div id="edit-form-fields-container" class="space-y-4"></div><div class="mt-6 flex justify-between space-x-3"><button type="button" id="delete-record-btn" class="bg-red-600 text-white font-semibold px-4 py-2 rounded-lg hover:bg-red-700">Delete</button><div><button type="button" id="cancel-edit" class="bg-slate-200 dark:bg-slate-600 text-slate-800 dark:text-slate-200 font-semibold px-4 py-2 rounded-lg">Cancel</button><button type="submit" id="edit-record-submit" class="bg-indigo-600 text-white font-semibold px-4 py-2 rounded-lg disabled:opacity-50 ml-2">Save Changes</button></div></div></form></div></div>
     <div id="edit-time-modal" class="fixed inset-0 bg-black bg-opacity-70 flex items-center justify-center p-4 hidden"><div class="bg-white dark:bg-slate-800 rounded-xl shadow-2xl p-6 w-full max-w-sm"><h2 class="text-xl font-semibold mb-4 text-slate-900 dark:text-white">Edit Timestamp</h2><form id="edit-time-form"><input type="hidden" name="id"><div class="space-y-4"><input id="edit-time-input" type="datetime-local" class="w-full p-2 border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-700 rounded-lg text-slate-900 dark:text-slate-200"></div><div class="mt-6 flex justify-end space-x-3"><button type="button" id="cancel-time-edit" class="bg-slate-200 dark:bg-slate-600 font-semibold px-4 py-2 rounded-lg">Cancel</button><button type="submit" id="save-time-edit" class="bg-indigo-600 text-white font-semibold px-4 py-2 rounded-lg">Save Time</button></div></form></div></div>
