@@ -104,7 +104,7 @@
 
     <script type="module">
         import { initializeApp, getApps, getApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
-        import { getAuth, onAuthStateChanged, createUserWithEmailAndPassword, signInWithEmailAndPassword, signOut, sendEmailVerification } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+        import { getAuth, onAuthStateChanged, createUserWithEmailAndPassword, signInWithEmailAndPassword, signOut } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
         import { getFirestore, doc, collection, onSnapshot, addDoc, updateDoc, deleteDoc, arrayUnion, serverTimestamp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
         import { getDatabase, ref, onValue, set, onDisconnect, serverTimestamp as dbServerTimestamp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-database.js";
 
@@ -126,17 +126,16 @@
             console.error("Firebase initialization failed:", e);
         }
 
-        const authContainer = document.getElementById('auth-container'), appContainer = document.getElementById('app-container'), authForm = document.getElementById('auth-form'), authEmailInput = document.getElementById('auth-email'), authPasswordInput = document.getElementById('auth-password'), addLinkForm = document.getElementById('add-link-form'), linksContainer = document.getElementById('links-container'), loadingState = document.getElementById('loading-state'), searchInput = document.getElementById('search-input'), sortControls = document.getElementById('sort-controls'), userEmailSpan = document.getElementById('user-email'), logoutBtn = document.getElementById('logout-btn'), presenceList = document.getElementById('presence-list'), activeTagFilter = document.getElementById('active-tag-filter'), authErrorEl = document.getElementById('auth-error'), authMessageEl = document.getElementById('auth-message'), loginBtn = document.getElementById('login-btn'), registerBtn = document.getElementById('register-btn');
+        const authContainer = document.getElementById('auth-container'), appContainer = document.getElementById('app-container'), addLinkForm = document.getElementById('add-link-form'), linksContainer = document.getElementById('links-container'), loadingState = document.getElementById('loading-state'), searchInput = document.getElementById('search-input'), sortControls = document.getElementById('sort-controls'), userEmailSpan = document.getElementById('user-email'), logoutBtn = document.getElementById('logout-btn'), presenceList = document.getElementById('presence-list'), activeTagFilter = document.getElementById('active-tag-filter'), authErrorEl = document.getElementById('auth-error'), authMessageEl = document.getElementById('auth-message'), loginBtn = document.getElementById('login-btn'), registerBtn = document.getElementById('register-btn');
 
         const showAuthMessage = (message, type = 'success') => {
             authMessageEl.innerHTML = message;
             let colors = 'bg-green-100 text-green-800';
-            if (type === 'warning') colors = 'bg-yellow-100 text-yellow-800';
             if (type === 'error') colors = 'bg-red-100 text-red-800';
             authMessageEl.className = `message-box mb-4 p-4 text-sm rounded-lg ${colors}`;
             authMessageEl.classList.remove('hidden');
         };
-
+        
         const renderLinks = () => {
             linksContainer.innerHTML = '';
             let filteredLinks = [...allLinks];
@@ -238,7 +237,7 @@
                 presenceList.innerHTML = onlineUsers.length ? onlineUsers.map(email => `<span class="bg-green-100 text-green-800 px-1.5 py-0.5 rounded-full">${email}</span>`).join('') : 'No one online.';
             });
         };
-
+        
         const showApp = (user) => {
             userId = user.uid;
             userEmailSpan.textContent = user.email;
@@ -280,30 +279,15 @@
             }
         });
 
-        // --- PRIMARY AUTH LOGIC ---
-        onAuthStateChanged(auth, async (user) => {
+        // --- PRIMARY AUTH LOGIC (SIMPLIFIED) ---
+        onAuthStateChanged(auth, (user) => {
             authMessageEl.classList.add('hidden');
             authErrorEl.textContent = '';
             if (user) {
-                await user.reload();
-                const freshUser = auth.currentUser;
-                 if (freshUser.emailVerified) {
-                    showApp(freshUser);
-                 } else {
-                    showLogin();
-                    const msg = `Your email <strong>${freshUser.email}</strong> is not verified. Please check your inbox and spam folder. <br><br> <button id="resend-verification-btn" class="font-semibold underline hover:text-yellow-900">Resend verification email</button>`;
-                    showAuthMessage(msg, 'warning');
-                    document.getElementById('resend-verification-btn')?.addEventListener('click', async () => {
-                        try {
-                            await sendEmailVerification(freshUser);
-                            showAuthMessage('A new verification email has been successfully sent. Please check your spam folder.', 'success');
-                        } catch (error) {
-                            console.error("Error resending verification email:", error);
-                            showAuthMessage(`Failed to resend verification email. Error: ${error.code}. Please try again in a few moments.`, 'error');
-                        }
-                    });
-                 }
+                // If a user object exists, they are authenticated. Show the app.
+                showApp(user);
             } else {
+                // If no user object, show the login page.
                 showLogin();
             }
         });
@@ -313,6 +297,7 @@
             authMessageEl.classList.add('hidden');
             try {
                 await signInWithEmailAndPassword(auth, authEmailInput.value, authPasswordInput.value);
+                // onAuthStateChanged will handle the UI switch automatically.
             } catch (error) { 
                 authErrorEl.textContent = `Login failed: ${error.code}`; 
             }
@@ -328,10 +313,10 @@
                 return;
             }
             try {
-                const userCredential = await createUserWithEmailAndPassword(auth, email, password);
-                await sendEmailVerification(userCredential.user);
-                // ** FIX: We no longer sign out here. Let onAuthStateChanged handle the "unverified" state. **
-                showAuthMessage(`Registration successful! A verification link has been sent to <strong>${email}</strong>. Please check your inbox and spam folder.`, 'success');
+                await createUserWithEmailAndPassword(auth, email, password);
+                // onAuthStateChanged will handle the UI switch automatically.
+                // You can optionally show a success message here, but it's not required.
+                showAuthMessage('Registration successful! You can now log in.', 'success');
             } catch (error) { 
                 authErrorEl.textContent = `Registration failed: ${error.code}`; 
             }
