@@ -6,7 +6,7 @@ const appId = 'samtech-record-board';
 const SHARED_PASSWORD = "__SHARED_PASSWORD__" || "samtech";
 
 let app, db, recordsUnsubscribe;
-let allRecords = [];
+let allRecords = []; 
 let groupedFaults = new Map();
 let currentSort = 'newest', currentSearch = '', currentCategory = '', currentFilter = 'all', currentUserDisplayName = '';
 let recordToDelete = null;
@@ -187,16 +187,26 @@ const renderRecordCard = (record) => {
                 <dl class="grid grid-cols-1 md:grid-cols-2 gap-x-4 gap-y-1">${detailsHtml}${linkedRecordsHtml}</dl>
                 ${descriptionHtml}
             </div>
+            <div class="comments-section mt-4 pt-4 border-t border-slate-200 dark:border-slate-700"></div>
             <p class="text-xs text-slate-400 dark:text-slate-500 mt-4">Added by <span class="font-mono">${record.addedBy}</span> on ${formatDateTime(record.createdAt)}</p>
         </div>`;
     
-    const actions = card.querySelector('.actions');
-    actions.innerHTML = `<button class="time-btn" title="Edit Timestamp">&#x1F4C5;</button><button class="edit-btn" title="Edit">&#9998;</button><button class="close-btn" title="${record.isClosed ? 'Re-open' : 'Close'}">${record.isClosed ? '&#x1F513;' : '&#x1F512;'}</button>`;
-    actions.classList.add('text-slate-500', 'dark:text-slate-400');
-    actions.querySelectorAll('button').forEach(btn => btn.classList.add('hover:text-indigo-600', 'dark:hover:text-indigo-400', 'transition'));
-    actions.querySelector('.close-btn').classList.add('hover:text-red-600', 'dark:hover:text-red-500');
-    
     return card;
+};
+
+const renderComments = (container, record) => {
+    container.innerHTML = `<h4 class="text-sm font-semibold mb-2">Updates & Comments</h4><div class="comments-list mt-2 space-y-3"></div>${!record.isClosed ? '<form class="add-comment-form mt-3 flex items-start gap-2"><textarea placeholder="Add a comment..." class="flex-grow w-full text-sm px-3 py-2 border rounded" rows="2"></textarea><button type="submit" class="bg-slate-600 text-white font-semibold text-sm px-4 py-2 rounded-lg hover:bg-slate-700 flex-shrink-0 disabled:opacity-50">Post</button></form>' : ''}`;
+    
+    const commentsList = container.querySelector('.comments-list');
+    if (record.comments && record.comments.length > 0) {
+         const sortedComments = record.comments.map((c, index) => ({...c, originalIndex: index, date: c.createdAt?.seconds ? new Date(c.createdAt.seconds * 1000) : new Date() })).sort((a,b) => a.date - b.date);
+        sortedComments.forEach((comment) => {
+            const commentDiv = document.createElement('div');
+            commentDiv.className = 'bg-slate-100 dark:bg-slate-700 p-3 rounded-lg text-sm';
+            commentDiv.innerHTML = `<p class="text-xs text-slate-500 dark:text-slate-400 mb-1">By: <span class="font-mono">${comment.addedBy}</span> at ${formatDateTime(comment.createdAt)}</p><div class="comment-body flex justify-between items-start"><p class="comment-text break-words whitespace-pre-wrap flex-grow">${comment.text || ''}</p><div class="comment-actions flex-shrink-0 ml-2 space-x-2"><button class="edit-comment-btn" data-index="${comment.originalIndex}" title="Edit">&#9998;</button><button class="delete-comment-btn" data-index="${comment.originalIndex}" title="Delete">&#10006;</button></div></div>`;
+            commentsList.appendChild(commentDiv);
+        });
+    } else { commentsList.innerHTML = '<p class="text-xs text-slate-400 dark:text-slate-500">No comments yet.</p>'; }
 };
 
 const renderRecords = () => {
@@ -301,6 +311,37 @@ dom.recordsContainer.addEventListener('click', async (e) => {
             expandedRecordIds.delete(recordId);
         }
         renderRecords();
+    } else if(e.target.closest('.comments-section > .collapsible-header')) {
+        e.target.closest('.comments-section').classList.toggle('expanded');
+    } else if(e.target.classList.contains('edit-comment-btn')) {
+        const commentBody = e.target.closest('.comment-body');
+        const commentIndex = parseInt(e.target.dataset.index);
+        const currentText = commentBody.querySelector('.comment-text').textContent;
+        commentBody.innerHTML = `<textarea class="edit-comment-textarea flex-grow w-full text-sm p-2 border rounded">${currentText}</textarea><div class="flex flex-col ml-2 space-y-1"><button class="save-comment-btn text-xs bg-green-500 text-white px-2 py-1 rounded" data-index="${commentIndex}">Save</button><button class="cancel-comment-btn text-xs bg-gray-500 text-white px-2 py-1 rounded">Cancel</button></div>`;
+    } else if(e.target.classList.contains('save-comment-btn')) {
+         const commentIndex = parseInt(e.target.dataset.index);
+         const newText = e.target.closest('.comment-body').querySelector('.edit-comment-textarea').value;
+         const recordRef = doc(db, `/artifacts/${appId}/public/data/records`, recordId);
+         await runTransaction(db, async (transaction) => {
+             const recordDoc = await transaction.get(recordRef);
+             if(!recordDoc.exists()) throw "Document does not exist!";
+             const comments = recordDoc.data().comments;
+             comments[commentIndex].text = newText;
+             transaction.update(recordRef, { comments });
+         });
+    } else if(e.target.classList.contains('delete-comment-btn')) {
+        const commentIndex = parseInt(e.target.dataset.index);
+        await runTransaction(db, async (transaction) => {
+             const recordRef = doc(db, `/artifacts/${appId}/public/data/records`, recordId);
+             const recordDoc = await transaction.get(recordRef);
+             if(!recordDoc.exists()) throw "Document does not exist!";
+             const comments = recordDoc.data().comments;
+             comments.splice(commentIndex, 1);
+             transaction.update(recordRef, { comments });
+         });
+    } else if (e.target.classList.contains('cancel-comment-btn')) {
+        renderComments(e.target.closest('.comments-section'), record);
+        e.target.closest('.comments-section').classList.add('expanded');
     } else if (e.target.classList.contains('linked-fault-btn')) {
         e.stopPropagation();
         const groupId = e.target.dataset.groupId;
@@ -311,6 +352,22 @@ dom.recordsContainer.addEventListener('click', async (e) => {
         if(e.target.closest('.edit-btn')) { e.stopPropagation(); openEditModal(record); }
         if(e.target.closest('.close-btn')) { e.stopPropagation(); updateDoc(doc(db,`/artifacts/${appId}/public/data/records`,record.id),{isClosed:!record.isClosed, closedAt: !record.isClosed ? Timestamp.now() : null }); }
         if(e.target.closest('.time-btn')) { e.stopPropagation(); openTimeEditModal(record); }
+    }
+});
+
+dom.recordsContainer.addEventListener('submit', async (e) => {
+    if (e.target.classList.contains('add-comment-form')) {
+        e.preventDefault();
+        const form = e.target; const textarea = form.querySelector('textarea'); const text = textarea.value.trim(); const submitBtn = form.querySelector('button');
+        const card = form.closest('.record-card');
+        const recordId = card.dataset.id;
+        if (!text) return;
+        submitBtn.disabled = true; submitBtn.textContent = '...';
+        try {
+            await updateDoc(doc(db, `/artifacts/${appId}/public/data/records`, recordId), { comments: arrayUnion({ text, addedBy: currentUserDisplayName, createdAt: Timestamp.now() }) });
+            textarea.value = '';
+            expandedRecordIds.add(recordId);
+        } finally { submitBtn.disabled = false; submitBtn.textContent = 'Post'; }
     }
 });
 
