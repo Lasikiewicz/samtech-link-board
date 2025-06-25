@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Samtech Record Board</title>
+    <title>Collaborative Record Board</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -38,17 +38,15 @@
         </div>
     </div>
     
-    <!-- User Name Modal -->
     <div id="name-prompt-modal" class="fixed inset-0 bg-black bg-opacity-70 flex items-center justify-center p-4 hidden">
         <div class="bg-white dark:bg-slate-800 rounded-xl shadow-2xl p-6 w-full max-w-sm">
             <h2 class="text-xl font-semibold mb-4 text-slate-900 dark:text-white">Enter Your Name</h2>
-            <p class="text-sm text-slate-600 dark:text-slate-400 mb-4">This name will be used to identify your records and comments.</p>
+            <p class="text-sm text-slate-600 dark:text-slate-400 mb-4">This name will identify your records and comments.</p>
             <form id="name-prompt-form"><div class="space-y-4"><input id="user-display-name" type="text" placeholder="Your Name or Initials" class="w-full px-4 py-2 border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-700 rounded-lg" required></div><div class="mt-6 flex justify-end"><button type="submit" class="bg-indigo-600 text-white font-semibold px-4 py-2 rounded-lg hover:bg-indigo-700">Continue</button></div></form>
         </div>
     </div>
 
 
-    <!-- Main Application Container -->
     <div id="app-container" class="max-w-7xl mx-auto p-4 sm:p-6 lg:p-8">
       <div class="grid grid-cols-1 lg:grid-cols-4 gap-8">
         <aside class="lg:col-span-1"><div class="sticky top-8"><h2 class="text-lg font-bold mb-4 text-slate-900 dark:text-white">Categories</h2><nav id="category-menu" class="space-y-1"></nav></div></aside>
@@ -78,26 +76,22 @@
       </div>
     </div>
 
-    <!-- Modals -->
     <div id="add-record-modal" class="fixed inset-0 bg-black bg-opacity-70 flex items-center justify-center p-4 hidden"><div class="bg-white dark:bg-slate-800 rounded-xl shadow-2xl p-6 w-full max-w-lg"><h2 class="text-xl font-semibold mb-4 text-slate-900 dark:text-white">Add New Record</h2><form id="add-record-form"><div class="mb-4"><label class="block text-sm font-medium mb-1">Category</label><div id="form-category-selector" class="grid grid-cols-3 gap-2"><button type="button" class="form-category-btn px-4 py-2 border rounded-lg" data-category="qa">Q&A</button><button type="button" class="form-category-btn px-4 py-2 border rounded-lg" data-category="common-fault">Common Faults</button><button type="button" class="form-category-btn px-4 py-2 border rounded-lg" data-category="general">General</button></div></div><div id="form-fields-container" class="space-y-4"></div><div class="mt-6 flex justify-end space-x-3"><button type="button" id="cancel-add" class="bg-slate-200 dark:bg-slate-600 text-slate-800 dark:text-slate-200 font-semibold px-4 py-2 rounded-lg">Cancel</button><button type="submit" id="add-record-submit" class="bg-indigo-600 text-white font-semibold px-4 py-2 rounded-lg disabled:opacity-50">Add Record</button></div></form></div></div>
     <div id="edit-record-modal" class="fixed inset-0 bg-black bg-opacity-70 flex items-center justify-center p-4 hidden"><div class="bg-white dark:bg-slate-800 rounded-xl shadow-2xl p-6 w-full max-w-lg"><h2 class="text-xl font-semibold mb-4 text-slate-900 dark:text-white">Edit Record</h2><form id="edit-record-form"><input type="hidden" name="id"><div id="edit-form-fields-container" class="space-y-4"></div><div class="mt-6 flex justify-end space-x-3"><button type="button" id="cancel-edit" class="bg-slate-200 dark:bg-slate-600 text-slate-800 dark:text-slate-200 font-semibold px-4 py-2 rounded-lg">Cancel</button><button type="submit" id="edit-record-submit" class="bg-indigo-600 text-white font-semibold px-4 py-2 rounded-lg disabled:opacity-50">Save Changes</button></div></form></div></div>
 
     <script type="module">
         import { initializeApp, getApps, getApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
-        import { getFirestore, doc, collection, onSnapshot, addDoc, updateDoc, deleteDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+        import { getFirestore, doc, collection, onSnapshot, addDoc, updateDoc, deleteDoc, serverTimestamp, query, where, orderBy, limit } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
         
         const firebaseConfig = { apiKey: "__API_KEY__", authDomain: "__AUTH_DOMAIN__", projectId: "__PROJECT_ID__", storageBucket: "__STORAGE_BUCKET__", messagingSenderId: "__MESSAGING_SENDER_ID__", appId: "__APP_ID__" };
         const appId = 'samtech-record-board';
         const SHARED_PASSWORD = "__SHARED_PASSWORD__" || "samtech";
 
         let app, db, recordsUnsubscribe;
-        let allRecords = [];
+        let fetchedRecords = [];
         let currentSort = 'newest', currentSearch = '', currentCategory = '', currentFilter = 'open', currentUserDisplayName = '';
 
-        try {
-            app = getApps().length ? getApp() : initializeApp(firebaseConfig);
-            db = getFirestore(app);
-        } catch (e) { console.error("Firebase initialization failed:", e); }
+        try { app = getApps().length ? getApp() : initializeApp(firebaseConfig); db = getFirestore(app); } catch (e) { console.error("Firebase init failed:", e); }
 
         const dom = {
             authContainer: document.getElementById('auth-container'), appContainer: document.getElementById('app-container'),
@@ -117,22 +111,17 @@
         };
         
         const formFieldsTemplates = {
-            qa: `<input name="title" type="text" placeholder="Q&A Title" class="w-full px-4 py-2 border rounded-lg" required><input name="qaId" type="text" placeholder="Q&A Question ID" pattern="\\d{8}" title="Must be 8 digits" class="w-full px-4 py-2 border rounded-lg" required><input name="modelNumber" type="text" placeholder="Model Number" class="w-full px-4 py-2 border rounded-lg"><input name="serialNumber" type="text" placeholder="Serial Number" class="w-full px-4 py-2 border rounded-lg"><input name="serviceOrderNumber" type="text" placeholder="Service Order Number" pattern="\\d{10}" title="Must be 10 digits" class="w-full px-4 py-2 border rounded-lg"><input name="salesforceCaseNumber" type="text" placeholder="Salesforce Case Number" class="w-full px-4 py-2 border rounded-lg"><textarea name="description" placeholder="Description" class="w-full px-4 py-2 border rounded-lg" rows="4"></textarea>`,
-            'common-fault': `<input name="title" type="text" placeholder="Title" class="w-full px-4 py-2 border rounded-lg" required><input name="modelNumber" type="text" placeholder="Model Number" class="w-full px-4 py-2 border rounded-lg"><input name="serialNumber" type="text" placeholder="Serial Number" class="w-full px-4 py-2 border rounded-lg"><input name="serviceOrderNumber" type="text" placeholder="Service Order Number" pattern="\\d{10}" title="Must be 10 digits" class="w-full px-4 py-2 border rounded-lg"><input name="salesforceCaseNumber" type="text" placeholder="Salesforce Case Number" class="w-full px-4 py-2 border rounded-lg"><textarea name="description" placeholder="Description" class="w-full px-4 py-2 border rounded-lg" rows="4"></textarea>`,
-            general: `<input name="title" type="text" placeholder="Title" class="w-full px-4 py-2 border rounded-lg" required><input name="modelNumber" type="text" placeholder="Model Number" class="w-full px-4 py-2 border rounded-lg"><input name="serialNumber" type="text" placeholder="Serial Number" class="w-full px-4 py-2 border rounded-lg"><input name="serviceOrderNumber" type="text" placeholder="Service Order Number" pattern="\\d{10}" title="Must be 10 digits" class="w-full px-4 py-2 border rounded-lg"><input name="salesforceCaseNumber" type="text" placeholder="Salesforce Case Number" class="w-full px-4 py-2 border rounded-lg"><textarea name="description" placeholder="Description" class="w-full px-4 py-2 border rounded-lg" rows="4"></textarea>`
+            qa: `<input name="title" type="text" placeholder="Q&A Title" class="w-full p-2 border rounded" required><input name="qaId" type="text" placeholder="Q&A Question ID" pattern="\\d{8}" title="8 digits" class="w-full p-2 border rounded" required><input name="modelNumber" type="text" placeholder="Model Number" class="w-full p-2 border rounded"><input name="serialNumber" type="text" placeholder="Serial Number" class="w-full p-2 border rounded"><input name="serviceOrderNumber" type="text" placeholder="Service Order Number" pattern="\\d{10}" title="10 digits" class="w-full p-2 border rounded"><input name="salesforceCaseNumber" type="text" placeholder="Salesforce Case Number" class="w-full p-2 border rounded"><textarea name="description" placeholder="Description" class="w-full p-2 border rounded" rows="4"></textarea>`,
+            'common-fault': `<input name="title" type="text" placeholder="Title" class="w-full p-2 border rounded" required><input name="modelNumber" type="text" placeholder="Model Number" class="w-full p-2 border rounded"><input name="serialNumber" type="text" placeholder="Serial Number" class="w-full p-2 border rounded"><input name="serviceOrderNumber" type="text" placeholder="Service Order Number" pattern="\\d{10}" title="10 digits" class="w-full p-2 border rounded"><input name="salesforceCaseNumber" type="text" placeholder="Salesforce Case Number" class="w-full p-2 border rounded"><textarea name="description" placeholder="Description" class="w-full p-2 border rounded" rows="4"></textarea>`,
+            general: `<input name="title" type="text" placeholder="Title" class="w-full p-2 border rounded" required><input name="modelNumber" type="text" placeholder="Model Number" class="w-full p-2 border rounded"><input name="serialNumber" type="text" placeholder="Serial Number" class="w-full p-2 border rounded"><input name="serviceOrderNumber" type="text" placeholder="Service Order Number" pattern="\\d{10}" title="10 digits" class="w-full p-2 border rounded"><input name="salesforceCaseNumber" type="text" placeholder="Salesforce Case Number" class="w-full p-2 border rounded"><textarea name="description" placeholder="Description" class="w-full p-2 border rounded" rows="4"></textarea>`
         };
         
         let currentFormCategory = 'qa';
         const setFormCategory = (category, container, record = {}) => {
             currentFormCategory = category;
             container.innerHTML = formFieldsTemplates[category];
-            for (const key in record) {
-                const input = container.querySelector(`[name="${key}"]`);
-                if (input) input.value = record[key];
-            }
-            if (container.id === 'form-fields-container') {
-                dom.formCategorySelector.querySelectorAll('.form-category-btn').forEach(btn => btn.classList.toggle('active', btn.dataset.category === category));
-            }
+            for (const key in record) { if (container.querySelector(`[name="${key}"]`)) container.querySelector(`[name="${key}"]`).value = record[key]; }
+            if (container.id === 'form-fields-container') dom.formCategorySelector.querySelectorAll('.form-category-btn').forEach(btn => btn.classList.toggle('active', btn.dataset.category === category));
         };
 
         const formatDate = (timestamp) => timestamp?.seconds ? new Date(timestamp.seconds * 1000).toLocaleDateString('en-GB') : 'N/A';
@@ -140,11 +129,10 @@
             dom.categoryMenu.innerHTML = '';
             const categories = { '': 'All Records', qa: 'Q&A', 'common-fault': 'Common Faults', general: 'General' };
             Object.entries(categories).forEach(([key, value]) => {
-                const btn = document.createElement('button');
-                btn.textContent = value;
+                const btn = document.createElement('button'); btn.textContent = value;
                 btn.className = `category-menu-item w-full text-left px-3 py-2 rounded-md text-sm hover:bg-slate-200 dark:hover:bg-slate-700`;
                 if (currentCategory === key) btn.classList.add('active');
-                btn.addEventListener('click', () => { currentCategory = key; renderRecords(); renderCategoryMenu(); });
+                btn.addEventListener('click', () => { currentCategory = key; setupRecordsListener(); renderCategoryMenu(); });
                 dom.categoryMenu.appendChild(btn);
             });
         };
@@ -168,15 +156,15 @@
         };
         
         const renderRecords = () => {
-             dom.recordsContainer.innerHTML = ''; let filteredRecords = [...allRecords];
-            if (currentFilter==='my') filteredRecords = filteredRecords.filter(r=>r.addedBy===currentUserDisplayName);
-            else if (currentFilter==='open') filteredRecords = filteredRecords.filter(r=>!r.isClosed);
-            else if (currentFilter==='closed') filteredRecords = filteredRecords.filter(r=>r.isClosed);
-            if (currentSearch) filteredRecords=filteredRecords.filter(r=>Object.values(r).join(' ').toLowerCase().includes(currentSearch));
-            if (currentCategory) filteredRecords=filteredRecords.filter(r=>r.category===currentCategory);
-            switch(currentSort){case'oldest':filteredRecords.sort((a,b)=>(a.createdAt?.seconds||0)-(b.createdAt?.seconds||0));break;case'alpha':filteredRecords.sort((a,b)=>a.title.localeCompare(b.title));break;case'newest':default:filteredRecords.sort((a,b)=>(b.createdAt?.seconds||0)-(a.createdAt?.seconds||0));break;}
-            if (filteredRecords.length===0) dom.recordsContainer.innerHTML=`<p class="text-slate-500 dark:text-slate-400">No records match filters.</p>`;
-            else filteredRecords.forEach(recordData=>dom.recordsContainer.appendChild(renderRecordCard(recordData)));
+            let recordsToDisplay = [...fetchedRecords];
+            if (currentSearch) {
+                recordsToDisplay = recordsToDisplay.filter(r => Object.values(r).join(' ').toLowerCase().includes(currentSearch));
+            }
+            dom.recordsContainer.innerHTML = '';
+            if (recordsToDisplay.length === 0) {
+                 dom.recordsContainer.innerHTML = `<p class="text-slate-500 dark:text-slate-400">No records match your search.</p>`; return;
+            }
+            recordsToDisplay.forEach(recordData => dom.recordsContainer.appendChild(renderRecordCard(recordData)));
         };
 
         const openEditModal = (record) => {
@@ -187,17 +175,35 @@
         
         const setupRecordsListener = () => {
             if (recordsUnsubscribe) recordsUnsubscribe();
-            const q = collection(db, `/artifacts/${appId}/public/data/records`);
+            dom.loadingState.style.display = 'block';
+            
+            const constraints = [];
+            if (currentFilter === 'my') constraints.push(where('addedBy', '==', currentUserDisplayName));
+            else if (currentFilter === 'open') constraints.push(where('isClosed', '==', false));
+            else if (currentFilter === 'closed') constraints.push(where('isClosed', '==', true));
+            if (currentCategory) constraints.push(where('category', '==', currentCategory));
+
+            const sortField = currentSort === 'alpha' ? 'title' : 'createdAt';
+            const sortDirection = currentSort === 'oldest' ? 'asc' : 'desc';
+            constraints.push(orderBy(sortField, sortDirection));
+
+            const q = query(collection(db, `/artifacts/${appId}/public/data/records`), ...constraints);
+            
             recordsUnsubscribe = onSnapshot(q, (snapshot) => {
                 dom.loadingState.style.display = 'none';
-                allRecords = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-                renderRecords(); renderCategoryMenu();
+                fetchedRecords = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+                renderRecords(); // Initial render after fetch
+                renderCategoryMenu();
+            }, (error) => {
+                console.error("Firestore snapshot error:", error);
+                dom.loadingState.innerHTML = `<p class="text-red-500">Error loading data. A required index is likely missing. Please check the browser console (F12) for a link to create it.</p>`;
             });
         };
-
+        
         const showApp = () => { dom.authContainer.style.display = 'none'; dom.namePromptModal.classList.add('hidden'); dom.appContainer.style.display = 'block'; dom.userNameDisplay.textContent = currentUserDisplayName; setupRecordsListener(); };
         const showLogin = () => { dom.authContainer.style.display = 'flex'; dom.appContainer.style.display = 'none'; if (recordsUnsubscribe) recordsUnsubscribe(); };
 
+        // --- EVENT LISTENERS ---
         dom.searchInput.addEventListener('input', (e) => { currentSearch = e.target.value.toLowerCase(); renderRecords(); });
         [dom.sortControls, dom.filterControls].forEach(container => {
             container.addEventListener('click', (e) => {
@@ -206,7 +212,8 @@
                     if (btn.dataset.sort) currentSort = btn.dataset.sort;
                     if (btn.dataset.filter) currentFilter = btn.dataset.filter;
                     container.querySelectorAll('.control-btn').forEach(b => b.classList.remove('active'));
-                    btn.classList.add('active'); renderRecords();
+                    btn.classList.add('active');
+                    setupRecordsListener(); // Re-fetch from Firestore with new query
                 }
             });
         });
@@ -214,6 +221,7 @@
         dom.addNewRecordBtn.addEventListener('click', () => { setFormCategory('qa', dom.formFieldsContainer); dom.addRecordModal.classList.remove('hidden'); });
         dom.cancelAdd.addEventListener('click', () => dom.addRecordModal.classList.add('hidden'));
         dom.cancelEdit.addEventListener('click', () => dom.editRecordModal.classList.add('hidden'));
+
         dom.formCategorySelector.addEventListener('click', (e) => { if (e.target.matches('.form-category-btn')) setFormCategory(e.target.dataset.category, dom.formFieldsContainer); });
 
         dom.addRecordForm.addEventListener('submit', async (e) => {
@@ -221,7 +229,8 @@
             const formData = new FormData(dom.addRecordForm); const recordData = Object.fromEntries(formData.entries());
             if (recordData.title && currentUserDisplayName) {
                 submitBtn.disabled = true; submitBtn.textContent = '...';
-                try { await addDoc(collection(db, `/artifacts/${appId}/public/data/records`), { ...recordData, category: currentFormCategory, addedBy: currentUserDisplayName, createdAt: serverTimestamp(), isClosed: false });
+                try {
+                    await addDoc(collection(db, `/artifacts/${appId}/public/data/records`), { ...recordData, category: currentFormCategory, addedBy: currentUserDisplayName, createdAt: serverTimestamp(), isClosed: false });
                     dom.addRecordForm.reset(); dom.addRecordModal.classList.add('hidden');
                 } finally { submitBtn.disabled = false; submitBtn.textContent = 'Add Record'; }
             }
@@ -232,7 +241,8 @@
             const recordId = recordData.id; delete recordData.id;
             if (recordId && recordData.title) {
                 submitBtn.disabled = true; submitBtn.textContent = '...';
-                try { await updateDoc(doc(db, `/artifacts/${appId}/public/data/records`, recordId), recordData); dom.editRecordModal.classList.add('hidden'); } finally { submitBtn.disabled = false; submitBtn.textContent = 'Save Changes'; }
+                try { await updateDoc(doc(db, `/artifacts/${appId}/public/data/records`, recordId), recordData); dom.editRecordModal.classList.add('hidden');
+                } finally { submitBtn.disabled = false; submitBtn.textContent = 'Save Changes'; }
             }
         });
 
@@ -240,43 +250,27 @@
             e.preventDefault(); dom.authErrorEl.textContent = '';
             if (dom.authPasswordInput.value === SHARED_PASSWORD) {
                 sessionStorage.setItem('isLoggedIn', 'true');
-                if (sessionStorage.getItem('displayName')) {
-                    currentUserDisplayName = sessionStorage.getItem('displayName');
-                    showApp();
-                } else {
-                    dom.namePromptModal.classList.remove('hidden');
-                }
+                if (sessionStorage.getItem('displayName')) { currentUserDisplayName = sessionStorage.getItem('displayName'); showApp(); } 
+                else { dom.namePromptModal.classList.remove('hidden'); }
             } else { dom.authErrorEl.textContent = 'Incorrect password.'; }
         });
 
         dom.namePromptForm.addEventListener('submit', (e) => {
             e.preventDefault();
             const name = document.getElementById('user-display-name').value.trim();
-            if (name) {
-                currentUserDisplayName = name;
-                sessionStorage.setItem('displayName', name);
-                showApp();
-            }
+            if (name) { currentUserDisplayName = name; sessionStorage.setItem('displayName', name); showApp(); }
         });
 
         dom.logoutBtn.addEventListener('click', () => { sessionStorage.clear(); showLogin(); });
         
         const applyTheme = () => {
-            if (localStorage.getItem('theme') === 'dark') {
-                document.documentElement.classList.add('dark'); dom.sunIcon.classList.add('hidden'); dom.moonIcon.classList.remove('hidden');
-            } else {
-                document.documentElement.classList.remove('dark'); dom.sunIcon.classList.remove('hidden'); dom.moonIcon.classList.add('hidden');
-            }
+            if (localStorage.getItem('theme') === 'dark') { document.documentElement.classList.add('dark'); dom.sunIcon.classList.add('hidden'); dom.moonIcon.classList.remove('hidden'); } 
+            else { document.documentElement.classList.remove('dark'); dom.sunIcon.classList.remove('hidden'); dom.moonIcon.classList.add('hidden'); }
         };
         dom.darkModeToggle.addEventListener('click', () => { localStorage.setItem('theme', document.documentElement.classList.contains('dark') ? 'light' : 'dark'); applyTheme(); });
         
-        // Initial Page Load
-        if (sessionStorage.getItem('isLoggedIn') === 'true' && sessionStorage.getItem('displayName')) {
-            currentUserDisplayName = sessionStorage.getItem('displayName');
-            showApp();
-        } else {
-            showLogin();
-        }
+        if (sessionStorage.getItem('isLoggedIn') === 'true' && sessionStorage.getItem('displayName')) { currentUserDisplayName = sessionStorage.getItem('displayName'); showApp(); } 
+        else { showLogin(); }
         applyTheme();
 
     </script>
