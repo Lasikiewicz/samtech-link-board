@@ -20,19 +20,18 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      # This new step uses a dedicated action to replace all placeholders at once.
-      - name: Replace placeholders in app.js
-        uses: jaywcjlove/github-action-replace@v1.3.0
-        with:
-          path: app.js
-          replacements: |
-            __API_KEY__ => ${{ secrets.FIREBASE_API_KEY }}
-            __AUTH_DOMAIN__ => ${{ secrets.FIREBASE_AUTH_DOMAIN }}
-            __PROJECT_ID__ => ${{ secrets.FIREBASE_PROJECT_ID }}
-            __STORAGE_BUCKET__ => ${{ secrets.FIREBASE_STORAGE_BUCKET }}
-            __MESSAGING_SENDER_ID__ => ${{ secrets.FIREBASE_MESSAGING_SENDER_ID }}
-            __APP_ID__ => ${{ secrets.FIREBASE_APP_ID }}
-            __SHARED_PASSWORD__ => ${{ secrets.SHARED_PASSWORD }}
+      # This step uses built-in shell commands to replace the placeholders.
+      # This is more reliable than a third-party action.
+      # IMPORTANT: This step will fail if your GitHub Secret names are not an exact match.
+      - name: Replace Firebase and Password placeholders
+        run: |
+          sed -i "s|__API_KEY__|${{ secrets.FIREBASE_API_KEY }}|g" app.js
+          sed -i "s|__AUTH_DOMAIN__|${{ secrets.FIREBASE_AUTH_DOMAIN }}|g" app.js
+          sed -i "s|__PROJECT_ID__|${{ secrets.FIREBASE_PROJECT_ID }}|g" app.js
+          sed -i "s|__STORAGE_BUCKET__|${{ secrets.FIREBASE_STORAGE_BUCKET }}|g" app.js
+          sed -i "s|__MESSAGING_SENDER_ID__|${{ secrets.FIREBASE_MESSAGING_SENDER_ID }}|g" app.js
+          sed -i "s|__APP_ID__|${{ secrets.FIREBASE_APP_ID }}|g" app.js
+          sed -i "s|__SHARED_PASSWORD__|${{ secrets.SHARED_PASSWORD }}|g" app.js
       
       - name: Upload artifact
         uses: actions/upload-pages-artifact@v3
