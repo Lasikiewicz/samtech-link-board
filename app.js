@@ -75,7 +75,9 @@ const groupCommonFaults = () => {
 
         while (queue.length > 0) {
             const currentFault = queue.shift();
+            
             const allRelated = [...(currentFault.relatedTo || []), ...(currentFault.relatedBy || [])];
+
             for(const related of allRelated) {
                  if (recordMap.has(related.id) && !visited.has(related.id)) {
                     visited.add(related.id);
@@ -164,11 +166,18 @@ const renderRecordCard = (record) => {
 
     card.innerHTML = `<div class="collapsible-header flex justify-between items-start cursor-pointer record-header"><div class="flex items-center gap-3"><span class="text-xs capitalize text-white px-2 py-0.5 rounded-full" style="background-color: ${categoryColors[record.category] || '#64748b'}">${categoryDisplayNames[record.category] || record.category}</span><h3 class="text-lg font-semibold text-indigo-600 dark:text-indigo-400 break-all">${record.title}</h3></div><div class="flex items-center gap-2">${record.onSamsungTracker ? '<span class="text-xs font-bold bg-green-500 text-white px-2 py-1 rounded-full">Samsung Action Tracker</span>' : ''}${record.isClosed?'<span class="text-xs font-bold bg-slate-500 text-white px-2 py-1 rounded-full">CLOSED</span>':''}<div class="actions flex-shrink-0 ml-4 space-x-2"></div><svg class="chevron h-5 w-5 transition-transform" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" /></svg></div></div><div class="collapsible-content details-container"><div class="mt-4 pt-4 border-t border-slate-200 dark:border-slate-700 text-sm space-y-2"><dl class="grid grid-cols-1 md:grid-cols-2 gap-x-4 gap-y-1">${detailsHtml}${linkedRecordsHtml}</dl>${record.description?`<div class="pt-2"><p class="whitespace-pre-wrap">${record.description}</p></div>`:''}</div><div class="comments-section mt-4 pt-4 border-t border-slate-200 dark:border-slate-700"></div><p class="text-xs text-slate-400 dark:text-slate-500 mt-4">Added by <span class="font-mono">${record.addedBy}</span> on ${formatDateTime(record.createdAt)}</p></div>`;
     
+    const actions = card.querySelector('.actions');
+    actions.innerHTML = `<button class="time-btn" title="Edit Timestamp">&#x1F4C5;</button><button class="edit-btn" title="Edit">&#9998;</button><button class="close-btn" title="${record.isClosed?'Re-open':'Close'}">${record.isClosed?'&#x1F513;':'&#x1F512;'}</button>`;
+    actions.classList.add('text-slate-500','dark:text-slate-400');
+    actions.querySelectorAll('button').forEach(btn=>btn.classList.add('hover:text-indigo-600','dark:hover:text-indigo-400','transition'));
+    actions.querySelector('.close-btn').classList.add('hover:text-red-600','dark:hover:text-red-500');
+    
     return card;
 };
 
 const renderComments = (container, record) => {
     container.innerHTML = `<div class="collapsible-header flex justify-between items-center cursor-pointer"><h4 class="text-sm font-semibold">Updates & Comments</h4><svg class="chevron h-5 w-5 transition-transform" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" /></svg></div><div class="collapsible-content"><div class="comments-list mt-2 space-y-3 pr-2"></div>${!record.isClosed ? '<form class="add-comment-form mt-3 flex items-start gap-2"><textarea placeholder="Add a comment..." class="flex-grow w-full text-sm px-3 py-2 border rounded" rows="2"></textarea><button type="submit" class="bg-slate-600 text-white font-semibold text-sm px-4 py-2 rounded-lg hover:bg-slate-700 flex-shrink-0 disabled:opacity-50">Post</button></form>' : ''}</div>`;
+    container.querySelector('.collapsible-header').addEventListener('click', () => container.classList.toggle('expanded'));
     
     const commentsList = container.querySelector('.comments-list');
     if (record.comments && record.comments.length > 0) {
@@ -264,85 +273,44 @@ dom.deleteRecordBtn.addEventListener('click', () => { recordToDelete = dom.editR
 dom.cancelDelete.addEventListener('click', () => { recordToDelete = null; dom.confirmDeleteModal.classList.add('hidden'); });
 dom.confirmDeleteBtn.addEventListener('click', async () => { if (recordToDelete) { await deleteDoc(doc(db, `/artifacts/${appId}/public/data/records`, recordToDelete)); dom.editRecordModal.classList.add('hidden'); dom.confirmDeleteModal.classList.add('hidden'); recordToDelete = null; } });
 
-// --- MAIN EVENT DELEGATION LISTENER ---
 dom.recordsContainer.addEventListener('click', async (e) => {
     const recordCard = e.target.closest('.record-card');
     if (!recordCard) return;
     const recordId = recordCard.dataset.id;
-    const record = allRecords.find(r => r.id === recordId);
-    if (!record) return;
 
-    // Handle record expansion/collapse
-    if (e.target.closest('.record-header') && !e.target.closest('.actions')) {
-        const isCurrentlyExpanded = recordCard.classList.contains('expanded');
-        
-        dom.recordsContainer.querySelectorAll('.record-card').forEach(c => c.classList.remove('expanded'));
-        expandedRecordIds.clear();
-
-        if (!isCurrentlyExpanded) {
-            recordCard.classList.add('expanded');
-            recordCard.querySelector('.comments-section')?.classList.add('expanded');
-            expandedRecordIds.add(recordId);
-        }
-        return;
-    }
-    
-    // Handle comments section collapse/expand
-    if(e.target.closest('.comments-section > .collapsible-header')) {
-        e.target.closest('.comments-section').classList.toggle('expanded');
-        return;
-    }
-
-    // Handle submitting a new comment
-    if (e.target.closest('.add-comment-form') && e.target.tagName === 'BUTTON') {
-        e.preventDefault();
+    if (e.target.closest('.add-comment-form')) {
         const form = e.target.closest('form');
-        const textarea = form.querySelector('textarea');
-        const text = textarea.value.trim();
-        const submitBtn = form.querySelector('button');
-        
-        if (!text) return;
-        submitBtn.disabled = true;
-        submitBtn.textContent = '...';
-        try {
-            await updateDoc(doc(db, `/artifacts/${appId}/public/data/records`, recordId), { 
-                comments: arrayUnion({ text, addedBy: currentUserDisplayName, createdAt: Timestamp.now() }) 
-            });
-            textarea.value = '';
-            expandedRecordIds.add(recordId); // Ensure it stays open
-        } finally {
-            submitBtn.disabled = false;
-            submitBtn.textContent = 'Post';
+        if (e.target.tagName === 'BUTTON' && e.target.type === 'submit') {
+             e.preventDefault();
+             const textarea = form.querySelector('textarea'); const text = textarea.value.trim(); const submitBtn = form.querySelector('button');
+             if (!text || !currentUserDisplayName) return;
+             submitBtn.disabled = true; submitBtn.textContent = '...';
+             try {
+                await updateDoc(doc(db, `/artifacts/${appId}/public/data/records`, recordId), { comments: arrayUnion({ text, addedBy: currentUserDisplayName, createdAt: Timestamp.now() }) });
+                textarea.value = '';
+                expandedRecordIds.add(recordId);
+             } finally { submitBtn.disabled = false; submitBtn.textContent = 'Post'; }
         }
-        return;
     }
-
-    // Handle editing a comment
-    if(e.target.classList.contains('edit-comment-btn')) {
+    else if (e.target.classList.contains('edit-comment-btn')) {
         const commentBody = e.target.closest('.comment-body');
         const commentIndex = parseInt(e.target.dataset.index);
         const currentText = commentBody.querySelector('.comment-text').textContent;
         commentBody.innerHTML = `<textarea class="edit-comment-textarea flex-grow w-full text-sm p-2 border rounded">${currentText}</textarea><div class="flex flex-col ml-2 space-y-1"><button class="save-comment-btn text-xs bg-green-500 text-white px-2 py-1 rounded" data-index="${commentIndex}">Save</button><button class="cancel-comment-btn text-xs bg-gray-500 text-white px-2 py-1 rounded">Cancel</button></div>`;
-        return;
     }
-
-    // Handle saving an edited comment
-    if(e.target.classList.contains('save-comment-btn')) {
-        const commentIndex = parseInt(e.target.dataset.index);
-        const newText = e.target.closest('.comment-body').querySelector('.edit-comment-textarea').value;
-        const recordRef = doc(db, `/artifacts/${appId}/public/data/records`, recordId);
-        await runTransaction(db, async (transaction) => {
-            const recordDoc = await transaction.get(recordRef);
-            if (!recordDoc.exists()) throw "Document does not exist!";
-            const comments = recordDoc.data().comments;
-            comments[commentIndex].text = newText;
-            transaction.update(recordRef, { comments });
-        });
-        return;
+    else if(e.target.classList.contains('save-comment-btn')) {
+         const commentIndex = parseInt(e.target.dataset.index);
+         const newText = e.target.closest('.comment-body').querySelector('.edit-comment-textarea').value;
+         await runTransaction(db, async (transaction) => {
+             const recordRef = doc(db, `/artifacts/${appId}/public/data/records`, recordId);
+             const recordDoc = await transaction.get(recordRef);
+             if(!recordDoc.exists()) throw "Document does not exist!";
+             const comments = recordDoc.data().comments;
+             comments[commentIndex].text = newText;
+             transaction.update(recordRef, { comments });
+         });
     }
-    
-    // Handle deleting a comment
-    if(e.target.classList.contains('delete-comment-btn')) {
+    else if(e.target.classList.contains('delete-comment-btn')) {
         const commentIndex = parseInt(e.target.dataset.index);
         await runTransaction(db, async (transaction) => {
              const recordRef = doc(db, `/artifacts/${appId}/public/data/records`, recordId);
@@ -352,13 +320,10 @@ dom.recordsContainer.addEventListener('click', async (e) => {
              comments.splice(commentIndex, 1);
              transaction.update(recordRef, { comments });
          });
-         return;
     }
-    
-    // Handle canceling a comment edit
-    if (e.target.classList.contains('cancel-comment-btn')) {
-        renderComments(e.target.closest('.comments-section'), record);
-        return;
+    else if (e.target.classList.contains('cancel-comment-btn')) {
+        const record = allRecords.find(r => r.id === recordId);
+        if (record) renderComments(e.target.closest('.comments-section'), record);
     }
 });
 
@@ -383,7 +348,7 @@ const createRecord = async (recordData, relatedTo = []) => {
      submitBtn.disabled = true; submitBtn.textContent = '...';
      try {
         recordData.onSamsungTracker = recordData.onSamsungTracker === 'on';
-        const newRecordRef = await addDoc(collection(db, `/artifacts/${appId}/public/data/records`), { ...recordData, category: currentFormCategory, addedBy: currentUserDisplayName, createdAt: serverTimestamp(), isClosed: false, comments: [], relatedTo: relatedTo, relatedBy: [] });
+        const newRecordRef = await addDoc(collection(db, `/artifacts/${appId}/public/data/records`), { ...recordData, category: currentFormCategory, addedBy: currentUserDisplayName, createdAt: serverTimestamp(), isClosed: false, comments: [], relatedTo: [], relatedBy: relatedTo });
         for(const related of relatedTo) {
             const relatedDocRef = doc(db, `/artifacts/${appId}/public/data/records`, related.id);
             await updateDoc(relatedDocRef, { relatedBy: arrayUnion({ id: newRecordRef.id, title: recordData.title }) });
@@ -423,25 +388,12 @@ dom.editRecordForm.addEventListener('submit', async (e) => {
     e.preventDefault(); const submitBtn = e.target.querySelector('#edit-record-submit');
     const formData = new FormData(dom.editRecordForm); const recordData = Object.fromEntries(formData.entries());
     recordData.onSamsungTracker = recordData.onSamsungTracker === 'on';
-    const recordId = recordData.id;
-    delete recordData.id; // Remove ID from data to be updated
-
-    if (!recordId) {
-        console.error("Edit record: No record ID found for update.");
-        return; // Stop execution if no ID
+    const recordId = recordData.id; delete recordData.id;
+    if (recordId && recordData.title) {
+        submitBtn.disabled = true; submitBtn.textContent = '...';
+        try { await updateDoc(doc(db, `/artifacts/${appId}/public/data/records`, recordId), recordData); dom.editRecordModal.classList.add('hidden');
+        } finally { submitBtn.disabled = false; submitBtn.textContent = 'Save Changes'; }
     }
-    // The 'title' field is marked as 'required' in HTML, but adding a JS check for robustness.
-    if (!recordData.title) {
-        console.error("Edit record: Title is empty. Please ensure the title field is filled.");
-        return; // Stop execution if title is empty
-    }
-
-    submitBtn.disabled = true; submitBtn.textContent = '...';
-    try { await updateDoc(doc(db, `/artifacts/${appId}/public/data/records`, recordId), recordData); dom.editRecordModal.classList.add('hidden');
-    } catch (error) {
-        console.error("Error updating record:", error);
-        // Optionally, provide user feedback here, e.g., alert("Failed to save changes. Check console for details.");
-    } finally { submitBtn.disabled = false; submitBtn.textContent = 'Save Changes'; }
 });
  dom.editTimeForm.addEventListener('submit', async (e) => {
     e.preventDefault();
@@ -465,11 +417,13 @@ dom.editRecordModal.addEventListener('click', (e) => {
             const recordDoc = await transaction.get(recordRef);
             if(!recordDoc.exists()) throw "Document does not exist!";
             
+            // Remove from current record's arrays
             transaction.update(recordRef, {
                 relatedTo: arrayRemove({id: unlinkId, title: unlinkTitle}),
                 relatedBy: arrayRemove({id: unlinkId, title: unlinkTitle})
             });
 
+            // Remove from the other record's arrays
             transaction.update(unlinkRef, {
                 relatedTo: arrayRemove({id: recordId, title: recordDoc.data().title}),
                 relatedBy: arrayRemove({id: recordId, title: recordDoc.data().title})
