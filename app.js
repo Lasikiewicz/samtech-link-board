@@ -6,7 +6,7 @@ const appId = 'samtech-record-board';
 const SHARED_PASSWORD = "__SHARED_PASSWORD__" || "samtech";
 
 let app, db, recordsUnsubscribe;
-let allRecords = []; // This will hold the full dataset from the current main filter
+let allRecords = []; 
 let groupedFaults = new Map();
 let currentSort = 'newest', currentSearch = '', currentCategory = '', currentFilter = 'all', currentUserDisplayName = '';
 let recordToDelete = null;
@@ -113,9 +113,9 @@ const renderCategoryMenu = () => {
         if (currentCategory === id) btn.classList.add('active');
         btn.addEventListener('click', () => { 
             currentCategory = id; 
-            currentFilter = 'all'; 
+            currentFilter = id === 'action-tracker' ? 'open' : 'all'; // Default to open for tracker
             dom.filterControls.querySelectorAll('.control-btn').forEach(b => b.classList.remove('active'));
-            dom.filterControls.querySelector(`[data-filter="all"]`).classList.add('active');
+            dom.filterControls.querySelector(`[data-filter="${currentFilter}"]`).classList.add('active');
             setupRecordsListener();
         });
         return btn;
@@ -194,13 +194,6 @@ const renderRecordCard = (record) => {
             <p class="text-xs text-slate-400 dark:text-slate-500 mt-4">Added by <span class="font-mono">${record.addedBy}</span> on ${formatDateTime(record.createdAt)}</p>
         </div>`;
     
-    // Actions are now always visible
-    const actions = card.querySelector('.actions');
-    actions.innerHTML = `<button class="time-btn" title="Edit Timestamp">&#x1F4C5;</button><button class="edit-btn" title="Edit">&#9998;</button><button class="close-btn" title="${record.isClosed ? 'Re-open' : 'Close'}">${record.isClosed ? '&#x1F513;' : '&#x1F512;'}</button>`;
-    actions.classList.add('text-slate-500', 'dark:text-slate-400');
-    actions.querySelectorAll('button').forEach(btn => btn.classList.add('hover:text-indigo-600', 'dark:hover:text-indigo-400', 'transition'));
-    actions.querySelector('.close-btn').classList.add('hover:text-red-600', 'dark:hover:text-red-500');
-    
     return card;
 };
 
@@ -220,6 +213,7 @@ const renderComments = (container, record) => {
 };
 
 const renderRecords = () => {
+    dom.recordsContainer.innerHTML = '';
     let recordsToDisplay = [...allRecords];
     if (currentCategory) {
         if (currentCategory === 'action-tracker') {
@@ -228,19 +222,42 @@ const renderRecords = () => {
              recordsToDisplay = groupedFaults.get(currentCategory).records;
         } else if (currentCategory.endsWith('-closed')) {
             const cat = currentCategory.replace('-closed', '');
-            recordsToDisplay = recordsToDisplay.filter(r => r.category === cat && r.isClosed);
+            recordsToDisplay = allRecords.filter(r => r.category === cat && r.isClosed);
         } else {
-            recordsToDisplay = recordsToDisplay.filter(r => r.category === currentCategory);
+            recordsToDisplay = allRecords.filter(r => r.category === currentCategory);
         }
     }
     if (currentSearch) recordsToDisplay = recordsToDisplay.filter(r => Object.values(r).join(' ').toLowerCase().includes(currentSearch));
     
-    dom.recordsContainer.innerHTML = '';
     if (recordsToDisplay.length === 0) { dom.recordsContainer.innerHTML = `<p class="text-slate-500 dark:text-slate-400">No records match your current filters.</p>`; return; }
+    
     recordsToDisplay.forEach(recordData => dom.recordsContainer.appendChild(renderRecordCard(recordData)));
 };
 
-const openEditModal = (record) => { dom.editRecordForm.querySelector('[name="id"]').value = record.id; setFormCategory(record.category, dom.editFormFieldsContainer, record); dom.editRecordModal.classList.remove('hidden'); };
+const openEditModal = (record) => { 
+    dom.editRecordForm.querySelector('[name="id"]').value = record.id; 
+    setFormCategory(record.category, dom.editFormFieldsContainer, record); 
+    
+    if (record.category === 'common-fault') {
+        const allRelated = [...(record.relatedTo || []), ...(record.relatedBy || [])];
+        if (allRelated.length > 0) {
+            const unlinkContainer = document.createElement('div');
+            unlinkContainer.className = "mt-4 pt-4 border-t border-slate-200 dark:border-slate-700";
+            unlinkContainer.innerHTML = `<h3 class="text-md font-semibold mb-2">Linked Records</h3>`;
+            const list = document.createElement('ul');
+            list.className = "space-y-1";
+            allRelated.forEach(related => {
+                const item = document.createElement('li');
+                item.className = "flex justify-between items-center";
+                item.innerHTML = `<span>${related.title}</span><button type="button" class="unlink-btn text-red-500 text-xs hover:underline" data-unlink-id="${related.id}" data-unlink-title="${related.title}">Unlink</button>`;
+                list.appendChild(item);
+            });
+            unlinkContainer.appendChild(list);
+            dom.editFormFieldsContainer.appendChild(unlinkContainer);
+        }
+    }
+    dom.editRecordModal.classList.remove('hidden'); 
+};
 const openTimeEditModal = (record) => {
     const form = dom.editTimeForm;
     form.querySelector('[name="id"]').value = record.id;
@@ -282,7 +299,6 @@ const setupRecordsListener = () => {
 const showApp = () => { dom.authContainer.style.display = 'none'; dom.namePromptModal.classList.add('hidden'); dom.appContainer.style.display = 'block'; dom.userNameDisplay.textContent = currentUserDisplayName; setupRecordsListener(); };
 const showLogin = () => { dom.authContainer.style.display = 'flex'; dom.appContainer.style.display = 'none'; if (recordsUnsubscribe) recordsUnsubscribe(); };
 
-// --- MAIN EVENT DELEGATION LISTENER ---
 dom.recordsContainer.addEventListener('click', async (e) => {
     const recordCard = e.target.closest('.record-card');
     if (!recordCard) return;
