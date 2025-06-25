@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Collaborative Link Board</title>
+    <title>Collaborative Record Board</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -21,10 +21,12 @@
         #auth-container, #app-container { display: none; }
         .message-box { animation: fadeIn 0.3s ease-out; }
         @keyframes fadeIn { from { opacity: 0; transform: translateY(-10px); } to { opacity: 1; transform: translateY(0); } }
-        .sort-btn.active, .filter-btn.active { background-color: #4f46e5; color: white; border-color: #4f46e5; }
-        .dark .sort-btn.active, .dark .filter-btn.active { background-color: #6366f1; border-color: #6366f1;}
-        .tag-menu-item.active { background-color: #e0e7ff; color: #4f46e5; font-weight: 600; }
-        .dark .tag-menu-item.active { background-color: #312e81; color: #a5b4fc; }
+        .control-btn.active { background-color: #4f46e5; color: white; border-color: #4f46e5; }
+        .dark .control-btn.active { background-color: #6366f1; border-color: #6366f1;}
+        .category-menu-item.active { background-color: #e0e7ff; color: #4f46e5; font-weight: 600; }
+        .dark .category-menu-item.active { background-color: #312e81; color: #a5b4fc; }
+        .form-category-btn.active { background-color: #4f46e5; color: white; }
+        .dark .form-category-btn.active { background-color: #6366f1; }
     </style>
 </head>
 <body class="text-slate-800 dark:text-slate-200">
@@ -32,23 +34,9 @@
     <!-- Authentication Container -->
     <div id="auth-container" class="min-h-screen flex items-center justify-center p-4">
         <div class="max-w-md w-full bg-white p-8 rounded-2xl shadow-xl">
-            <div class="text-center mb-8">
-                <img src="https://i.ibb.co/b3y7t5R/logo1.png" alt="Samtech Solutions Logo" class="mx-auto mb-4 h-16 w-auto">
-                <h1 class="text-2xl font-bold text-slate-800">Welcome</h1>
-                <p class="text-slate-500">Sign in or create an account to continue</p>
-            </div>
+            <div class="text-center mb-8"><img src="https://i.ibb.co/b3y7t5R/logo1.png" alt="Samtech Solutions Logo" class="mx-auto mb-4 h-16 w-auto"><h1 class="text-2xl font-bold text-slate-800">Welcome</h1><p class="text-slate-500">Sign in or create an account</p></div>
             <div id="auth-message" class="hidden message-box mb-4 p-4 text-sm rounded-lg"></div>
-            <form id="auth-form">
-                <div class="space-y-4">
-                    <input id="auth-email" type="email" placeholder="Enter your email" class="w-full px-4 py-2 border border-slate-300 rounded-lg" required>
-                    <input id="auth-password" type="password" placeholder="Enter your password" class="w-full px-4 py-2 border border-slate-300 rounded-lg" required>
-                </div>
-                <p id="auth-error" class="text-red-500 text-sm mt-4 h-5"></p>
-                <div class="mt-6 flex flex-col sm:flex-row gap-3">
-                    <button type="button" id="login-btn" class="w-full bg-indigo-600 text-white font-semibold px-6 py-2 rounded-lg hover:bg-indigo-700">Login</button>
-                    <button type="button" id="register-btn" class="w-full bg-slate-600 text-white font-semibold px-6 py-2 rounded-lg hover:bg-slate-700">Register</button>
-                </div>
-            </form>
+            <form id="auth-form"><div class="space-y-4"><input id="auth-email" type="email" placeholder="Enter your email" class="w-full px-4 py-2 border border-slate-300 rounded-lg" required><input id="auth-password" type="password" placeholder="Enter your password" class="w-full px-4 py-2 border border-slate-300 rounded-lg" required></div><p id="auth-error" class="text-red-500 text-sm mt-4 h-5"></p><div class="mt-6 flex flex-col sm:flex-row gap-3"><button type="button" id="login-btn" class="w-full bg-indigo-600 text-white font-semibold px-6 py-2 rounded-lg hover:bg-indigo-700">Login</button><button type="button" id="register-btn" class="w-full bg-slate-600 text-white font-semibold px-6 py-2 rounded-lg hover:bg-slate-700">Register</button></div></form>
         </div>
     </div>
 
@@ -56,28 +44,20 @@
     <div id="app-container" class="max-w-7xl mx-auto p-4 sm:p-6 lg:p-8">
       <div class="grid grid-cols-1 lg:grid-cols-4 gap-8">
         
-        <!-- Left Sidebar for Tags -->
         <aside class="lg:col-span-1">
           <div class="sticky top-8">
-            <h2 class="text-lg font-bold mb-4 text-slate-900 dark:text-white">Tags</h2>
-            <nav id="tag-menu" class="space-y-1"></nav>
+            <h2 class="text-lg font-bold mb-4 text-slate-900 dark:text-white">Categories</h2>
+            <nav id="category-menu" class="space-y-1"></nav>
           </div>
         </aside>
 
-        <!-- Main Content -->
         <main class="lg:col-span-3">
             <header class="mb-6">
                 <div class="flex flex-wrap gap-4 justify-between items-center">
-                    <div>
-                        <h1 class="text-3xl sm:text-4xl font-bold text-slate-900 dark:text-white">Collaborative Link Board</h1>
-                        <p class="text-slate-600 dark:text-slate-400 mt-1">Share, discuss, and edit web links in real-time.</p>
-                    </div>
+                    <div><h1 class="text-3xl sm:text-4xl font-bold text-slate-900 dark:text-white">Collaborative Record Board</h1><p class="text-slate-600 dark:text-slate-400 mt-1">Share, discuss, and edit records in real-time.</p></div>
                     <div class="flex items-center gap-4">
-                        <button id="add-new-link-btn" class="bg-indigo-600 text-white font-semibold px-4 py-2 rounded-lg hover:bg-indigo-700">Add New Link</button>
-                        <button id="dark-mode-toggle" class="p-2 rounded-full hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-500 dark:text-slate-400" title="Toggle Dark Mode">
-                            <svg id="sun-icon" xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z" /></svg>
-                            <svg id="moon-icon" xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 hidden" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z" /></svg>
-                        </button>
+                        <button id="add-new-record-btn" class="bg-indigo-600 text-white font-semibold px-4 py-2 rounded-lg hover:bg-indigo-700">Add New Record</button>
+                        <button id="dark-mode-toggle" class="p-2 rounded-full hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-500 dark:text-slate-400" title="Toggle Dark Mode"><svg id="sun-icon" xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z" /></svg><svg id="moon-icon" xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 hidden" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z" /></svg></button>
                         <button id="logout-btn" class="bg-red-500 text-white font-semibold px-4 py-2 rounded-lg hover:bg-red-600">Logout</button>
                     </div>
                 </div>
@@ -90,32 +70,39 @@
             <div class="bg-white dark:bg-slate-800 p-4 rounded-xl shadow-lg mb-8 space-y-4">
                 <input id="search-input" type="search" placeholder="&#x1F50D; Search by title..." class="w-full px-4 py-2 border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-700 rounded-lg">
                 <div class="flex flex-wrap items-center gap-x-4 gap-y-2">
-                    <div class="flex items-center gap-2"><span class="text-sm font-semibold">Show:</span><div id="filter-controls" class="flex gap-2"><button class="filter-btn text-sm px-3 py-1 rounded-full border border-slate-300 dark:border-slate-600 active" data-filter="open">Open</button><button class="filter-btn text-sm px-3 py-1 rounded-full border border-slate-300 dark:border-slate-600" data-filter="closed">Closed</button><button class="filter-btn text-sm px-3 py-1 rounded-full border border-slate-300 dark:border-slate-600" data-filter="all">All</button><button class="filter-btn text-sm px-3 py-1 rounded-full border border-slate-300 dark:border-slate-600" data-filter="my">My Links</button></div></div>
-                    <div class="flex items-center gap-2"><span class="text-sm font-semibold">Sort by:</span><div id="sort-controls" class="flex gap-2"><button class="sort-btn text-sm px-3 py-1 rounded-full border border-slate-300 dark:border-slate-600 active" data-sort="newest">Newest</button><button class="sort-btn text-sm px-3 py-1 rounded-full border border-slate-300 dark:border-slate-600" data-sort="oldest">Oldest</button><button class="sort-btn text-sm px-3 py-1 rounded-full border border-slate-300 dark:border-slate-600" data-sort="alpha">A-Z</button></div></div>
+                    <div class="flex items-center gap-2"><span class="text-sm font-semibold">Show:</span><div id="filter-controls" class="flex gap-2"><button class="control-btn text-sm px-3 py-1 rounded-full border border-slate-300 dark:border-slate-600 active" data-filter="open">Open</button><button class="control-btn text-sm px-3 py-1 rounded-full border border-slate-300 dark:border-slate-600" data-filter="closed">Closed</button><button class="control-btn text-sm px-3 py-1 rounded-full border border-slate-300 dark:border-slate-600" data-filter="all">All</button><button class="control-btn text-sm px-3 py-1 rounded-full border border-slate-300 dark:border-slate-600" data-filter="my">My Records</button></div></div>
+                    <div class="flex items-center gap-2"><span class="text-sm font-semibold">Sort by:</span><div id="sort-controls" class="flex gap-2"><button class="control-btn text-sm px-3 py-1 rounded-full border border-slate-300 dark:border-slate-600 active" data-sort="newest">Newest</button><button class="control-btn text-sm px-3 py-1 rounded-full border border-slate-300 dark:border-slate-600" data-sort="oldest">Oldest</button><button class="control-btn text-sm px-3 py-1 rounded-full border border-slate-300 dark:border-slate-600" data-sort="alpha">A-Z</button></div></div>
                 </div>
             </div>
 
-            <div>
-                <div id="links-container" class="space-y-6">
-                    <p id="loading-state" class="text-slate-500 dark:text-slate-400">Loading links...</p>
-                </div>
+            <div id="records-container" class="space-y-6">
+                <p id="loading-state" class="text-slate-500 dark:text-slate-400">Loading records...</p>
             </div>
         </main>
       </div>
     </div>
 
     <!-- Modals -->
-    <div id="add-link-modal" class="fixed inset-0 bg-black bg-opacity-70 flex items-center justify-center p-4 hidden">
+    <div id="add-record-modal" class="fixed inset-0 bg-black bg-opacity-70 flex items-center justify-center p-4 hidden">
         <div class="bg-white dark:bg-slate-800 rounded-xl shadow-2xl p-6 w-full max-w-lg">
-            <h2 class="text-xl font-semibold mb-4 text-slate-900 dark:text-white">Add a New Link</h2>
-            <form id="add-link-form"><div class="space-y-4"><input id="link-title" type="text" placeholder="Enter Q&A ID and Title" class="w-full px-4 py-2 border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-700 rounded-lg" required><input id="link-url" type="url" placeholder="Enter full URL" class="w-full px-4 py-2 border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-700 rounded-lg" required><input id="link-tags" type="text" placeholder="Add tags, separated by commas" class="w-full px-4 py-2 border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-700 rounded-lg"></div><div class="mt-6 flex justify-end space-x-3"><button type="button" id="cancel-add" class="bg-slate-200 dark:bg-slate-600 text-slate-800 dark:text-slate-200 font-semibold px-4 py-2 rounded-lg hover:bg-slate-300 dark:hover:bg-slate-500">Cancel</button><button type="submit" id="add-link-submit" class="bg-indigo-600 text-white font-semibold px-4 py-2 rounded-lg hover:bg-indigo-700 disabled:opacity-50">Share Link</button></div></form>
-        </div>
-    </div>
+            <h2 class="text-xl font-semibold mb-4 text-slate-900 dark:text-white">Add New Record</h2>
+            <form id="add-record-form">
+                <div class="mb-4">
+                    <label class="block text-sm font-medium mb-1">Category</label>
+                    <div id="form-category-selector" class="grid grid-cols-3 gap-2">
+                        <button type="button" class="form-category-btn px-4 py-2 border rounded-lg" data-category="qa">Q&A</button>
+                        <button type="button" class="form-category-btn px-4 py-2 border rounded-lg" data-category="common-fault">Common Faults</button>
+                        <button type="button" class="form-category-btn px-4 py-2 border rounded-lg" data-category="general">General</button>
+                    </div>
+                </div>
 
-    <div id="edit-modal" class="fixed inset-0 bg-black bg-opacity-70 flex items-center justify-center p-4 hidden">
-        <div class="bg-white dark:bg-slate-800 rounded-xl shadow-2xl p-6 w-full max-w-lg">
-            <h2 class="text-xl font-semibold mb-4 text-slate-900 dark:text-white">Edit Link</h2>
-            <form id="edit-link-form"><input type="hidden" id="edit-link-id"><div class="space-y-4"><input id="edit-link-title" type="text" placeholder="Enter Q&A ID and Title" class="w-full px-4 py-2 border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-700 rounded-lg" required><input id="edit-link-url" type="url" placeholder="Enter full URL" class="w-full px-4 py-2 border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-700 rounded-lg" required><input id="edit-link-tags" type="text" placeholder="Add tags, separated by commas" class="w-full px-4 py-2 border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-700 rounded-lg"></div><div class="mt-6 flex justify-end space-x-3"><button type="button" id="cancel-edit" class="bg-slate-200 dark:bg-slate-600 text-slate-800 dark:text-slate-200 font-semibold px-4 py-2 rounded-lg hover:bg-slate-300 dark:hover:bg-slate-500">Cancel</button><button type="submit" id="edit-link-submit" class="bg-indigo-600 text-white font-semibold px-4 py-2 rounded-lg hover:bg-indigo-700 disabled:opacity-50">Save Changes</button></div></form>
+                <div id="form-fields-container" class="space-y-4"></div>
+
+                <div class="mt-6 flex justify-end space-x-3">
+                    <button type="button" id="cancel-add" class="bg-slate-200 dark:bg-slate-600 text-slate-800 dark:text-slate-200 font-semibold px-4 py-2 rounded-lg hover:bg-slate-300 dark:hover:bg-slate-500">Cancel</button>
+                    <button type="submit" id="add-record-submit" class="bg-indigo-600 text-white font-semibold px-4 py-2 rounded-lg hover:bg-indigo-700 disabled:opacity-50">Add Record</button>
+                </div>
+            </form>
         </div>
     </div>
 
@@ -126,11 +113,11 @@
         import { getDatabase, ref, onValue, set, onDisconnect, serverTimestamp as dbServerTimestamp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-database.js";
 
         const firebaseConfig = { apiKey: "__API_KEY__", authDomain: "__AUTH_DOMAIN__", projectId: "__PROJECT_ID__", storageBucket: "__STORAGE_BUCKET__", messagingSenderId: "__MESSAGING_SENDER_ID__", appId: "__APP_ID__" };
-        const appId = 'samtech-link-board';
+        const appId = 'samtech-record-board'; // Updated App ID
 
-        let app, auth, db, rtDb, userId, linksUnsubscribe;
-        let allLinks = [], allTags = new Set();
-        let currentSort = 'newest', currentSearch = '', currentTag = '', currentFilter = 'open';
+        let app, auth, db, rtDb, userId, recordsUnsubscribe;
+        let allRecords = [];
+        let currentSort = 'newest', currentSearch = '', currentCategory = '', currentFilter = 'open';
 
         try {
             app = getApps().length ? getApp() : initializeApp(firebaseConfig);
@@ -139,153 +126,136 @@
 
         const dom = {
             authContainer: document.getElementById('auth-container'), appContainer: document.getElementById('app-container'),
-            addLinkForm: document.getElementById('add-link-form'), addLinkModal: document.getElementById('add-link-modal'),
-            addNewLinkBtn: document.getElementById('add-new-link-btn'), cancelAdd: document.getElementById('cancel-add'),
-            linksContainer: document.getElementById('links-container'), loadingState: document.getElementById('loading-state'),
+            addRecordForm: document.getElementById('add-record-form'), addRecordModal: document.getElementById('add-record-modal'),
+            addNewRecordBtn: document.getElementById('add-new-record-btn'), cancelAdd: document.getElementById('cancel-add'),
+            recordsContainer: document.getElementById('records-container'), loadingState: document.getElementById('loading-state'),
             searchInput: document.getElementById('search-input'), sortControls: document.getElementById('sort-controls'),
             filterControls: document.getElementById('filter-controls'), userEmailSpan: document.getElementById('user-email'),
             logoutBtn: document.getElementById('logout-btn'), presenceList: document.getElementById('presence-list'),
             authErrorEl: document.getElementById('auth-error'), authMessageEl: document.getElementById('auth-message'),
             loginBtn: document.getElementById('login-btn'), registerBtn: document.getElementById('register-btn'),
             darkModeToggle: document.getElementById('dark-mode-toggle'), sunIcon: document.getElementById('sun-icon'),
-            moonIcon: document.getElementById('moon-icon'), editModal: document.getElementById('edit-modal'),
-            editLinkForm: document.getElementById('edit-link-form'), cancelEdit: document.getElementById('cancel-edit'),
-            tagMenu: document.getElementById('tag-menu')
-        };
-
-        const showAuthMessage = (message, type = 'success') => {
-            dom.authMessageEl.innerHTML = message;
-            let colors = 'bg-green-100 text-green-800';
-            if (type === 'error') colors = 'bg-red-100 text-red-800';
-            dom.authMessageEl.className = `message-box mb-4 p-4 text-sm rounded-lg ${colors}`;
-            dom.authMessageEl.classList.remove('hidden');
+            moonIcon: document.getElementById('moon-icon'),
+            categoryMenu: document.getElementById('category-menu'),
+            formCategorySelector: document.getElementById('form-category-selector'),
+            formFieldsContainer: document.getElementById('form-fields-container')
         };
         
-        const renderTagMenu = () => {
-            dom.tagMenu.innerHTML = '';
-            const allBtn = document.createElement('button');
-            allBtn.textContent = 'All Tags';
-            allBtn.className = `tag-menu-item w-full text-left px-3 py-2 rounded-md text-sm hover:bg-slate-200 dark:hover:bg-slate-700`;
-            if (currentTag === '') allBtn.classList.add('active');
-            allBtn.addEventListener('click', () => { currentTag = ''; renderLinks(); renderTagMenu(); });
-            dom.tagMenu.appendChild(allBtn);
-            [...allTags].sort().forEach(tag => {
-                const tagBtn = document.createElement('button');
-                tagBtn.textContent = tag;
-                tagBtn.className = `tag-menu-item w-full text-left px-3 py-2 rounded-md text-sm hover:bg-slate-200 dark:hover:bg-slate-700`;
-                if (currentTag === tag) tagBtn.classList.add('active');
-                tagBtn.addEventListener('click', () => { currentTag = tag; renderLinks(); renderTagMenu(); });
-                dom.tagMenu.appendChild(tagBtn);
+        const formFieldsTemplates = {
+            qa: `
+                <input name="title" type="text" placeholder="Q&A Title" class="w-full px-4 py-2 border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-700 rounded-lg" required>
+                <input name="qaId" type="text" placeholder="Q&A Question ID" pattern="\\d{8}" title="Must be 8 digits" class="w-full px-4 py-2 border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-700 rounded-lg" required>
+                <input name="modelNumber" type="text" placeholder="Model Number" class="w-full px-4 py-2 border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-700 rounded-lg">
+                <input name="serialNumber" type="text" placeholder="Serial Number" class="w-full px-4 py-2 border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-700 rounded-lg">
+                <input name="serviceOrderNumber" type="text" placeholder="Service Order Number" pattern="\\d{10}" title="Must be 10 digits" class="w-full px-4 py-2 border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-700 rounded-lg">
+                <input name="salesforceCaseNumber" type="text" placeholder="Salesforce Case Number" class="w-full px-4 py-2 border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-700 rounded-lg">
+                <textarea name="description" placeholder="Description" class="w-full px-4 py-2 border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-700 rounded-lg" rows="4"></textarea>
+            `,
+            'common-fault': `
+                <input name="title" type="text" placeholder="Title" class="w-full px-4 py-2 border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-700 rounded-lg" required>
+                <input name="modelNumber" type="text" placeholder="Model Number" class="w-full px-4 py-2 border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-700 rounded-lg">
+                <input name="serialNumber" type="text" placeholder="Serial Number" class="w-full px-4 py-2 border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-700 rounded-lg">
+                <input name="serviceOrderNumber" type="text" placeholder="Service Order Number" pattern="\\d{10}" title="Must be 10 digits" class="w-full px-4 py-2 border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-700 rounded-lg">
+                <input name="salesforceCaseNumber" type="text" placeholder="Salesforce Case Number" class="w-full px-4 py-2 border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-700 rounded-lg">
+                <textarea name="description" placeholder="Description" class="w-full px-4 py-2 border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-700 rounded-lg" rows="4"></textarea>
+            `,
+            general: `
+                <input name="title" type="text" placeholder="Title" class="w-full px-4 py-2 border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-700 rounded-lg" required>
+                <input name="modelNumber" type="text" placeholder="Model Number" class="w-full px-4 py-2 border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-700 rounded-lg">
+                <input name="serialNumber" type="text" placeholder="Serial Number" class="w-full px-4 py-2 border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-700 rounded-lg">
+                <input name="serviceOrderNumber" type="text" placeholder="Service Order Number" pattern="\\d{10}" title="Must be 10 digits" class="w-full px-4 py-2 border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-700 rounded-lg">
+                <input name="salesforceCaseNumber" type="text" placeholder="Salesforce Case Number" class="w-full px-4 py-2 border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-700 rounded-lg">
+                <textarea name="description" placeholder="Description" class="w-full px-4 py-2 border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-700 rounded-lg" rows="4"></textarea>
+            `
+        };
+        
+        let currentFormCategory = 'qa';
+        const setFormCategory = (category) => {
+            currentFormCategory = category;
+            dom.formFieldsContainer.innerHTML = formFieldsTemplates[category];
+            dom.formCategorySelector.querySelectorAll('.form-category-btn').forEach(btn => {
+                btn.classList.toggle('active', btn.dataset.category === category);
             });
         };
-
-        const renderLinks = () => {
-            dom.linksContainer.innerHTML = '';
-            let filteredLinks = [...allLinks];
-
-            if (currentFilter === 'my' && userId) filteredLinks = filteredLinks.filter(link => link.addedBy === userId);
-            else if (currentFilter === 'open') filteredLinks = filteredLinks.filter(link => !link.isClosed);
-            else if (currentFilter === 'closed') filteredLinks = filteredLinks.filter(link => link.isClosed);
+        
+        const renderCategoryMenu = () => {
+            dom.categoryMenu.innerHTML = '';
+            const categories = { '': 'All Records', qa: 'Q&A', 'common-fault': 'Common Faults', general: 'General' };
+            Object.entries(categories).forEach(([key, value]) => {
+                const btn = document.createElement('button');
+                btn.textContent = value;
+                btn.className = `category-menu-item w-full text-left px-3 py-2 rounded-md text-sm hover:bg-slate-200 dark:hover:bg-slate-700`;
+                if (currentCategory === key) btn.classList.add('active');
+                btn.addEventListener('click', () => { currentCategory = key; renderRecords(); renderCategoryMenu(); });
+                dom.categoryMenu.appendChild(btn);
+            });
+        };
+        
+        const renderRecordCard = (record) => {
+            const detailsHtml = `
+                ${record.qaId ? `<div class="flex"><dt class="w-1/3 font-semibold">Q&A ID:</dt><dd class="w-2/3">${record.qaId}</dd></div>` : ''}
+                ${record.modelNumber ? `<div class="flex"><dt class="w-1/3 font-semibold">Model #:</dt><dd class="w-2/3">${record.modelNumber}</dd></div>` : ''}
+                ${record.serialNumber ? `<div class="flex"><dt class="w-1/3 font-semibold">Serial #:</dt><dd class="w-2/3">${record.serialNumber}</dd></div>` : ''}
+                ${record.serviceOrderNumber ? `<div class="flex"><dt class="w-1/3 font-semibold">Service Order #:</dt><dd class="w-2/3">${record.serviceOrderNumber}</dd></div>` : ''}
+                ${record.salesforceCaseNumber ? `<div class="flex"><dt class="w-1/3 font-semibold">Salesforce Case #:</dt><dd class="w-2/3">${record.salesforceCaseNumber}</dd></div>` : ''}
+            `;
             
-            if (currentSearch) filteredLinks = filteredLinks.filter(link => link.title.toLowerCase().includes(currentSearch));
-            if (currentTag) filteredLinks = filteredLinks.filter(link => link.tags && link.tags.includes(currentTag));
+            return `
+                <div class="flex justify-between items-start">
+                    <div>
+                        <h3 class="text-lg font-semibold text-indigo-600 dark:text-indigo-400 break-all">${record.title}</h3>
+                        <div class="mt-2 flex flex-wrap gap-2">
+                           <span class="text-xs bg-gray-200 dark:bg-gray-700 text-gray-800 dark:text-gray-200 px-2 py-0.5 rounded-full">${record.category}</span>
+                           ${record.isClosed ? '<span class="text-xs font-bold bg-slate-500 text-white px-2 py-1 rounded-full">CLOSED</span>' : ''}
+                        </div>
+                    </div>
+                    ${record.addedBy === userId ? `<div class="flex-shrink-0 ml-4 space-x-2">...</div>` : ''}
+                </div>
+                <div class="mt-4 pt-4 border-t border-slate-200 dark:border-slate-700 text-sm space-y-2">
+                    <dl class="flex flex-col space-y-1">${detailsHtml}</dl>
+                    ${record.description ? `<div class="pt-2"><p class="whitespace-pre-wrap">${record.description}</p></div>` : ''}
+                </div>
+                <p class="text-xs text-slate-400 dark:text-slate-500 mt-4">Added by: <span class="font-mono">${record.addedByEmail}</span></p>
+            `;
+        };
+        
+        const renderRecords = () => {
+             dom.recordsContainer.innerHTML = '';
+            let filteredRecords = [...allRecords];
+
+            if (currentFilter === 'my' && userId) filteredRecords = filteredRecords.filter(r => r.addedBy === userId);
+            else if (currentFilter === 'open') filteredRecords = filteredRecords.filter(r => !r.isClosed);
+            else if (currentFilter === 'closed') filteredRecords = filteredRecords.filter(r => r.isClosed);
+            
+            if (currentSearch) filteredRecords = filteredRecords.filter(r => r.title.toLowerCase().includes(currentSearch));
+            if (currentCategory) filteredRecords = filteredRecords.filter(r => r.category === currentCategory);
 
             switch (currentSort) {
-                case 'oldest': filteredLinks.sort((a, b) => (a.createdAt?.seconds || 0) - (b.createdAt?.seconds || 0)); break;
-                case 'alpha': filteredLinks.sort((a, b) => a.title.localeCompare(b.title)); break;
-                case 'newest': default: filteredLinks.sort((a, b) => (b.createdAt?.seconds || 0) - (a.createdAt?.seconds || 0)); break;
+                case 'oldest': filteredRecords.sort((a, b) => (a.createdAt?.seconds || 0) - (b.createdAt?.seconds || 0)); break;
+                case 'alpha': filteredRecords.sort((a, b) => a.title.localeCompare(b.title)); break;
+                case 'newest': default: filteredRecords.sort((a, b) => (b.createdAt?.seconds || 0) - (a.createdAt?.seconds || 0)); break;
             }
             
-            if (filteredLinks.length === 0) {
-                 dom.linksContainer.innerHTML = `<p class="text-slate-500 dark:text-slate-400">No links match your current filters.</p>`; return;
+            if (filteredRecords.length === 0) {
+                 dom.recordsContainer.innerHTML = `<p class="text-slate-500 dark:text-slate-400">No records match your current filters.</p>`; return;
             }
 
-            filteredLinks.forEach(linkData => {
+            filteredRecords.forEach(recordData => {
                 const card = document.createElement('div');
-                card.className = `bg-white dark:bg-slate-800 p-5 rounded-xl shadow-lg transition-opacity ${linkData.isClosed ? 'opacity-60' : ''}`;
-                let url = linkData.url;
-                if (!url.startsWith('http')) url = 'https://' + url;
-
-                card.innerHTML = `<div class="flex justify-between items-start"><div><a href="${url}" target="_blank" rel="noopener noreferrer" class="text-lg font-semibold text-indigo-600 dark:text-indigo-400 hover:underline break-all ${linkData.isClosed ? 'line-through' : ''}">${linkData.title}</a> ${linkData.isClosed ? '<span class="ml-2 text-xs font-bold bg-slate-500 text-white px-2 py-1 rounded-full">CLOSED</span>' : ''}<div class="mt-2 flex flex-wrap gap-2">${linkData.tags ? linkData.tags.map(tag => `<span class="text-xs bg-sky-100 dark:bg-sky-900 text-sky-800 dark:text-sky-200 px-2 py-0.5 rounded-full">${tag}</span>`).join('') : ''}</div><p class="text-sm text-slate-500 dark:text-slate-400 break-all mt-2">${linkData.url}</p><p class="text-xs text-slate-400 dark:text-slate-500 mt-1">Added by: <span class="font-mono">${linkData.addedByEmail}</span></p></div><div class="flex-shrink-0 ml-4 space-x-2">${linkData.addedBy === userId ? `<button class="edit-btn text-slate-500 dark:text-slate-400 hover:text-indigo-600 dark:hover:text-indigo-400 transition" title="Edit">&#9998;</button><button class="close-btn text-slate-500 dark:text-slate-400 hover:text-red-600 dark:hover:text-red-500 transition" title="${linkData.isClosed ? 'Re-open' : 'Close'}">${linkData.isClosed ? '&#x1F513;' : '&#x1F512;'}</button><button class="delete-btn text-slate-500 dark:text-slate-400 hover:text-red-600 dark:hover:text-red-500 transition" title="Delete">&#10006;</button>` : ''}</div></div><div class="mt-4 pt-4 border-t border-slate-200 dark:border-slate-700"><h4 class="text-sm font-semibold mb-2">Comments</h4><div class="comments-list space-y-3 max-h-60 overflow-y-auto custom-scrollbar pr-2"></div>${!linkData.isClosed ? '<form class="add-comment-form mt-3 flex items-start gap-2"><textarea placeholder="Add a comment..." class="flex-grow w-full text-sm px-3 py-2 border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-700 rounded-lg" rows="2"></textarea><button type="submit" class="bg-slate-600 text-white font-semibold text-sm px-4 py-2 rounded-lg hover:bg-slate-700 flex-shrink-0 disabled:opacity-50">Post</button></form>' : ''}</div>`;
-                
-                const commentsList = card.querySelector('.comments-list');
-                if (linkData.comments && linkData.comments.length > 0) {
-                    linkData.comments.forEach((comment, index) => {
-                        const commentDiv = document.createElement('div');
-                        commentDiv.className = 'bg-slate-100 dark:bg-slate-700 p-3 rounded-lg text-sm';
-                        commentDiv.innerHTML = `<div class="flex justify-between items-start"><p class="comment-text break-words whitespace-pre-wrap flex-grow">${comment.text || ''}</p>${comment.commentBy === userId ? `<button class="edit-comment-btn flex-shrink-0 ml-2 text-slate-500 dark:text-slate-400 hover:text-indigo-600 dark:hover:text-indigo-400" title="Edit Comment">&#9998;</button>` : ''}</div><p class="text-xs text-slate-500 dark:text-slate-400 mt-2">By: <span class="font-mono">${comment.commentByEmail}</span></p>`;
-                        commentsList.appendChild(commentDiv);
-                        if(comment.commentBy === userId){
-                             commentDiv.querySelector('.edit-comment-btn').addEventListener('click', (e) => toggleCommentEdit(e.currentTarget.closest('.flex'), linkData.id, index));
-                        }
-                    });
-                } else {
-                    commentsList.innerHTML = '<p class="text-xs text-slate-400 dark:text-slate-500">No comments yet.</p>';
-                }
-
-                if (linkData.addedBy === userId) {
-                    card.querySelector('.edit-btn').addEventListener('click', () => openEditModal(linkData));
-                    card.querySelector('.close-btn').addEventListener('click', () => updateDoc(doc(db, `/artifacts/${appId}/public/data/links`, linkData.id), { isClosed: !linkData.isClosed }));
-                    card.querySelector('.delete-btn').addEventListener('click', () => deleteDoc(doc(db, `/artifacts/${appId}/public/data/links`, linkData.id)));
-                }
-                if (!linkData.isClosed) {
-                    card.querySelector('.add-comment-form').addEventListener('submit', async (e) => {
-                        e.preventDefault();
-                        const form = e.target; const textarea = form.querySelector('textarea'); const text = textarea.value.trim(); const submitBtn = form.querySelector('button');
-                        if (!text || !auth.currentUser) return;
-                        submitBtn.disabled = true; submitBtn.textContent = '...';
-                        try {
-                            const newComment = { text, commentBy: auth.currentUser.uid, commentByEmail: auth.currentUser.email, createdAt: new Date() };
-                            await updateDoc(doc(db, `/artifacts/${appId}/public/data/links`, linkData.id), { comments: arrayUnion(newComment) });
-                            textarea.value = '';
-                        } finally { submitBtn.disabled = false; submitBtn.textContent = 'Post'; }
-                    });
-                }
-                dom.linksContainer.appendChild(card);
+                card.className = `bg-white dark:bg-slate-800 p-5 rounded-xl shadow-lg`;
+                card.innerHTML = renderRecordCard(recordData);
+                dom.recordsContainer.appendChild(card);
             });
-        };
-
-        const toggleCommentEdit = (commentContainer, linkId, commentIndex) => {
-            const currentText = commentContainer.querySelector('.comment-text').textContent;
-            commentContainer.innerHTML = `
-                <textarea class="edit-comment-textarea flex-grow w-full text-sm px-2 py-1 border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800 rounded-lg" rows="3">${currentText}</textarea>
-                <div class="flex flex-col ml-2 space-y-1">
-                    <button class="save-comment-btn text-xs bg-green-500 text-white px-2 py-1 rounded hover:bg-green-600">Save</button>
-                    <button class="cancel-comment-edit-btn text-xs bg-red-500 text-white px-2 py-1 rounded hover:bg-red-600">Cancel</button>
-                </div>`;
-            
-            commentContainer.querySelector('.save-comment-btn').addEventListener('click', async () => {
-                const newText = commentContainer.querySelector('.edit-comment-textarea').value;
-                const linkRef = doc(db, `/artifacts/${appId}/public/data/links`, linkId);
-                const linkDoc = await getDoc(linkRef);
-                if(linkDoc.exists()){
-                    const comments = linkDoc.data().comments;
-                    comments[commentIndex].text = newText;
-                    await updateDoc(linkRef, { comments });
-                }
-            });
-             commentContainer.querySelector('.cancel-comment-edit-btn').addEventListener('click', () => renderLinks());
         };
         
-        const openEditModal = (linkData) => {
-            const form = dom.editLinkForm;
-            form.querySelector('#edit-link-id').value = linkData.id;
-            form.querySelector('#edit-link-title').value = linkData.title;
-            form.querySelector('#edit-link-url').value = linkData.url;
-            form.querySelector('#edit-link-tags').value = linkData.tags ? linkData.tags.join(', ') : '';
-            dom.editModal.classList.remove('hidden');
-        };
-
-        const setupLinksListener = () => {
-            if (linksUnsubscribe) linksUnsubscribe();
-            const q = collection(db, `/artifacts/${appId}/public/data/links`);
-            linksUnsubscribe = onSnapshot(q, (snapshot) => {
+        const setupRecordsListener = () => {
+            if (recordsUnsubscribe) recordsUnsubscribe();
+            const q = collection(db, `/artifacts/${appId}/public/data/records`);
+            recordsUnsubscribe = onSnapshot(q, (snapshot) => {
                 dom.loadingState.style.display = 'none';
-                allLinks = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-                allTags.clear();
-                allLinks.forEach(link => link.tags?.forEach(tag => allTags.add(tag)));
-                renderLinks();
-                renderTagMenu();
+                allRecords = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+                renderRecords();
+                renderCategoryMenu();
             });
         };
 
@@ -303,66 +273,56 @@
             });
         };
         
-        const showApp = (user) => { userId = user.uid; dom.userEmailSpan.textContent = user.email; dom.authContainer.style.display = 'none'; dom.appContainer.style.display = 'block'; setupLinksListener(); setupPresence(user); };
-        const showLogin = () => { userId = null; dom.authContainer.style.display = 'flex'; dom.appContainer.style.display = 'none'; if (linksUnsubscribe) linksUnsubscribe(); };
+        const showApp = (user) => { userId = user.uid; dom.userEmailSpan.textContent = user.email; dom.authContainer.style.display = 'none'; dom.appContainer.style.display = 'block'; setupRecordsListener(); setupPresence(user); };
+        const showLogin = () => { userId = null; dom.authContainer.style.display = 'flex'; dom.appContainer.style.display = 'none'; if (recordsUnsubscribe) recordsUnsubscribe(); };
 
         // --- EVENT LISTENERS ---
-        dom.searchInput.addEventListener('input', (e) => { currentSearch = e.target.value.toLowerCase(); renderLinks(); });
-        dom.sortControls.addEventListener('click', (e) => {
-            if (e.target.classList.contains('sort-btn')) {
-                currentSort = e.target.dataset.sort;
-                dom.sortControls.querySelectorAll('.sort-btn').forEach(btn => btn.classList.remove('active'));
-                e.target.classList.add('active');
-                renderLinks();
+        dom.searchInput.addEventListener('input', (e) => { currentSearch = e.target.value.toLowerCase(); renderRecords(); });
+        [dom.sortControls, dom.filterControls].forEach(container => {
+            container.addEventListener('click', (e) => {
+                const btn = e.target.closest('.control-btn');
+                if (btn) {
+                    if (btn.dataset.sort) currentSort = btn.dataset.sort;
+                    if (btn.dataset.filter) currentFilter = btn.dataset.filter;
+                    container.querySelectorAll('.control-btn').forEach(b => b.classList.remove('active'));
+                    btn.classList.add('active');
+                    renderRecords();
+                }
+            });
+        });
+        
+        dom.addNewRecordBtn.addEventListener('click', () => { setFormCategory('qa'); dom.addRecordModal.classList.remove('hidden'); });
+        dom.cancelAdd.addEventListener('click', () => dom.addRecordModal.classList.add('hidden'));
+        dom.formCategorySelector.addEventListener('click', (e) => {
+            if (e.target.matches('.form-category-btn')) {
+                setFormCategory(e.target.dataset.category);
             }
         });
-        dom.filterControls.addEventListener('click', (e) => {
-            if (e.target.classList.contains('filter-btn')) {
-                currentFilter = e.target.dataset.filter;
-                dom.filterControls.querySelectorAll('.filter-btn').forEach(btn => btn.classList.remove('active'));
-                e.target.classList.add('active');
-                renderLinks();
-            }
-        });
-        dom.addNewLinkBtn.addEventListener('click', () => dom.addLinkModal.classList.remove('hidden'));
-        dom.cancelAdd.addEventListener('click', () => dom.addLinkModal.classList.add('hidden'));
 
-        dom.addLinkForm.addEventListener('submit', async (e) => {
+        dom.addRecordForm.addEventListener('submit', async (e) => {
             e.preventDefault();
-            const submitBtn = e.target.querySelector('#add-link-submit');
-            const title = e.target.querySelector('#link-title').value.trim();
-            const url = e.target.querySelector('#link-url').value.trim();
-            const tagsRaw = e.target.querySelector('#link-tags').value.trim();
-            if (title && url && auth.currentUser) {
+            const submitBtn = e.target.querySelector('#add-record-submit');
+            const formData = new FormData(e.target);
+            const recordData = Object.fromEntries(formData.entries());
+
+            if (recordData.title && auth.currentUser) {
                 submitBtn.disabled = true; submitBtn.textContent = '...';
                 try {
-                    const tags = tagsRaw ? tagsRaw.split(',').map(tag => tag.trim()).filter(Boolean) : [];
-                    await addDoc(collection(db, `/artifacts/${appId}/public/data/links`), { title, url, tags, addedBy: auth.currentUser.uid, addedByEmail: auth.currentUser.email, createdAt: serverTimestamp(), comments: [], isClosed: false });
-                    dom.addLinkForm.reset();
-                    dom.addLinkModal.classList.add('hidden');
-                } finally { submitBtn.disabled = false; submitBtn.textContent = 'Share Link'; }
+                    const dataToSave = {
+                        ...recordData,
+                        category: currentFormCategory,
+                        addedBy: auth.currentUser.uid,
+                        addedByEmail: auth.currentUser.email,
+                        createdAt: serverTimestamp(),
+                        isClosed: false
+                    };
+                    await addDoc(collection(db, `/artifacts/${appId}/public/data/records`), dataToSave);
+                    dom.addRecordForm.reset();
+                    dom.addRecordModal.classList.add('hidden');
+                } finally { submitBtn.disabled = false; submitBtn.textContent = 'Add Record'; }
             }
         });
 
-        dom.editLinkForm.addEventListener('submit', async (e) => {
-            e.preventDefault();
-            const submitBtn = e.target.querySelector('#edit-link-submit');
-            const id = e.target.querySelector('#edit-link-id').value;
-            const title = e.target.querySelector('#edit-link-title').value.trim();
-            const url = e.target.querySelector('#edit-link-url').value.trim();
-            const tagsRaw = e.target.querySelector('#edit-link-tags').value.trim();
-            if (id && title && url) {
-                submitBtn.disabled = true;
-                try {
-                    const tags = tagsRaw ? tagsRaw.split(',').map(tag => tag.trim()).filter(Boolean) : [];
-                    await updateDoc(doc(db, `/artifacts/${appId}/public/data/links`, id), { title, url, tags });
-                    dom.editModal.classList.add('hidden');
-                } finally { submitBtn.disabled = false; }
-            }
-        });
-        dom.cancelEdit.addEventListener('click', () => dom.editModal.classList.add('hidden'));
-
-        // --- PRIMARY AUTH LOGIC (SIMPLIFIED) ---
         onAuthStateChanged(auth, (user) => {
             dom.authMessageEl.classList.add('hidden');
             dom.authErrorEl.textContent = '';
@@ -386,16 +346,13 @@
 
         dom.logoutBtn.addEventListener('click', () => signOut(auth));
         
-        // --- DARK MODE LOGIC ---
         const applyTheme = () => {
             if (localStorage.getItem('theme') === 'dark') {
                 document.documentElement.classList.add('dark');
-                dom.sunIcon.classList.add('hidden');
-                dom.moonIcon.classList.remove('hidden');
+                dom.sunIcon.classList.add('hidden'); dom.moonIcon.classList.remove('hidden');
             } else {
                 document.documentElement.classList.remove('dark');
-                dom.sunIcon.classList.remove('hidden');
-                dom.moonIcon.classList.add('hidden');
+                dom.sunIcon.classList.remove('hidden'); dom.moonIcon.classList.add('hidden');
             }
         };
         dom.darkModeToggle.addEventListener('click', () => {
