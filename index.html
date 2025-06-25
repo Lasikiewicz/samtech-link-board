@@ -130,7 +130,7 @@
 
         const showAuthMessage = (message, type = 'success') => {
             authMessageEl.innerHTML = message;
-            let colors = 'bg-green-100 text-green-800'; // Default to success
+            let colors = 'bg-green-100 text-green-800';
             if (type === 'warning') colors = 'bg-yellow-100 text-yellow-800';
             if (type === 'error') colors = 'bg-red-100 text-red-800';
             authMessageEl.className = `message-box mb-4 p-4 text-sm rounded-lg ${colors}`;
@@ -141,12 +141,8 @@
             linksContainer.innerHTML = '';
             let filteredLinks = [...allLinks];
 
-            if (currentSearch) {
-                filteredLinks = filteredLinks.filter(link => link.title.toLowerCase().includes(currentSearch));
-            }
-            if (currentTag) {
-                filteredLinks = filteredLinks.filter(link => link.tags && link.tags.includes(currentTag));
-            }
+            if (currentSearch) filteredLinks = filteredLinks.filter(link => link.title.toLowerCase().includes(currentSearch));
+            if (currentTag) filteredLinks = filteredLinks.filter(link => link.tags && link.tags.includes(currentTag));
 
             switch (currentSort) {
                 case 'oldest': filteredLinks.sort((a, b) => (a.createdAt?.seconds || 0) - (b.createdAt?.seconds || 0)); break;
@@ -169,9 +165,7 @@
                     <div class="flex justify-between items-start">
                         <div>
                             <a href="${url}" target="_blank" rel="noopener noreferrer" class="text-lg font-semibold text-indigo-700 hover:underline break-all">${linkData.title}</a>
-                            <div class="mt-2 flex flex-wrap gap-2">
-                                ${linkData.tags ? linkData.tags.map(tag => `<button class="tag-btn text-xs bg-sky-100 text-sky-800 px-2 py-0.5 rounded-full hover:bg-sky-200" data-tag="${tag}">${tag}</button>`).join('') : ''}
-                            </div>
+                            <div class="mt-2 flex flex-wrap gap-2">${linkData.tags ? linkData.tags.map(tag => `<button class="tag-btn text-xs bg-sky-100 text-sky-800 px-2 py-0.5 rounded-full hover:bg-sky-200" data-tag="${tag}">${tag}</button>`).join('') : ''}</div>
                             <p class="text-sm text-slate-500 break-all mt-2">${linkData.url}</p>
                             <p class="text-xs text-slate-400 mt-1">Added by: <span class="font-mono">${linkData.addedByEmail}</span></p>
                         </div>
@@ -228,24 +222,18 @@
             const userStatusDatabaseRef = ref(rtDb, '/status/' + user.uid);
             const isOfflineForDatabase = { state: 'offline', email: user.email, last_changed: dbServerTimestamp() };
             const isOnlineForDatabase = { state: 'online', email: user.email, last_changed: dbServerTimestamp() };
-            
             const connectedRef = ref(rtDb, '.info/connected');
             onValue(connectedRef, (snap) => {
                 if (snap.val() === true) {
-                    onDisconnect(userStatusDatabaseRef).set(isOfflineForDatabase).then(() => {
-                        set(userStatusDatabaseRef, isOnlineForDatabase);
-                    });
+                    onDisconnect(userStatusDatabaseRef).set(isOfflineForDatabase).then(() => set(userStatusDatabaseRef, isOnlineForDatabase));
                 }
             });
-
             const statusRef = ref(rtDb, '/status');
             onValue(statusRef, (snapshot) => {
                 const onlineUsers = [];
                 snapshot.forEach(childSnapshot => {
                     const userStatus = childSnapshot.val();
-                    if (userStatus.state === 'online') {
-                        onlineUsers.push(userStatus.email);
-                    }
+                    if (userStatus.state === 'online') onlineUsers.push(userStatus.email);
                 });
                 presenceList.innerHTML = onlineUsers.length ? onlineUsers.map(email => `<span class="bg-green-100 text-green-800 px-1.5 py-0.5 rounded-full">${email}</span>`).join('') : 'No one online.';
             });
@@ -296,12 +284,9 @@
         onAuthStateChanged(auth, async (user) => {
             authMessageEl.classList.add('hidden');
             authErrorEl.textContent = '';
-
             if (user) {
-                // *** FIX: Force a reload of the user object to get the latest emailVerified state ***
                 await user.reload();
-                const freshUser = auth.currentUser; // Use the reloaded user object
-
+                const freshUser = auth.currentUser;
                  if (freshUser.emailVerified) {
                     showApp(freshUser);
                  } else {
@@ -327,7 +312,6 @@
             authErrorEl.textContent = '';
             authMessageEl.classList.add('hidden');
             try {
-                // We just sign in. onAuthStateChanged will handle all UI updates.
                 await signInWithEmailAndPassword(auth, authEmailInput.value, authPasswordInput.value);
             } catch (error) { 
                 authErrorEl.textContent = `Login failed: ${error.code}`; 
@@ -346,8 +330,8 @@
             try {
                 const userCredential = await createUserWithEmailAndPassword(auth, email, password);
                 await sendEmailVerification(userCredential.user);
-                await signOut(auth);
-                showAuthMessage(`Registration successful! A verification link has been sent to <strong>${email}</strong>. Please check your spam folder.`, 'success');
+                // ** FIX: We no longer sign out here. Let onAuthStateChanged handle the "unverified" state. **
+                showAuthMessage(`Registration successful! A verification link has been sent to <strong>${email}</strong>. Please check your inbox and spam folder.`, 'success');
             } catch (error) { 
                 authErrorEl.textContent = `Registration failed: ${error.code}`; 
             }
