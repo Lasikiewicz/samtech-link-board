@@ -187,7 +187,11 @@
             } else { commentsList.innerHTML = '<p class="text-xs text-slate-400 dark:text-slate-500">No comments yet.</p>'; }
         };
         
-        const logUpdate = async (recordId) => { await updateDoc(doc(db, `/artifacts/${appId}/public/data/records`, recordId), { comments: arrayUnion({ text: `Record updated`, addedBy: currentUserDisplayName, createdAt: serverTimestamp() }) }); };
+        const logUpdate = async (recordId) => { 
+            await updateDoc(doc(db, `/artifacts/${appId}/public/data/records`, recordId), { 
+                comments: arrayUnion({ text: `Record updated`, addedBy: currentUserDisplayName, createdAt: Timestamp.now() }) 
+            }); 
+        };
         
         const renderRecords = () => {
              let recordsToDisplay = [...fetchedRecords];
@@ -265,7 +269,7 @@
                 if (!text || !currentUserDisplayName) return;
                 submitBtn.disabled = true; submitBtn.textContent = '...';
                 try {
-                    await updateDoc(doc(db, `/artifacts/${appId}/public/data/records`, recordId), { comments: arrayUnion({ text, addedBy: currentUserDisplayName, createdAt: serverTimestamp() }) });
+                    await updateDoc(doc(db, `/artifacts/${appId}/public/data/records`, recordId), { comments: arrayUnion({ text, addedBy: currentUserDisplayName, createdAt: Timestamp.now() }) });
                     textarea.value = '';
                 } finally { submitBtn.disabled = false; submitBtn.textContent = 'Post'; }
             }
