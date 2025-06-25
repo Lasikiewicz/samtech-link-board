@@ -84,8 +84,6 @@
     <div id="confirm-delete-modal" class="fixed inset-0 bg-black bg-opacity-70 flex items-center justify-center p-4 hidden"><div class="bg-white dark:bg-slate-800 rounded-xl shadow-2xl p-6 w-full max-w-sm"><h2 class="text-xl font-semibold mb-2 text-slate-900 dark:text-white">Are you sure?</h2><p class="text-sm text-slate-600 dark:text-slate-400 mb-4">This action cannot be undone.</p><div class="mt-6 flex justify-end space-x-3"><button type="button" id="cancel-delete" class="bg-slate-200 dark:bg-slate-600 font-semibold px-4 py-2 rounded-lg">Cancel</button><button type="button" id="confirm-delete-btn" class="bg-red-600 text-white font-semibold px-4 py-2 rounded-lg">Delete Record</button></div></div></div>
     <div id="link-fault-modal" class="fixed inset-0 bg-black bg-opacity-70 flex items-center justify-center p-4 hidden"><div class="bg-white dark:bg-slate-800 rounded-xl shadow-2xl p-6 w-full max-w-lg"><h2 class="text-xl font-semibold mb-4 text-slate-900 dark:text-white">Link to Existing Fault?</h2><p class="text-sm mb-4">Found existing Common Faults with the same Model Number. Do you want to link this new fault to them?</p><div id="existing-faults-list" class="space-y-2 mb-4"></div><div class="mt-6 flex justify-end space-x-3"><button type="button" id="skip-link-btn" class="bg-slate-200 dark:bg-slate-600 font-semibold px-4 py-2 rounded-lg">Don't Link, Create New</button><button type="button" id="confirm-link-btn" class="bg-indigo-600 text-white font-semibold px-4 py-2 rounded-lg">Link and Create</button></div></div></div>
 
-    <!-- Load config first, then the main app logic -->
-    <script src="config.js"></script>
     <script src="app.js" type="module"></script>
 </body>
 </html>

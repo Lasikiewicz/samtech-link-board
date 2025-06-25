@@ -1,7 +1,6 @@
 import { initializeApp, getApps, getApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
 import { getFirestore, doc, getDoc, collection, onSnapshot, addDoc, updateDoc, deleteDoc, serverTimestamp, query, where, orderBy, arrayUnion, Timestamp, getDocs } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
-// This will be replaced by the deploy script
 const firebaseConfig = { apiKey: "__API_KEY__", authDomain: "__AUTH_DOMAIN__", projectId: "__PROJECT_ID__", storageBucket: "__STORAGE_BUCKET__", messagingSenderId: "__MESSAGING_SENDER_ID__", appId: "__APP_ID__" };
 const appId = 'samtech-record-board';
 const SHARED_PASSWORD = "__SHARED_PASSWORD__" || "samtech";
@@ -218,8 +217,8 @@ const createRecord = async (recordData, relatedTo = []) => {
      try {
         recordData.onSamsungTracker = recordData.onSamsungTracker === 'on';
         const newRecordRef = await addDoc(collection(db, `/artifacts/${appId}/public/data/records`), { ...recordData, category: currentFormCategory, addedBy: currentUserDisplayName, createdAt: serverTimestamp(), isClosed: false, comments: [], relatedTo });
-        for(const relatedId of relatedTo) {
-            const relatedRef = doc(db, `/artifacts/${appId}/public/data/records`, relatedId);
+        for(const related of relatedTo) {
+            const relatedRef = doc(db, `/artifacts/${appId}/public/data/records`, related.id);
             await updateDoc(relatedRef, { relatedTo: arrayUnion({ id: newRecordRef.id, title: recordData.title }) });
         }
          dom.addRecordForm.reset(); dom.addRecordModal.classList.add('hidden');
