@@ -71,7 +71,7 @@
                     <div class="flex items-center gap-2"><span class="text-sm font-semibold">Sort by:</span><div id="sort-controls" class="flex gap-2"><button class="control-btn text-sm px-3 py-1 rounded-full border border-slate-300 dark:border-slate-600 active" data-sort="newest">Newest</button><button class="control-btn text-sm px-3 py-1 rounded-full border border-slate-300 dark:border-slate-600" data-sort="oldest">Oldest</button><button class="control-btn text-sm px-3 py-1 rounded-full border border-slate-300 dark:border-slate-600" data-sort="alpha">A-Z</button></div></div>
                 </div>
             </div>
-            <div id="records-container" class="space-y-6"><p id="loading-state" class="text-slate-500 dark:text-slate-400">Loading records...</p></div>
+            <div id="records-container" class="space-y-2"><p id="loading-state" class="text-slate-500 dark:text-slate-400">Loading records...</p></div>
         </main>
       </div>
     </div>
@@ -84,7 +84,7 @@
 
     <script type="module">
         import { initializeApp, getApps, getApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
-        import { getFirestore, doc, collection, onSnapshot, addDoc, updateDoc, deleteDoc, serverTimestamp, query, where, orderBy, arrayUnion, Timestamp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+        import { getFirestore, doc, getDoc, collection, onSnapshot, addDoc, updateDoc, deleteDoc, serverTimestamp, query, where, orderBy, arrayUnion, Timestamp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
         
         const firebaseConfig = { apiKey: "__API_KEY__", authDomain: "__AUTH_DOMAIN__", projectId: "__PROJECT_ID__", storageBucket: "__STORAGE_BUCKET__", messagingSenderId: "__MESSAGING_SENDER_ID__", appId: "__APP_ID__" };
         const appId = 'samtech-record-board';
@@ -165,10 +165,10 @@
             actions.classList.add('text-slate-500','dark:text-slate-400');
             actions.querySelectorAll('button').forEach(btn=>btn.classList.add('hover:text-indigo-600','dark:hover:text-indigo-400','transition'));
             actions.querySelector('.close-btn').classList.add('hover:text-red-600','dark:hover:text-red-500');
-            card.querySelector('.edit-btn').addEventListener('click',(e)=>{ e.stopPropagation(); openEditModal(record); });
-            card.querySelector('.close-btn').addEventListener('click',(e)=>{ e.stopPropagation(); updateDoc(doc(db,`/artifacts/${appId}/public/data/records`,record.id),{isClosed:!record.isClosed}); });
-            card.querySelector('.update-btn').addEventListener('click',(e)=>{ e.stopPropagation(); logUpdate(record.id); });
-            card.querySelector('.time-btn').addEventListener('click',(e)=>{ e.stopPropagation(); openTimeEditModal(record); });
+            actions.querySelector('.edit-btn').addEventListener('click',(e)=>{ e.stopPropagation(); openEditModal(record); });
+            actions.querySelector('.close-btn').addEventListener('click',(e)=>{ e.stopPropagation(); updateDoc(doc(db,`/artifacts/${appId}/public/data/records`,record.id),{isClosed:!record.isClosed}); });
+            actions.querySelector('.update-btn').addEventListener('click',(e)=>{ e.stopPropagation(); logUpdate(record.id); });
+            actions.querySelector('.time-btn').addEventListener('click',(e)=>{ e.stopPropagation(); openTimeEditModal(record); });
             
             return card;
         };
