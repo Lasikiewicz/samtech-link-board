@@ -27,7 +27,9 @@
         .form-category-btn.active { background-color: #4f46e5; color: white; }
         .dark .form-category-btn.active { background-color: #6366f1; }
         .collapsible-content { max-height: 0; overflow: hidden; transition: max-height 0.5s ease-in-out; }
-        .expanded > .collapsible-content { max-height: 1500px; /* Adjust as needed */ }
+        .record-card.expanded > .collapsible-header + .details-container { max-height: 1500px; /* Adjust as needed */ }
+        .record-card.expanded .comments-section.expanded .collapsible-content { max-height: 1000px; }
+        .collapsible-header .chevron { transition: transform 0.3s; }
         .expanded > .collapsible-header .chevron { transform: rotate(180deg); }
     </style>
 </head>
@@ -81,7 +83,7 @@
     <div id="edit-record-modal" class="fixed inset-0 bg-black bg-opacity-70 flex items-center justify-center p-4 hidden"><div class="bg-white dark:bg-slate-800 rounded-xl shadow-2xl p-6 w-full max-w-lg"><h2 class="text-xl font-semibold mb-4 text-slate-900 dark:text-white">Edit Record</h2><form id="edit-record-form"><input type="hidden" name="id"><div id="edit-form-fields-container" class="space-y-4"></div><div class="mt-6 flex justify-between space-x-3"><button type="button" id="delete-record-btn" class="bg-red-600 text-white font-semibold px-4 py-2 rounded-lg hover:bg-red-700">Delete</button><div><button type="button" id="cancel-edit" class="bg-slate-200 dark:bg-slate-600 text-slate-800 dark:text-slate-200 font-semibold px-4 py-2 rounded-lg">Cancel</button><button type="submit" id="edit-record-submit" class="bg-indigo-600 text-white font-semibold px-4 py-2 rounded-lg disabled:opacity-50 ml-2">Save Changes</button></div></div></form></div></div>
     <div id="edit-time-modal" class="fixed inset-0 bg-black bg-opacity-70 flex items-center justify-center p-4 hidden"><div class="bg-white dark:bg-slate-800 rounded-xl shadow-2xl p-6 w-full max-w-sm"><h2 class="text-xl font-semibold mb-4 text-slate-900 dark:text-white">Edit Timestamp</h2><form id="edit-time-form"><input type="hidden" name="id"><div class="space-y-4"><input id="edit-time-input" type="datetime-local" class="w-full p-2 border rounded-lg"></div><div class="mt-6 flex justify-end space-x-3"><button type="button" id="cancel-time-edit" class="bg-slate-200 dark:bg-slate-600 font-semibold px-4 py-2 rounded-lg">Cancel</button><button type="submit" id="save-time-edit" class="bg-indigo-600 text-white font-semibold px-4 py-2 rounded-lg">Save Time</button></div></form></div></div>
     <div id="confirm-delete-modal" class="fixed inset-0 bg-black bg-opacity-70 flex items-center justify-center p-4 hidden"><div class="bg-white dark:bg-slate-800 rounded-xl shadow-2xl p-6 w-full max-w-sm"><h2 class="text-xl font-semibold mb-2 text-slate-900 dark:text-white">Are you sure?</h2><p class="text-sm text-slate-600 dark:text-slate-400 mb-4">This action cannot be undone.</p><div class="mt-6 flex justify-end space-x-3"><button type="button" id="cancel-delete" class="bg-slate-200 dark:bg-slate-600 font-semibold px-4 py-2 rounded-lg">Cancel</button><button type="button" id="confirm-delete-btn" class="bg-red-600 text-white font-semibold px-4 py-2 rounded-lg">Delete Record</button></div></div></div>
-    <div id="link-fault-modal" class="fixed inset-0 bg-black bg-opacity-70 flex items-center justify-center p-4 hidden"><div class="bg-white dark:bg-slate-800 rounded-xl shadow-2xl p-6 w-full max-w-lg"><h2 class="text-xl font-semibold mb-4 text-slate-900 dark:text-white">Link to Existing Fault?</h2><p class="text-sm mb-4">A Common Fault with this Model Number already exists. Do you want to link this new fault to it?</p><div id="existing-faults-list" class="space-y-2 mb-4"></div><div class="mt-6 flex justify-end space-x-3"><button type="button" id="skip-link-btn" class="bg-slate-200 dark:bg-slate-600 font-semibold px-4 py-2 rounded-lg">Don't Link, Create New</button><button type="button" id="confirm-link-btn" class="bg-indigo-600 text-white font-semibold px-4 py-2 rounded-lg">Link and Create</button></div></div></div>
+    <div id="link-fault-modal" class="fixed inset-0 bg-black bg-opacity-70 flex items-center justify-center p-4 hidden"><div class="bg-white dark:bg-slate-800 rounded-xl shadow-2xl p-6 w-full max-w-lg"><h2 class="text-xl font-semibold mb-4 text-slate-900 dark:text-white">Link to Existing Fault?</h2><p class="text-sm mb-4">Found existing Common Faults with the same Model Number. Do you want to link this new fault to them?</p><div id="existing-faults-list" class="space-y-2 mb-4"></div><div class="mt-6 flex justify-end space-x-3"><button type="button" id="skip-link-btn" class="bg-slate-200 dark:bg-slate-600 font-semibold px-4 py-2 rounded-lg">Don't Link, Create New</button><button type="button" id="confirm-link-btn" class="bg-indigo-600 text-white font-semibold px-4 py-2 rounded-lg">Link and Create</button></div></div></div>
 
     <script type="module">
         import { initializeApp, getApps, getApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
@@ -123,7 +125,7 @@
         
         const formFieldsTemplates = {
             qa: `<input name="title" type="text" placeholder="Q&A Title" class="w-full p-2 border rounded" required><input name="qaId" type="text" placeholder="Q&A Question ID" pattern="\\d{8}" title="8 digits" class="w-full p-2 border rounded" required><input name="modelNumber" type="text" placeholder="Model Number" class="w-full p-2 border rounded"><input name="serialNumber" type="text" placeholder="Serial Number" class="w-full p-2 border rounded"><input name="serviceOrderNumber" type="text" placeholder="Service Order Number" pattern="\\d{10}" title="10 digits" class="w-full p-2 border rounded"><input name="salesforceCaseNumber" type="text" placeholder="Salesforce Case Number" class="w-full p-2 border rounded"><textarea name="description" placeholder="Description" class="w-full p-2 border rounded" rows="4"></textarea>`,
-            'common-fault': `<input name="title" type="text" placeholder="Title" class="w-full p-2 border rounded" required><input name="modelNumber" type="text" placeholder="Model Number" class="w-full p-2 border rounded"><input name="serialNumber" type="text" placeholder="Serial Number" class="w-full p-2 border rounded"><input name="serviceOrderNumber" type="text" placeholder="Service Order Number" pattern="\\d{10}" title="10 digits" class="w-full p-2 border rounded"><input name="salesforceCaseNumber" type="text" placeholder="Salesforce Case Number" class="w-full p-2 border rounded"><textarea name="description" placeholder="Description" class="w-full p-2 border rounded" rows="4"></textarea>`,
+            'common-fault': `<input name="title" type="text" placeholder="Title" class="w-full p-2 border rounded" required><input name="modelNumber" type="text" placeholder="Model Number" class="w-full p-2 border rounded"><input name="serialNumber" type="text" placeholder="Serial Number" class="w-full p-2 border rounded"><input name="serviceOrderNumber" type="text" placeholder="Service Order Number" pattern="\\d{10}" title="10 digits" class="w-full p-2 border rounded"><input name="salesforceCaseNumber" type="text" placeholder="Salesforce Case Number" class="w-full p-2 border rounded"><textarea name="description" placeholder="Description" class="w-full p-2 border rounded" rows="4"></textarea><label class="flex items-center mt-4"><input type="checkbox" name="onSamsungTracker" class="rounded mr-2"> On Samsung Action Tracker</label>`,
             general: `<input name="title" type="text" placeholder="Title" class="w-full p-2 border rounded" required><input name="modelNumber" type="text" placeholder="Model Number" class="w-full p-2 border rounded"><input name="serialNumber" type="text" placeholder="Serial Number" class="w-full p-2 border rounded"><input name="serviceOrderNumber" type="text" placeholder="Service Order Number" pattern="\\d{10}" title="10 digits" class="w-full p-2 border rounded"><input name="salesforceCaseNumber" type="text" placeholder="Salesforce Case Number" class="w-full p-2 border rounded"><textarea name="description" placeholder="Description" class="w-full p-2 border rounded" rows="4"></textarea>`
         };
         
@@ -131,7 +133,13 @@
         const setFormCategory = (category, container, record = {}) => {
             currentFormCategory = category;
             container.innerHTML = formFieldsTemplates[category];
-            for (const key in record) { if (container.querySelector(`[name="${key}"]`)) container.querySelector(`[name="${key}"]`).value = record[key]; }
+            for (const key in record) {
+                const input = container.querySelector(`[name="${key}"]`);
+                if (input) {
+                    if (input.type === 'checkbox') input.checked = !!record[key];
+                    else input.value = record[key];
+                }
+            }
             if (container.id === 'form-fields-container') dom.formCategorySelector.querySelectorAll('.form-category-btn').forEach(btn => btn.classList.toggle('active', btn.dataset.category === category));
         };
 
@@ -157,12 +165,14 @@
             const detailsHtml = `${record.qaId?`<div><dt class="font-semibold">Q&A ID:</dt><dd class="break-all">${record.qaId}</dd></div>`:''}${record.modelNumber?`<div><dt class="font-semibold">Model Number:</dt><dd class="break-all">${record.modelNumber}</dd></div>`:''}${record.serialNumber?`<div><dt class="font-semibold">Serial Number:</dt><dd class="break-all">${record.serialNumber}</dd></div>`:''}${record.serviceOrderNumber?`<div><dt class="font-semibold">Service Order Number:</dt><dd class="break-all">${record.serviceOrderNumber}</dd></div>`:''}${record.salesforceCaseNumber?`<div><dt class="font-semibold">Salesforce Case Number:</dt><dd class="break-all">${record.salesforceCaseNumber}</dd></div>`:''}`;
             const categoryDisplayNames = { qa: 'Q&A', 'common-fault': 'Common Fault', general: 'General' };
             const categoryColors = { qa: '#5fcae2', 'common-fault': '#4892cf', general: '#3f57ab' };
+            const linkedRecordsHtml = record.relatedTo?.length > 0 ? `<div class="mt-2"><dt class="font-semibold">Linked Faults:</dt><dd>${record.relatedTo.map(r => `<span>${r.title}</span>`).join(', ')}</dd></div>` : '';
 
-            card.innerHTML = `<div class="collapsible-header flex justify-between items-start cursor-pointer record-header"><div class="flex items-center gap-3"><span class="text-xs capitalize text-white px-2 py-0.5 rounded-full" style="background-color: ${categoryColors[record.category] || '#64748b'}">${categoryDisplayNames[record.category] || record.category}</span><h3 class="text-lg font-semibold text-indigo-600 dark:text-indigo-400 break-all">${record.title}</h3></div><div class="flex items-center gap-2">${record.isClosed?'<span class="text-xs font-bold bg-slate-500 text-white px-2 py-1 rounded-full">CLOSED</span>':''}<div class="actions flex-shrink-0 ml-4 space-x-2"></div><svg class="chevron h-5 w-5 transition-transform" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" /></svg></div></div><div class="collapsible-content details-container"><div class="mt-4 pt-4 border-t border-slate-200 dark:border-slate-700 text-sm space-y-2"><dl class="grid grid-cols-1 md:grid-cols-2 gap-x-4 gap-y-1">${detailsHtml}</dl>${record.description?`<div class="pt-2"><p class="whitespace-pre-wrap">${record.description}</p></div>`:''}</div><div class="comments-section mt-4 pt-4 border-t border-slate-200 dark:border-slate-700"></div><p class="text-xs text-slate-400 dark:text-slate-500 mt-4">Added by <span class="font-mono">${record.addedBy}</span> on ${formatDateTime(record.createdAt)}</p></div>`;
+            card.innerHTML = `<div class="collapsible-header flex justify-between items-start cursor-pointer record-header"><div class="flex items-center gap-3"><span class="text-xs capitalize text-white px-2 py-0.5 rounded-full" style="background-color: ${categoryColors[record.category] || '#64748b'}">${categoryDisplayNames[record.category] || record.category}</span><h3 class="text-lg font-semibold text-indigo-600 dark:text-indigo-400 break-all">${record.title}</h3></div><div class="flex items-center gap-2">${record.onSamsungTracker ? '<span class="text-xs font-bold bg-green-500 text-white px-2 py-1 rounded-full">SAT</span>' : ''}${record.isClosed?'<span class="text-xs font-bold bg-slate-500 text-white px-2 py-1 rounded-full">CLOSED</span>':''}<div class="actions flex-shrink-0 ml-4 space-x-2"></div><svg class="chevron h-5 w-5 transition-transform" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" /></svg></div></div><div class="collapsible-content details-container"><div class="mt-4 pt-4 border-t border-slate-200 dark:border-slate-700 text-sm space-y-2"><dl class="grid grid-cols-1 md:grid-cols-2 gap-x-4 gap-y-1">${detailsHtml}${linkedRecordsHtml}</dl>${record.description?`<div class="pt-2"><p class="whitespace-pre-wrap">${record.description}</p></div>`:''}</div><div class="comments-section mt-4 pt-4 border-t border-slate-200 dark:border-slate-700"></div><p class="text-xs text-slate-400 dark:text-slate-500 mt-4">Added by <span class="font-mono">${record.addedBy}</span> on ${formatDateTime(record.createdAt)}</p></div>`;
             
             card.querySelector('.record-header').addEventListener('click', (e) => {
                 if (!e.target.closest('.actions')) {
                     card.classList.toggle('expanded');
+                    card.querySelector('.comments-section')?.classList.toggle('expanded', card.classList.contains('expanded'));
                     if (card.classList.contains('expanded')) expandedRecordIds.add(record.id); else expandedRecordIds.delete(record.id);
                 }
             });
@@ -272,12 +282,17 @@
             if (e.target.classList.contains('add-comment-form')) {
                 e.preventDefault();
                 const form = e.target; const textarea = form.querySelector('textarea'); const text = textarea.value.trim(); const submitBtn = form.querySelector('button');
-                const recordId = form.closest('.record-card').dataset.id;
+                const card = form.closest('.record-card');
+                const recordId = card.dataset.id;
                 if (!text || !currentUserDisplayName) return;
                 submitBtn.disabled = true; submitBtn.textContent = '...';
                 try {
                     await updateDoc(doc(db, `/artifacts/${appId}/public/data/records`, recordId), { comments: arrayUnion({ text, addedBy: currentUserDisplayName, createdAt: Timestamp.now() }) });
                     textarea.value = '';
+                    if(!card.classList.contains('expanded')) {
+                        card.classList.add('expanded');
+                        card.querySelector('.comments-section').classList.add('expanded');
+                    }
                 } finally { submitBtn.disabled = false; submitBtn.textContent = 'Post'; }
             }
         });
@@ -288,7 +303,12 @@
              const submitBtn = dom.addRecordForm.querySelector('#add-record-submit');
              submitBtn.disabled = true; submitBtn.textContent = '...';
              try {
-                 await addDoc(collection(db, `/artifacts/${appId}/public/data/records`), { ...recordData, category: currentFormCategory, addedBy: currentUserDisplayName, createdAt: serverTimestamp(), isClosed: false, comments: [], relatedTo });
+                recordData.onSamsungTracker = recordData.onSamsungTracker === 'on';
+                const newRecordRef = await addDoc(collection(db, `/artifacts/${appId}/public/data/records`), { ...recordData, category: currentFormCategory, addedBy: currentUserDisplayName, createdAt: serverTimestamp(), isClosed: false, comments: [], relatedTo });
+                for(const relatedId of relatedTo) {
+                    const relatedRef = doc(db, `/artifacts/${appId}/public/data/records`, relatedId);
+                    await updateDoc(relatedRef, { relatedTo: arrayUnion({ id: newRecordRef.id, title: recordData.title }) });
+                }
                  dom.addRecordForm.reset(); dom.addRecordModal.classList.add('hidden');
              } finally { submitBtn.disabled = false; submitBtn.textContent = 'Add Record'; }
         };
@@ -305,10 +325,10 @@
                     pendingRecordData = recordData;
                     dom.existingFaultsList.innerHTML = '';
                     querySnapshot.forEach(doc => {
-                        dom.existingFaultsList.innerHTML += `<label class="flex items-center space-x-2"><input type="checkbox" value="${doc.id}" class="related-fault-checkbox rounded"><span>${doc.data().title}</span></label>`;
+                        const isLinked = doc.data().relatedTo?.length > 0;
+                        dom.existingFaultsList.innerHTML += `<label class="flex items-center space-x-2"><input type="checkbox" value="${doc.id}" data-title="${doc.data().title}" class="related-fault-checkbox rounded"><span>${doc.data().title}${isLinked ? ' (Already linked)' : ''}</span></label>`;
                     });
-                    dom.linkFaultModal.classList.remove('hidden');
-                    return;
+                    dom.linkFaultModal.classList.remove('hidden'); return;
                 }
             }
             createRecord(recordData);
@@ -316,14 +336,15 @@
 
         dom.skipLinkBtn.addEventListener('click', () => { if(pendingRecordData) createRecord(pendingRecordData); dom.linkFaultModal.classList.add('hidden'); });
         dom.confirmLinkBtn.addEventListener('click', () => {
-            const relatedIds = Array.from(dom.existingFaultsList.querySelectorAll('.related-fault-checkbox:checked')).map(cb => cb.value);
-            if(pendingRecordData) createRecord(pendingRecordData, relatedIds);
+            const relatedTo = Array.from(dom.existingFaultsList.querySelectorAll('.related-fault-checkbox:checked')).map(cb => ({ id: cb.value, title: cb.dataset.title }));
+            if(pendingRecordData) createRecord(pendingRecordData, relatedTo);
             dom.linkFaultModal.classList.add('hidden');
         });
 
         dom.editRecordForm.addEventListener('submit', async (e) => {
             e.preventDefault(); const submitBtn = e.target.querySelector('#edit-record-submit');
             const formData = new FormData(dom.editRecordForm); const recordData = Object.fromEntries(formData.entries());
+            recordData.onSamsungTracker = recordData.onSamsungTracker === 'on';
             const recordId = recordData.id; delete recordData.id;
             if (recordId && recordData.title) {
                 submitBtn.disabled = true; submitBtn.textContent = '...';
