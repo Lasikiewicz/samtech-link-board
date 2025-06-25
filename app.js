@@ -200,7 +200,7 @@ const renderComments = (container, record) => {
 const logUpdate = async (recordId) => { await updateDoc(doc(db, `/artifacts/${appId}/public/data/records`, recordId), { comments: arrayUnion({ text: `Record updated`, addedBy: currentUserDisplayName, createdAt: Timestamp.now() }) }); };
 
 const renderRecords = () => {
-     let recordsToDisplay = [...fetchedRecords];
+     let recordsToDisplay = [...allRecords];
     if (currentCategory) {
         if(groupedFaults.has(currentCategory)) { // It's a group ID
              recordsToDisplay = groupedFaults.get(currentCategory).records;
@@ -242,7 +242,7 @@ const setupRecordsListener = () => {
     
     recordsUnsubscribe = onSnapshot(q, (snapshot) => {
         dom.loadingState.style.display = 'none';
-        fetchedRecords = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+        allRecords = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
         groupCommonFaults();
         renderRecords();
         renderCategoryMenu();
@@ -296,6 +296,20 @@ dom.recordsContainer.addEventListener('submit', async (e) => {
 
 dom.formCategorySelector.addEventListener('click', (e) => { if (e.target.matches('.form-category-btn')) setFormCategory(e.target.dataset.category, dom.formFieldsContainer); });
 
+const findSimilarFaults = (newTitle, modelNumber) => {
+    const modelNum = modelNumber.toLowerCase();
+    return allRecords.filter(r => {
+        if (r.category !== 'common-fault') return false;
+        if (r.modelNumber && r.modelNumber.toLowerCase() === modelNum) return true;
+        
+        const newWords = newTitle.toLowerCase().split(' ').filter(w => w.length > 3);
+        if(newWords.length === 0) return false;
+        const existingWords = r.title.toLowerCase().split(' ');
+        const matchCount = newWords.filter(word => existingWords.includes(word)).length;
+        return matchCount >= 2;
+    });
+};
+
 const createRecord = async (recordData, relatedTo = []) => {
      const submitBtn = dom.addRecordForm.querySelector('#add-record-submit');
      submitBtn.disabled = true; submitBtn.textContent = '...';
@@ -322,7 +336,7 @@ dom.addRecordForm.addEventListener('submit', async (e) => {
             dom.existingFaultsList.innerHTML = '';
             similarFaults.forEach(fault => {
                 const isLinked = fault.relatedTo?.length > 0 || fault.relatedBy?.length > 0;
-                dom.existingFaultsList.innerHTML += `<label class="flex items-center space-x-2"><input type="checkbox" value="${fault.id}" data-title="${fault.title}" class="related-fault-checkbox rounded"><span>${fault.title}${isLinked ? ' (Already linked)' : ''}</span></label>`;
+                dom.existingFaultsList.innerHTML += `<label class="flex items-center space-x-2"><input type="checkbox" value="${fault.id}" data-title="${fault.title}" class="related-fault-checkbox rounded"><span>${fault.title}${isLinked ? ' (Part of a group)' : ''}</span></label>`;
             });
             dom.linkFaultModal.classList.remove('hidden'); return;
         }
