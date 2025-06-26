@@ -188,7 +188,6 @@ const renderCategoryMenu = () => {
             <div class="space-y-1 mt-1"></div>`;
         const linkedContent = linkedIssuesDetails.querySelector('div');
         
-        // --- TASK 1: Sort linked issue groups from newest to oldest ---
         const sortedGroups = Array.from(groupedFaults.entries()).sort(([, groupA], [, groupB]) => {
             const timeA = groupA.records[0]?.createdAt?.seconds || 0;
             const timeB = groupB.records[0]?.createdAt?.seconds || 0;
@@ -289,7 +288,9 @@ const renderRecords = () => {
     const isGroupId = currentCategory.length === 20 && /^[a-zA-Z0-9]+$/.test(currentCategory);
 
     if (isGroupId && groupedFaults.has(currentCategory)) {
-        recordsToDisplay = groupedFaults.get(currentCategory).records;
+        const groupRecords = groupedFaults.get(currentCategory).records;
+        // --- TASK 1: Ensure linked group records are displayed newest first ---
+        recordsToDisplay = [...groupRecords].sort((a, b) => (b.createdAt?.seconds || 0) - (a.createdAt?.seconds || 0));
     } else {
         recordsToDisplay = [...allRecords];
     }
