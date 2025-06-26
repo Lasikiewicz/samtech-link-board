@@ -35,7 +35,8 @@ const dom = {
     formCategorySelector: document.getElementById('form-category-selector'), formFieldsContainer: document.getElementById('form-fields-container'),
     editRecordModal: document.getElementById('edit-record-modal'), editRecordForm: document.getElementById('edit-record-form'),
     editFormFieldsContainer: document.getElementById('edit-form-fields-container'), cancelEdit: document.getElementById('cancel-edit'),
-    deleteRecordBtn: document.getElementById('delete-record-btn-bottom'), 
+    // FIX: Corrected the ID to match the one in index.html
+    deleteRecordBtn: document.getElementById('delete-record-btn'), 
     manageLinksBtn: document.getElementById('manage-links-btn'),
     editTimeModal: document.getElementById('edit-time-modal'), editTimeForm: document.getElementById('edit-time-form'), cancelTimeEdit: document.getElementById('cancel-time-edit'),
     namePromptModal: document.getElementById('name-prompt-modal'), namePromptForm: document.getElementById('name-prompt-form'),
