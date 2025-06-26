@@ -162,10 +162,10 @@ const renderRecordCard = (record) => {
     const categoryColors = { qa: '#5fcae2', 'common-fault': '#4892cf', general: '#3f57ab' };
     const groupId = getRecordGroupId(record.id);
     const linkedRecordsHtml = groupId ? `<div class="mt-2"><dt class="font-semibold">Linked Faults:</dt><dd><button class="linked-fault-btn text-indigo-600 dark:text-indigo-400 underline" data-group-id="${groupId}">View Group</button></dd></div>` : '';
+    const actionsHtml = `<div class="actions flex-shrink-0 ml-4 space-x-1"><button title="Edit Record" class="edit-record-btn p-1.5 rounded-full hover:bg-slate-200 dark:hover:bg-slate-600">&#9998;</button><button title="Edit Timestamp" class="edit-time-btn p-1.5 rounded-full hover:bg-slate-200 dark:hover:bg-slate-600">&#128337;</button><button title="${record.isClosed ? 'Re-open Record' : 'Close Record'}" class="toggle-close-btn p-1.5 rounded-full hover:bg-slate-200 dark:hover:bg-slate-600">${record.isClosed ? '&#128275;' : '&#128274;'}</button></div>`;
 
-    card.innerHTML = `<div class="collapsible-header flex justify-between items-start cursor-pointer record-header"><div class="flex items-center gap-3"><span class="text-xs capitalize text-white px-2 py-0.5 rounded-full" style="background-color: ${categoryColors[record.category] || '#64748b'}">${categoryDisplayNames[record.category] || record.category}</span><h3 class="text-lg font-semibold text-indigo-600 dark:text-indigo-400 break-all">${record.title}</h3></div><div class="flex items-center gap-2">${record.onSamsungTracker ? '<span class="text-xs font-bold bg-green-500 text-white px-2 py-1 rounded-full">Samsung Action Tracker</span>' : ''}${record.isClosed?'<span class="text-xs font-bold bg-slate-500 text-white px-2 py-1 rounded-full">CLOSED</span>':''}<div class="actions flex-shrink-0 ml-4 space-x-2"></div><svg class="chevron h-5 w-5 transition-transform" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" /></svg></div></div><div class="collapsible-content details-container"><div class="mt-4 pt-4 border-t border-slate-200 dark:border-slate-700 text-sm space-y-2"><dl class="grid grid-cols-1 md:grid-cols-2 gap-x-4 gap-y-1">${detailsHtml}${linkedRecordsHtml}</dl>${record.description?`<div class="pt-2"><p class="whitespace-pre-wrap">${record.description}</p></div>`:''}</div><div class="comments-section mt-4 pt-4 border-t border-slate-200 dark:border-slate-700"></div><p class="text-xs text-slate-400 dark:text-slate-500 mt-4">Added by <span class="font-mono">${record.addedBy}</span> on ${formatDateTime(record.createdAt)}</p></div>`;
+    card.innerHTML = `<div class="collapsible-header flex justify-between items-start cursor-pointer record-header"><div class="flex items-center gap-3"><span class="text-xs capitalize text-white px-2 py-0.5 rounded-full" style="background-color: ${categoryColors[record.category] || '#64748b'}">${categoryDisplayNames[record.category] || record.category}</span><h3 class="text-lg font-semibold text-indigo-600 dark:text-indigo-400 break-all">${record.title}</h3></div><div class="flex items-center gap-2">${record.onSamsungTracker ? '<span class="text-xs font-bold bg-green-500 text-white px-2 py-1 rounded-full">Samsung Action Tracker</span>' : ''}${record.isClosed?'<span class="text-xs font-bold bg-slate-500 text-white px-2 py-1 rounded-full">CLOSED</span>':''}${actionsHtml}<svg class="chevron h-5 w-5 transition-transform" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" /></svg></div></div><div class="collapsible-content details-container"><div class="mt-4 pt-4 border-t border-slate-200 dark:border-slate-700 text-sm space-y-2"><dl class="grid grid-cols-1 md:grid-cols-2 gap-x-4 gap-y-1">${detailsHtml}${linkedRecordsHtml}</dl>${record.description?`<div class="pt-2"><p class="whitespace-pre-wrap">${record.description}</p></div>`:''}</div><div class="comments-section mt-4 pt-4 border-t border-slate-200 dark:border-slate-700"></div><p class="text-xs text-slate-400 dark:text-slate-500 mt-4">Added by <span class="font-mono">${record.addedBy}</span> on ${formatDateTime(record.createdAt)}</p></div>`;
     
-    // Automatically render comments if the card is expanded on initial render
     if (expandedRecordIds.has(record.id)) {
         renderComments(card.querySelector('.comments-section'), record);
     }
@@ -174,7 +174,8 @@ const renderRecordCard = (record) => {
 };
 
 const renderComments = (container, record) => {
-    container.innerHTML = `<div class="collapsible-header flex justify-between items-center cursor-pointer"><h4 class="text-sm font-semibold">Updates & Comments</h4><svg class="chevron h-5 w-5 transition-transform" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" /></svg></div><div class="collapsible-content"><div class="comments-list mt-2 space-y-3 pr-2"></div>${!record.isClosed ? '<form class="add-comment-form mt-3 flex items-start gap-2"><textarea placeholder="Add a comment..." class="flex-grow w-full text-sm px-3 py-2 border rounded" rows="2"></textarea><button type="submit" class="bg-slate-600 text-white font-semibold text-sm px-4 py-2 rounded-lg hover:bg-slate-700 flex-shrink-0 disabled:opacity-50">Post</button></form>' : ''}</div>`;
+    // --- FEATURE: Removed collapsible header and wrapper for comments ---
+    container.innerHTML = `<h4 class="text-sm font-semibold mb-2">Updates & Comments</h4><div class="comments-list mt-2 space-y-3 pr-2"></div>${!record.isClosed ? '<form class="add-comment-form mt-3 flex items-start gap-2"><textarea placeholder="Add a comment..." class="flex-grow w-full text-sm px-3 py-2 border rounded" rows="2"></textarea><button type="submit" class="bg-slate-600 text-white font-semibold text-sm px-4 py-2 rounded-lg hover:bg-slate-700 flex-shrink-0 disabled:opacity-50">Post</button></form>' : ''}`;
     
     const commentsList = container.querySelector('.comments-list');
     if (record.comments && record.comments.length > 0) {
@@ -183,7 +184,6 @@ const renderComments = (container, record) => {
             const commentDiv = document.createElement('div');
             commentDiv.className = 'bg-slate-100 dark:bg-slate-700 p-3 rounded-lg text-sm transition-all duration-300';
             
-            // --- VISUAL INDICATOR LOGIC ---
             if (recentlySavedCommentInfo && recentlySavedCommentInfo.recordId === record.id && recentlySavedCommentInfo.commentIndex === index) {
                 commentDiv.classList.add('bg-green-200', 'dark:bg-green-800');
                 setTimeout(() => {
@@ -214,8 +214,15 @@ const renderRecords = () => {
     recordsToDisplay.forEach(recordData => dom.recordsContainer.appendChild(renderRecordCard(recordData)));
 };
 
-const openEditModal = (record) => { dom.editRecordForm.querySelector('[name="id"]').value = record.id; setFormCategory(record.category, dom.editFormFieldsContainer, record); dom.editRecordModal.classList.remove('hidden'); };
+const openEditModal = (record) => {
+    document.getElementById('edit-record-title').textContent = record.title;
+    dom.editRecordForm.querySelector('[name="id"]').value = record.id;
+    setFormCategory(record.category, dom.editFormFieldsContainer, record);
+    dom.editRecordModal.classList.remove('hidden');
+};
+
 const openTimeEditModal = (record) => {
+    document.getElementById('edit-time-title').textContent = record.title;
     const form = dom.editTimeForm;
     form.querySelector('[name="id"]').value = record.id;
     const date = record.createdAt.seconds ? new Date(record.createdAt.seconds * 1000) : new Date();
@@ -280,7 +287,14 @@ dom.addNewRecordBtn.addEventListener('click', () => { setFormCategory('qa', dom.
 dom.cancelAdd.addEventListener('click', () => dom.addRecordModal.classList.add('hidden'));
 dom.cancelEdit.addEventListener('click', () => dom.editRecordModal.classList.add('hidden'));
 dom.cancelTimeEdit.addEventListener('click', () => dom.editTimeModal.classList.add('hidden'));
-dom.deleteRecordBtn.addEventListener('click', () => { recordToDelete = dom.editRecordForm.querySelector('[name="id"]').value; dom.confirmDeleteModal.classList.remove('hidden'); });
+dom.deleteRecordBtn.addEventListener('click', () => {
+    recordToDelete = dom.editRecordForm.querySelector('[name="id"]').value;
+    const record = allRecords.find(r => r.id === recordToDelete);
+    if (record) {
+        document.getElementById('delete-record-title').textContent = record.title;
+    }
+    dom.confirmDeleteModal.classList.remove('hidden');
+});
 dom.cancelDelete.addEventListener('click', () => { recordToDelete = null; dom.confirmDeleteModal.classList.add('hidden'); });
 dom.confirmDeleteBtn.addEventListener('click', async () => { if (recordToDelete) { await deleteDoc(doc(db, `/artifacts/${appId}/public/data/records`, recordToDelete)); dom.editRecordModal.classList.add('hidden'); dom.confirmDeleteModal.classList.add('hidden'); recordToDelete = null; } });
 
@@ -292,13 +306,26 @@ dom.recordsContainer.addEventListener('click', async (e) => {
     let record = allRecords.find(r => r.id === recordId);
     if (!record) return;
 
-    if (e.target.closest('.record-header') && !e.target.closest('.actions')) {
+    // --- BUG FIX: Handlers for new action buttons ---
+    if (e.target.closest('.edit-record-btn')) {
+        openEditModal(record);
+        return;
+    }
+    if (e.target.closest('.edit-time-btn')) {
+        openTimeEditModal(record);
+        return;
+    }
+    if (e.target.closest('.toggle-close-btn')) {
+        await updateDoc(doc(db, `/artifacts/${appId}/public/data/records`, recordId), { isClosed: !record.isClosed });
+        return;
+    }
+
+    if (e.target.closest('.record-header')) {
         const wasExpanded = recordCard.classList.contains('expanded');
         if (recordCard.classList.toggle('expanded')) {
             expandedRecordIds.add(recordId);
-            if (!wasExpanded) { // Only render comments if it was just expanded
+            if (!wasExpanded) {
                 renderComments(recordCard.querySelector('.comments-section'), record);
-                recordCard.querySelector('.comments-section').classList.add('expanded');
             }
         } else {
             expandedRecordIds.delete(recordId);
@@ -306,15 +333,7 @@ dom.recordsContainer.addEventListener('click', async (e) => {
         return;
     }
     
-    if(e.target.closest('.comments-section > .collapsible-header')) {
-        const commentsSection = e.target.closest('.comments-section');
-        commentsSection.classList.toggle('expanded');
-        // If we are expanding and the comments haven't been rendered yet
-        if (commentsSection.classList.contains('expanded') && !commentsSection.querySelector('.comments-list')) {
-            renderComments(commentsSection, record);
-        }
-        return;
-    }
+    // --- FEATURE REMOVED: No longer need handler for collapsing comments ---
 
     if (e.target.closest('.add-comment-form') && e.target.tagName === 'BUTTON') {
         e.preventDefault();
@@ -364,13 +383,11 @@ dom.recordsContainer.addEventListener('click', async (e) => {
                 comments[commentIndex].text = newText;
                 transaction.update(recordRef, { comments });
             });
-            // --- SET FLAG FOR VISUAL INDICATOR ---
             recentlySavedCommentInfo = { recordId: recordId, commentIndex: commentIndex };
         } catch (error) {
             console.error("Failed to save comment:", error);
             saveBtn.disabled = false;
             saveBtn.textContent = 'Save';
-            // Optionally show an error to the user here
         }
         return;
     }
@@ -389,7 +406,6 @@ dom.recordsContainer.addEventListener('click', async (e) => {
     }
     
     if (e.target.classList.contains('cancel-comment-btn')) {
-        // Find the full record data to pass to renderComments
         const fullRecord = allRecords.find(r => r.id === recordId);
         if (fullRecord) {
             renderComments(e.target.closest('.comments-section'), fullRecord);
@@ -437,6 +453,7 @@ dom.addRecordForm.addEventListener('submit', async (e) => {
         const similarFaults = findSimilarFaults(recordData.title, recordData.modelNumber);
         if (similarFaults.length > 0) {
             pendingRecordData = recordData;
+            document.getElementById('link-fault-title').textContent = `New Fault: ${recordData.title}`;
             dom.existingFaultsList.innerHTML = '';
             similarFaults.forEach(fault => {
                 const isLinked = fault.relatedTo?.length > 0 || fault.relatedBy?.length > 0;
