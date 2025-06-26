@@ -250,7 +250,7 @@ document.addEventListener('DOMContentLoaded', () => {
         const linkedRecordsHtml = groupId ? `<div class="mt-2"><dt class="font-semibold">Linked Faults:</dt><dd><button class="linked-fault-btn text-indigo-600 underline" data-group-id="${groupId}">View Group</button></dd></div>` : '';
         const actionsHtml = `<div class="actions flex-shrink-0 ml-4 space-x-1"><button title="Edit Record" class="edit-record-btn p-1.5 rounded-full hover:bg-slate-200">&#9998;</button><button title="Edit Timestamp" class="edit-time-btn p-1.5 rounded-full hover:bg-slate-200">&#128337;</button><button title="${record.isClosed ? 'Re-open Record' : 'Close Record'}" class="toggle-close-btn p-1.5 rounded-full hover:bg-slate-200">${record.isClosed ? '&#128275;' : '&#128274;'}</button></div>`;
 
-        // FIX: Moved the category span to be the first item in the title row.
+        // FIX: Moved the model tags to be to the right of the category tag.
         card.innerHTML = `<div class="collapsible-header flex justify-between items-start cursor-pointer record-header">
             <div>
                 <div class="flex items-center gap-2">
@@ -815,7 +815,7 @@ document.addEventListener('DOMContentLoaded', () => {
         if (recordId && recordData.title) {
             submitBtn.disabled = true; submitBtn.textContent = '...';
             try { await updateDoc(doc(db, `/artifacts/${appId}/public/data/records`, recordId), recordData); dom.editRecordModal.classList.add('hidden');
-            } finally { submitBtn.disabled = false; submitBtn.textContent = 'Save Changes'; }
+            } finally { submitBtn.disabled = false; submitBtn.textContent = 'Save'; }
         }
     });
 
