@@ -77,13 +77,22 @@
                 </div>
                 <button id="add-new-record-btn" class="bg-indigo-600 text-white font-semibold px-4 py-2 rounded-lg hover:bg-indigo-700 flex-shrink-0">Add New Record</button>
             </header>
-            <div class="bg-white p-4 rounded-xl shadow-lg mb-4 space-y-4">
+            <div class="bg-white p-4 rounded-xl shadow-lg mb-4">
                 <div class="flex items-center gap-2">
                     <span class="text-sm font-semibold">Show:</span>
-                    <div id="filter-controls" class="flex gap-2">
+                    <div id="filter-controls" class="flex flex-wrap gap-2">
                         <button class="control-btn text-sm px-3 py-1 rounded-full border border-slate-300" data-filter="open">Open</button>
                         <button class="control-btn text-sm px-3 py-1 rounded-full border border-slate-300" data-filter="closed">Closed</button>
                         <button class="control-btn text-sm px-3 py-1 rounded-full border border-slate-300 active" data-filter="all">All</button>
+                    </div>
+                </div>
+                <div class="flex items-center gap-2 mt-4 pt-4 border-t border-slate-200">
+                    <span class="text-sm font-semibold">Category:</span>
+                    <div id="category-filter-bar" class="flex flex-wrap gap-2">
+                        <button class="control-btn text-sm px-3 py-1 rounded-full border border-slate-300 active" data-category="all">All Records</button>
+                        <button class="control-btn text-sm px-3 py-1 rounded-full border border-slate-300" data-category="qa">Q&A</button>
+                        <button class="control-btn text-sm px-3 py-1 rounded-full border border-slate-300" data-category="common-fault">Common Faults</button>
+                        <button class="control-btn text-sm px-3 py-1 rounded-full border border-slate-300" data-category="general">General</button>
                     </div>
                 </div>
             </div>

@@ -31,6 +31,7 @@ const dom = {
     logoutBtn: document.getElementById('logout-btn'),
     authForm: document.getElementById('auth-form'), authPasswordInput: document.getElementById('auth-password'), authErrorEl: document.getElementById('auth-error'),
     categoryMenu: document.getElementById('category-menu'),
+    categoryFilterBar: document.getElementById('category-filter-bar'),
     formCategorySelector: document.getElementById('form-category-selector'), formFieldsContainer: document.getElementById('form-fields-container'),
     editRecordModal: document.getElementById('edit-record-modal'), editRecordForm: document.getElementById('edit-record-form'),
     editFormFieldsContainer: document.getElementById('edit-form-fields-container'), cancelEdit: document.getElementById('cancel-edit'),
@@ -185,6 +186,13 @@ const renderCategoryMenu = () => {
     dom.categoryMenu.appendChild(createMenuButton('model-DW', 'DW Models', 'level-2'));
     dom.categoryMenu.appendChild(createMenuButton('model-WSM', 'WSM Models', 'level-2'));
     dom.categoryMenu.appendChild(createMenuButton('model-TD', 'TD Models', 'level-2'));
+
+    // TASK 4: Sync top category filter bar
+    if (dom.categoryFilterBar) {
+        dom.categoryFilterBar.querySelectorAll('.control-btn').forEach(btn => {
+            btn.classList.toggle('active', btn.dataset.category === currentCategory);
+        });
+    }
 };
 
 
@@ -219,7 +227,7 @@ const renderRecordCard = (record) => {
     if (['WW', 'WM', 'WF', 'WD'].some(p => modelUpper.startsWith(p))) {
         modelTags.push(`<button class="filter-model-btn text-xs font-bold bg-teal-500 text-white px-2 py-1 rounded-full transition-transform hover:scale-105" data-filter-prefix="WSM">WSM</button>`);
     }
-    if (modelUpper.startsWith('DV')) { // Assuming TD was a typo for DV as it's a common dryer prefix
+    if (modelUpper.startsWith('TD')) {
         modelTags.push(`<button class="filter-model-btn text-xs font-bold bg-slate-500 text-white px-2 py-1 rounded-full transition-transform hover:scale-105" data-filter-prefix="TD">TD</button>`);
     }
 
@@ -453,6 +461,17 @@ dom.filterControls.addEventListener('click', (e) => {
     if (btn) {
         currentStatusFilter = btn.dataset.filter;
         dom.filterControls.querySelectorAll('.control-btn').forEach(b => b.classList.remove('active'));
+        btn.classList.add('active');
+        setupRecordsListener();
+    }
+});
+
+// TASK 4: Add event listener for new category filter bar
+dom.categoryFilterBar.addEventListener('click', (e) => {
+    const btn = e.target.closest('.control-btn');
+    if (btn && btn.dataset.category) {
+        currentCategory = btn.dataset.category;
+        dom.categoryFilterBar.querySelectorAll('.control-btn').forEach(b => b.classList.remove('active'));
         btn.classList.add('active');
         setupRecordsListener();
     }
