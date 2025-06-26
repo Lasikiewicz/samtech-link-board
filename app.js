@@ -131,7 +131,6 @@ const renderCategoryMenu = () => {
         const btn = document.createElement('button');
         btn.dataset.id = id;
         btn.textContent = text;
-        // --- TASK 1: Ensure menu items are block-level and text-left ---
         btn.className = `menu-item block w-full text-left truncate ${className}`;
         if (currentCategory === id) btn.classList.add('active');
         btn.addEventListener('click', (e) => { 
@@ -145,7 +144,6 @@ const renderCategoryMenu = () => {
     const createSortButton = (id, text) => {
         const btn = document.createElement('button');
         btn.textContent = text;
-        // --- TASK 1: Ensure sort buttons are also block-level and text-left ---
         btn.className = `menu-item block w-full text-left level-2 ${currentSort === id ? 'active' : ''}`;
         btn.addEventListener('click', (e) => {
             e.stopPropagation();
@@ -350,7 +348,19 @@ const setupRecordsListener = () => {
     
     const constraints = [];
     const isGroupId = currentCategory.length === 20 && /^[a-zA-Z0-9]+$/.test(currentCategory);
-    let [mainCategory, subCategory] = currentCategory.split('-');
+    
+    // --- BUG FIX: Robustly parse category ID ---
+    let mainCategory, subCategory;
+    const lastHyphenIndex = currentCategory.lastIndexOf('-');
+    const possibleSubCategory = currentCategory.substring(lastHyphenIndex + 1);
+
+    if (lastHyphenIndex !== -1 && ['open', 'closed'].includes(possibleSubCategory)) {
+        mainCategory = currentCategory.substring(0, lastHyphenIndex);
+        subCategory = possibleSubCategory;
+    } else {
+        mainCategory = currentCategory;
+        subCategory = undefined;
+    }
     
     let effectiveCategory = mainCategory;
     if (isGroupId) {
