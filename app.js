@@ -131,8 +131,8 @@ const renderCategoryMenu = () => {
         const btn = document.createElement('button');
         btn.dataset.id = id;
         btn.textContent = text;
-        // --- TASK 1: Ensure menu items are block-level to stack vertically ---
-        btn.className = `menu-item block w-full truncate ${className}`;
+        // --- TASK 1: Ensure menu items are block-level and text-left ---
+        btn.className = `menu-item block w-full text-left truncate ${className}`;
         if (currentCategory === id) btn.classList.add('active');
         btn.addEventListener('click', (e) => { 
             e.stopPropagation();
@@ -145,8 +145,8 @@ const renderCategoryMenu = () => {
     const createSortButton = (id, text) => {
         const btn = document.createElement('button');
         btn.textContent = text;
-        // --- TASK 1: Ensure sort buttons are also block-level ---
-        btn.className = `menu-item block w-full level-2 ${currentSort === id ? 'active' : ''}`;
+        // --- TASK 1: Ensure sort buttons are also block-level and text-left ---
+        btn.className = `menu-item block w-full text-left level-2 ${currentSort === id ? 'active' : ''}`;
         btn.addEventListener('click', (e) => {
             e.stopPropagation();
             currentSort = id;
