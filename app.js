@@ -123,7 +123,6 @@ const groupCommonFaults = () => {
     groupedFaults = groups;
 };
 
-// --- TASK 1, 2, 3: Rewritten menu generation logic ---
 const renderCategoryMenu = () => {
     dom.categoryMenu.innerHTML = '';
     const isGroupId = (id) => id.length === 20 && /^[a-zA-Z0-9]+$/.test(id);
@@ -132,7 +131,8 @@ const renderCategoryMenu = () => {
         const btn = document.createElement('button');
         btn.dataset.id = id;
         btn.textContent = text;
-        btn.className = `menu-item truncate ${className}`;
+        // --- TASK 1: Ensure menu items are block-level to stack vertically ---
+        btn.className = `menu-item block w-full truncate ${className}`;
         if (currentCategory === id) btn.classList.add('active');
         btn.addEventListener('click', (e) => { 
             e.stopPropagation();
@@ -145,7 +145,8 @@ const renderCategoryMenu = () => {
     const createSortButton = (id, text) => {
         const btn = document.createElement('button');
         btn.textContent = text;
-        btn.className = `menu-item level-2 ${currentSort === id ? 'active' : ''}`;
+        // --- TASK 1: Ensure sort buttons are also block-level ---
+        btn.className = `menu-item block w-full level-2 ${currentSort === id ? 'active' : ''}`;
         btn.addEventListener('click', (e) => {
             e.stopPropagation();
             currentSort = id;
@@ -319,7 +320,6 @@ const renderRecords = () => {
     recordsToDisplay.forEach(recordData => dom.recordsContainer.appendChild(renderRecordCard(recordData)));
 };
 
-// --- TASK 4: Add creator name editing ---
 const openEditModal = (record) => {
     document.getElementById('edit-record-title').textContent = record.title;
     const form = dom.editRecordForm;
