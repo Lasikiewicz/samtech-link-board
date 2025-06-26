@@ -123,7 +123,7 @@ const groupCommonFaults = () => {
     groupedFaults = groups;
 };
 
-// --- TASK 1: Rewritten menu generation logic ---
+// --- TASK 1, 2, 3: Rewritten menu generation logic ---
 const renderCategoryMenu = () => {
     dom.categoryMenu.innerHTML = '';
     const isGroupId = (id) => id.length === 20 && /^[a-zA-Z0-9]+$/.test(id);
@@ -137,7 +137,18 @@ const renderCategoryMenu = () => {
         btn.addEventListener('click', (e) => { 
             e.stopPropagation();
             currentCategory = id;
-            dom.filterControls.querySelectorAll('.control-btn').forEach(b => b.classList.remove('active'));
+            setupRecordsListener();
+        });
+        return btn;
+    };
+    
+    const createSortButton = (id, text) => {
+        const btn = document.createElement('button');
+        btn.textContent = text;
+        btn.className = `menu-item level-2 ${currentSort === id ? 'active' : ''}`;
+        btn.addEventListener('click', (e) => {
+            e.stopPropagation();
+            currentSort = id;
             setupRecordsListener();
         });
         return btn;
@@ -156,8 +167,11 @@ const renderCategoryMenu = () => {
         const content = details.querySelector('div');
         children.forEach(child => content.appendChild(child));
         
-        details.addEventListener('click', (e) => {
-            if (e.target.tagName === 'SUMMARY') {
+        details.querySelector('.menu-summary').addEventListener('click', (e) => {
+            if (details.open) {
+                e.preventDefault();
+                details.removeAttribute('open');
+            } else {
                 document.querySelectorAll('.menu-accordion-item').forEach(d => {
                     if (d !== details) d.removeAttribute('open');
                 });
@@ -171,7 +185,9 @@ const renderCategoryMenu = () => {
         return details;
     };
     
-    // Define Menu Structure
+    dom.categoryMenu.appendChild(createMenuButton('all', 'All Records', 'level-1'));
+    dom.categoryMenu.appendChild(createMenuButton('my', 'My Records', 'level-1'));
+    
     const commonFaultsChildren = [];
     if (groupedFaults.size > 0) {
         const linkedIssuesDetails = document.createElement('details');
@@ -191,24 +207,28 @@ const renderCategoryMenu = () => {
     commonFaultsChildren.push(createMenuButton('common-fault-open', 'Open', 'level-2'));
     commonFaultsChildren.push(createMenuButton('common-fault-closed', 'Closed', 'level-2'));
 
-    const generalChildren = [
-        createMenuButton('general-open', 'Open', 'level-2'),
-        createMenuButton('general-closed', 'Closed', 'level-2'),
-    ];
-    const qaChildren = [
-        createMenuButton('qa-open', 'Open', 'level-2'),
-        createMenuButton('qa-closed', 'Closed', 'level-2'),
-    ];
+    const generalChildren = [ createMenuButton('general-open', 'Open', 'level-2'), createMenuButton('general-closed', 'Closed', 'level-2') ];
+    const qaChildren = [ createMenuButton('qa-open', 'Open', 'level-2'), createMenuButton('qa-closed', 'Closed', 'level-2') ];
+    const satChildren = [ createMenuButton('samsung-action-tracker-open', 'Open', 'level-2'), createMenuButton('samsung-action-tracker-closed', 'Closed', 'level-2') ];
     
     dom.categoryMenu.appendChild(createAccordion('common-fault', 'Common Faults', commonFaultsChildren));
     dom.categoryMenu.appendChild(createAccordion('general', 'General', generalChildren));
     dom.categoryMenu.appendChild(createAccordion('qa', 'Q&A', qaChildren));
+    dom.categoryMenu.appendChild(createAccordion('samsung-action-tracker', 'Samsung Action Tracker', satChildren));
 
     const divider = document.createElement('hr');
     divider.className = "my-2 border-slate-200 dark:border-slate-700";
     dom.categoryMenu.appendChild(divider);
-    dom.categoryMenu.appendChild(createMenuButton('samsung-action-tracker', 'Samsung Action Tracker', 'level-1'));
-    dom.categoryMenu.appendChild(createMenuButton('all', 'All Records', 'level-1'));
+
+    const sortContainer = document.createElement('div');
+    const sortHeader = document.createElement('div');
+    sortHeader.textContent = 'Sort Order';
+    sortHeader.className = 'menu-header px-3 !pt-0';
+    sortContainer.appendChild(sortHeader);
+    sortContainer.appendChild(createSortButton('newest', 'Newest'));
+    sortContainer.appendChild(createSortButton('oldest', 'Oldest'));
+    sortContainer.appendChild(createSortButton('alpha', 'A-Z'));
+    dom.categoryMenu.appendChild(sortContainer);
 };
 
 
@@ -299,10 +319,17 @@ const renderRecords = () => {
     recordsToDisplay.forEach(recordData => dom.recordsContainer.appendChild(renderRecordCard(recordData)));
 };
 
+// --- TASK 4: Add creator name editing ---
 const openEditModal = (record) => {
     document.getElementById('edit-record-title').textContent = record.title;
-    dom.editRecordForm.querySelector('[name="id"]').value = record.id;
+    const form = dom.editRecordForm;
+    form.querySelector('[name="id"]').value = record.id;
     setFormCategory(record.category, dom.editFormFieldsContainer, record);
+
+    const addedByDiv = document.createElement('div');
+    addedByDiv.innerHTML = `<label class="${formLabelClasses}">Added By</label><input name="addedBy" value="${record.addedBy}" class="${formInputClasses}">`;
+    dom.editFormFieldsContainer.prepend(addedByDiv);
+
     dom.manageLinksBtn.classList.toggle('hidden', record.category !== 'common-fault');
     dom.editRecordModal.classList.remove('hidden');
 };
@@ -375,35 +402,6 @@ const showLogin = () => { dom.authContainer.style.display = 'flex'; dom.appConta
 
 dom.searchInput.addEventListener('input', (e) => { currentSearch = e.target.value.toLowerCase(); renderRecords(); });
 
-dom.sortControls.addEventListener('click', (e) => {
-    const btn = e.target.closest('.control-btn');
-    if (btn && btn.dataset.sort) {
-        currentSort = btn.dataset.sort;
-        dom.sortControls.querySelectorAll('.control-btn').forEach(b => b.classList.remove('active'));
-        btn.classList.add('active');
-        isInitialLoad = true;
-        setupRecordsListener();
-    }
-});
-
-dom.filterControls.addEventListener('click', (e) => {
-    const btn = e.target.closest('.control-btn');
-    if (btn && btn.dataset.filter) {
-        const filter = btn.dataset.filter;
-        let newCategory = 'all';
-        if (filter === 'open') newCategory = 'all-open';
-        else if (filter === 'closed') newCategory = 'all-closed';
-        else if (filter === 'my') newCategory = 'my';
-        currentCategory = newCategory;
-        
-        dom.filterControls.querySelectorAll('.control-btn').forEach(b => b.classList.remove('active'));
-        btn.classList.add('active');
-        isInitialLoad = true;
-        setupRecordsListener();
-    }
-});
-
-
 dom.addNewRecordBtn.addEventListener('click', () => { setFormCategory('qa', dom.formFieldsContainer); dom.addRecordModal.classList.remove('hidden'); });
 dom.cancelAdd.addEventListener('click', () => dom.addRecordModal.classList.add('hidden'));
 dom.cancelEdit.addEventListener('click', () => dom.editRecordModal.classList.add('hidden'));
@@ -430,7 +428,6 @@ dom.closeLinkUnlinkModal.addEventListener('click', () => {
     recordForLinking = null;
 });
 
-// --- TASK 2: Updated "Manage Links" logic ---
 const openLinkUnlinkModal = (record) => {
     document.getElementById('link-unlink-title').textContent = record.title;
     
@@ -534,7 +531,7 @@ dom.recordsContainer.addEventListener('click', async (e) => {
     
     if (e.target.closest('.filter-sat-btn')) {
         e.stopPropagation();
-        currentCategory = 'samsung-action-tracker';
+        currentCategory = 'samsung-action-tracker-open';
         setupRecordsListener();
         return;
     }
@@ -670,7 +667,6 @@ dom.addRecordForm.addEventListener('submit', async (e) => {
     const recordData = Object.fromEntries(formData.entries());
     if (!recordData.title || !currentUserDisplayName) return;
 
-    // --- TASK 3: Auto-link by serial number ---
     if (recordData.serialNumber) {
         const sn = recordData.serialNumber.trim().toLowerCase();
         if (sn) {
