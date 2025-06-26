@@ -8,7 +8,6 @@ const SHARED_PASSWORD = "__SHARED_PASSWORD__" || "samtech";
 let app, db, recordsUnsubscribe, presenceUnsubscribe;
 let allRecords = [];
 let groupedFaults = new Map();
-// TASK 1: Removed currentSort variable
 let currentSearch = '', currentCategory = 'all-open', currentUserDisplayName = '';
 let recordToDelete = null;
 let expandedRecordIds = new Set();
@@ -205,8 +204,6 @@ const renderCategoryMenu = () => {
     dom.categoryMenu.appendChild(createAccordion('general', 'General', generalChildren));
     dom.categoryMenu.appendChild(createAccordion('qa', 'Q&A', qaChildren));
     dom.categoryMenu.appendChild(createAccordion('samsung-action-tracker', 'Samsung Action Tracker', satChildren));
-
-    // TASK 1: Removed Sort Order menu
 };
 
 
@@ -297,7 +294,6 @@ const renderRecords = () => {
     recordsToDisplay.forEach(recordData => dom.recordsContainer.appendChild(renderRecordCard(recordData)));
 };
 
-// --- TASK 3: "Added By" field removed from this modal ---
 const openEditModal = (record) => {
     document.getElementById('edit-record-title').textContent = record.title;
     const form = dom.editRecordForm;
@@ -316,7 +312,6 @@ const openTimeEditModal = (record) => {
     const localISOString = new Date(date.getTime() - (date.getTimezoneOffset() * 60000)).toISOString().slice(0, 16);
     form.querySelector('[name="timestamp"]').value = localISOString;
 
-    // --- TASK 3: "Added By" field added here ---
     form.querySelector('#added-by-container')?.remove(); 
     const addedByDiv = document.createElement('div');
     addedByDiv.id = 'added-by-container';
@@ -366,7 +361,6 @@ const setupRecordsListener = () => {
         }
     }
     
-    // --- TASK 1: Hardcoded sort order ---
     constraints.push(orderBy('createdAt', 'desc'));
 
     const q = query(collection(db, `/artifacts/${appId}/public/data/records`), ...constraints);
@@ -556,6 +550,18 @@ dom.linkUnlinkModal.addEventListener('click', async (e) => {
 dom.recordsContainer.addEventListener('click', async (e) => {
     const recordCard = e.target.closest('.record-card');
     if (!recordCard) return;
+    
+    // --- TASK 1: Bug Fix for View Group button ---
+    if (e.target.closest('.linked-fault-btn')) {
+        e.preventDefault();
+        const groupId = e.target.dataset.groupId;
+        if (groupId) {
+            currentCategory = groupId;
+            setupRecordsListener();
+        }
+        return;
+    }
+
     const recordId = recordCard.dataset.id;
     let record = allRecords.find(r => r.id === recordId);
     if (!record) return;
@@ -570,17 +576,6 @@ dom.recordsContainer.addEventListener('click', async (e) => {
     }
     if (e.target.closest('.toggle-close-btn')) {
         await updateDoc(doc(db, `/artifacts/${appId}/public/data/records`, recordId), { isClosed: !record.isClosed });
-        return;
-    }
-    
-    // --- TASK 3: Add event handler for View Group button ---
-    if (e.target.closest('.linked-fault-btn')) {
-        e.preventDefault();
-        const groupId = e.target.dataset.groupId;
-        if (groupId) {
-            currentCategory = groupId;
-            setupRecordsListener();
-        }
         return;
     }
     
