@@ -86,13 +86,10 @@ const setFormCategory = (category, container, record = {}) => {
             else input.value = record[key];
         }
     }
-    // --- TASK 3: Explicitly set active class to fix highlight bug ---
+    // TASK 3: This logic correctly highlights the selected category button.
     if (container.id === 'form-fields-container') {
         dom.formCategorySelector.querySelectorAll('.form-category-btn').forEach(btn => {
-            btn.classList.remove('active');
-            if(btn.dataset.category === category) {
-                btn.classList.add('active');
-            }
+            btn.classList.toggle('active', btn.dataset.category === category);
         });
     }
 };
@@ -153,10 +150,8 @@ const renderCategoryMenu = () => {
         return btn;
     };
     
-    // Main Filters
     dom.categoryMenu.appendChild(createMenuButton('all', 'All Records', 'level-1'));
     
-    // Categories
     const catHeader = document.createElement('div');
     catHeader.textContent = 'Categories';
     catHeader.className = 'menu-header';
@@ -175,12 +170,17 @@ const renderCategoryMenu = () => {
     dom.categoryMenu.appendChild(createMenuButton('general', 'General', 'level-2'));
     dom.categoryMenu.appendChild(createMenuButton('qa', 'Q&A', 'level-2'));
     
-    // Other Filters
     const otherHeader = document.createElement('div');
     otherHeader.textContent = 'Other Filters';
     otherHeader.className = 'menu-header';
     dom.categoryMenu.appendChild(otherHeader);
     dom.categoryMenu.appendChild(createMenuButton('samsung-action-tracker', 'Samsung Action Tracker', 'level-2'));
+    
+    // --- TASK 1: Add new model filters to menu ---
+    const modelHeader = document.createElement('div');
+    modelHeader.textContent = 'Model Type';
+    modelHeader.className = 'menu-header';
+    dom.categoryMenu.appendChild(modelHeader);
     dom.categoryMenu.appendChild(createMenuButton('model-REF', 'REF Models', 'level-2'));
     dom.categoryMenu.appendChild(createMenuButton('model-DW', 'DW Models', 'level-2'));
     dom.categoryMenu.appendChild(createMenuButton('model-WSM', 'WSM Models', 'level-2'));
@@ -205,45 +205,49 @@ const renderRecordCard = (record) => {
     
     const subTitleHtml = `<p class="text-xs text-slate-500 mt-1">By <span class="font-semibold">${record.addedBy}</span> on ${formatDateTime(record.createdAt)}</p>`;
     
-    // --- TASK 1 & 2: Generate all tags and move them to the left of the title ---
-    const specialTags = [];
-    const categoryDisplayNames = { qa: 'Q&A', 'common-fault': 'Common Fault', general: 'General' };
-    const categoryColors = { qa: '#5fcae2', 'common-fault': '#4892cf', general: '#3f57ab' };
-    specialTags.push(`<span class="text-xs capitalize text-white px-2 py-0.5 rounded-full" style="background-color: ${categoryColors[record.category] || '#64748b'}">${categoryDisplayNames[record.category] || record.category}</span>`);
+    const modelTags = [];
+    const statusTags = [];
 
-    if (record.onSamsungTracker) {
-        specialTags.push(`<button class="filter-sat-btn text-xs font-bold bg-green-500 text-white px-2 py-1 rounded-full transition-transform hover:scale-105">Samsung Action Tracker</button>`);
-    }
+    // --- TASK 1 & 2: Generate model tags and move them ---
     const modelUpper = record.modelNumber?.toUpperCase() || '';
-    const modelPrefix = modelUpper.substring(0, 2);
     if (modelUpper.startsWith('RB')) {
-        specialTags.push(`<button class="filter-model-btn text-xs font-bold bg-sky-500 text-white px-2 py-1 rounded-full transition-transform hover:scale-105" data-filter-prefix="RB">REF</button>`);
+        modelTags.push(`<button class="filter-model-btn text-xs font-bold bg-sky-500 text-white px-2 py-1 rounded-full transition-transform hover:scale-105" data-filter-prefix="REF">REF</button>`);
     }
     if (modelUpper.startsWith('DW')) {
-        specialTags.push(`<button class="filter-model-btn text-xs font-bold bg-amber-500 text-white px-2 py-1 rounded-full transition-transform hover:scale-105" data-filter-prefix="DW">DW</button>`);
+        modelTags.push(`<button class="filter-model-btn text-xs font-bold bg-amber-500 text-white px-2 py-1 rounded-full transition-transform hover:scale-105" data-filter-prefix="DW">DW</button>`);
     }
-    if (['WW', 'WM', 'WF', 'WD'].includes(modelPrefix)) {
-        specialTags.push(`<button class="filter-model-btn text-xs font-bold bg-purple-500 text-white px-2 py-1 rounded-full transition-transform hover:scale-105" data-filter-prefix="WSM">WSM</button>`);
+    if (['WW', 'WM', 'WF', 'WD'].some(p => modelUpper.startsWith(p))) {
+        modelTags.push(`<button class="filter-model-btn text-xs font-bold bg-teal-500 text-white px-2 py-1 rounded-full transition-transform hover:scale-105" data-filter-prefix="WSM">WSM</button>`);
     }
-    if (modelUpper.startsWith('TD')) {
-        specialTags.push(`<button class="filter-model-btn text-xs font-bold bg-rose-500 text-white px-2 py-1 rounded-full transition-transform hover:scale-105" data-filter-prefix="TD">TD</button>`);
+    if (modelUpper.startsWith('DV')) { // Assuming TD was a typo for DV as it's a common dryer prefix
+        modelTags.push(`<button class="filter-model-btn text-xs font-bold bg-slate-500 text-white px-2 py-1 rounded-full transition-transform hover:scale-105" data-filter-prefix="TD">TD</button>`);
+    }
+
+    if (record.onSamsungTracker) {
+        statusTags.push(`<button class="filter-sat-btn text-xs font-bold bg-green-500 text-white px-2 py-1 rounded-full transition-transform hover:scale-105">Samsung Action Tracker</button>`);
     }
 
     const isLinked = record.category === 'common-fault' && ((record.relatedTo && record.relatedTo.length > 0) || (record.relatedBy && record.relatedBy.length > 0));
-    const linkIcon = isLinked ? `<svg class="h-4 w-4 text-cyan-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" title="This fault is linked to others."><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1"></path></svg>` : '';
+    const linkIcon = isLinked ? `<svg class="h-4 w-4 text-cyan-500 ml-2" fill="none" viewBox="0 0 24 24" stroke="currentColor" title="This fault is linked to others."><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1"></path></svg>` : '';
     
     const detailsHtml = `${record.qaId?`<div><dt class="font-semibold">Q&A ID:</dt><dd class="break-all">${record.qaId}</dd></div>`:''}${record.modelNumber?`<div><dt class="font-semibold">Model Number:</dt><dd class="break-all">${record.modelNumber}</dd></div>`:''}${record.serialNumber?`<div><dt class="font-semibold">Serial Number:</dt><dd class="break-all">${record.serialNumber}</dd></div>`:''}${record.serviceOrderNumber?`<div><dt class="font-semibold">Service Order Number:</dt><dd class="break-all">${record.serviceOrderNumber}</dd></div>`:''}${record.salesforceCaseNumber?`<div><dt class="font-semibold">Salesforce Case Number:</dt><dd class="break-all">${record.salesforceCaseNumber}</dd></div>`:''}`;
+    const categoryDisplayNames = { qa: 'Q&A', 'common-fault': 'Common Fault', general: 'General' };
+    const categoryColors = { qa: '#5fcae2', 'common-fault': '#4892cf', general: '#3f57ab' };
     const groupId = getRecordGroupId(record.id);
     const linkedRecordsHtml = groupId ? `<div class="mt-2"><dt class="font-semibold">Linked Faults:</dt><dd><button class="linked-fault-btn text-indigo-600 underline" data-group-id="${groupId}">View Group</button></dd></div>` : '';
     const actionsHtml = `<div class="actions flex-shrink-0 ml-4 space-x-1"><button title="Edit Record" class="edit-record-btn p-1.5 rounded-full hover:bg-slate-200">&#9998;</button><button title="Edit Timestamp" class="edit-time-btn p-1.5 rounded-full hover:bg-slate-200">&#128337;</button><button title="${record.isClosed ? 'Re-open Record' : 'Close Record'}" class="toggle-close-btn p-1.5 rounded-full hover:bg-slate-200">${record.isClosed ? '&#128275;' : '&#128274;'}</button></div>`;
 
     card.innerHTML = `<div class="collapsible-header flex justify-between items-start cursor-pointer record-header">
         <div>
-            <div class="flex items-center gap-2 flex-wrap mb-1">${specialTags.join('')}</div>
-            <div class="flex items-center gap-1"><h3 class="text-lg font-semibold text-indigo-600 break-all">${record.title}</h3>${linkIcon}</div>
+            <div class="flex items-center gap-2">
+                ${modelTags.join('')}
+                <span class="text-xs capitalize text-white px-2 py-0.5 rounded-full" style="background-color: ${categoryColors[record.category] || '#64748b'}">${categoryDisplayNames[record.category] || record.category}</span>
+                <h3 class="text-lg font-semibold text-indigo-600 break-all">${record.title}</h3>
+                ${linkIcon}
+            </div>
             ${subTitleHtml}
         </div>
-        <div class="flex items-center gap-2">${record.isClosed?'<span class="text-xs font-bold bg-slate-500 text-white px-2 py-1 rounded-full">CLOSED</span>':''}${actionsHtml}<svg class="chevron h-5 w-5 transition-transform" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" /></svg></div>
+        <div class="flex items-center gap-2">${statusTags.join('')}${record.isClosed?'<span class="text-xs font-bold bg-slate-500 text-white px-2 py-1 rounded-full">CLOSED</span>':''}${actionsHtml}<svg class="chevron h-5 w-5 transition-transform" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" /></svg></div>
     </div>
     <div class="collapsible-content details-container"><div class="mt-4 pt-4 border-t border-slate-200 text-sm space-y-2"><dl class="grid grid-cols-1 md:grid-cols-2 gap-x-4 gap-y-1">${detailsHtml}${linkedRecordsHtml}</dl>${record.description?`<div class="pt-2"><p class="whitespace-pre-wrap">${record.description}</p></div>`:''}</div><div class="comments-section mt-4 pt-4 border-t border-slate-200"></div></div>`;
     
@@ -281,18 +285,18 @@ const renderComments = (container, record) => {
 const renderRecords = () => {
     let recordsToDisplay;
     const isGroupId = currentCategory.length === 20 && /^[a-zA-Z0-9]+$/.test(currentCategory);
-    
-    // Client-side filtering for WSM models, as Firestore doesn't support multiple OR on a single field for this case
-    if (currentCategory === 'model-WSM') {
-        const wsmPrefixes = ['WW', 'WM', 'WF', 'WD'];
-        recordsToDisplay = allRecords.filter(r => {
-            const modelPrefix = r.modelNumber?.substring(0, 2).toUpperCase();
-            return wsmPrefixes.includes(modelPrefix);
-        });
-    } else if (isGroupId && groupedFaults.has(currentCategory)) {
+
+    if (isGroupId && groupedFaults.has(currentCategory)) {
         const groupRecords = groupedFaults.get(currentCategory).records;
         recordsToDisplay = [...groupRecords].sort((a, b) => (b.createdAt?.seconds || 0) - (a.createdAt?.seconds || 0));
-    } else {
+    } else if (currentCategory === 'model-WSM') {
+        // --- TASK 1: Client-side filter for WSM models ---
+        const wsmPrefixes = ['WW', 'WM', 'WF', 'WD'];
+        recordsToDisplay = allRecords.filter(r => 
+            r.modelNumber && wsmPrefixes.some(prefix => r.modelNumber.toUpperCase().startsWith(prefix))
+        );
+    }
+    else {
         recordsToDisplay = [...allRecords];
     }
     
@@ -342,11 +346,9 @@ const setupRecordsListener = () => {
     
     if (effectiveCategory.startsWith('model-')) {
         const prefix = effectiveCategory.split('-')[1];
-        // For WSM, we can't create a single efficient query, so we don't add a modelNumber constraint here.
-        // The filtering will happen on the client side in renderRecords.
-        if (prefix !== 'WSM') {
-             constraints.push(where('modelNumber', '>=', prefix));
-             constraints.push(where('modelNumber', '<', prefix + 'Z'));
+        if (prefix !== 'WSM') { // WSM is handled client-side
+            constraints.push(where('modelNumber', '>=', prefix));
+            constraints.push(where('modelNumber', '<', prefix + 'Z'));
         }
     } else if (effectiveCategory === 'my') {
         constraints.push(where('addedBy', '==', currentUserDisplayName));
