@@ -1,11 +1,11 @@
 import { initializeApp, getApps, getApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
-import { getFirestore, doc, getDoc, collection, onSnapshot, addDoc, updateDoc, deleteDoc, serverTimestamp, query, where, orderBy, arrayUnion, arrayRemove, Timestamp, getDocs, runTransaction } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+import { getFirestore, doc, getDoc, collection, onSnapshot, addDoc, updateDoc, deleteDoc, serverTimestamp, query, where, orderBy, arrayUnion, arrayRemove, Timestamp, getDocs, runTransaction, setDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
 const firebaseConfig = { apiKey: "__API_KEY__", authDomain: "__AUTH_DOMAIN__", projectId: "__PROJECT_ID__", storageBucket: "__STORAGE_BUCKET__", messagingSenderId: "__MESSAGING_SENDER_ID__", appId: "__APP_ID__" };
 const appId = 'samtech-record-board';
 const SHARED_PASSWORD = "__SHARED_PASSWORD__" || "samtech";
 
-let app, db, recordsUnsubscribe;
+let app, db, recordsUnsubscribe, presenceUnsubscribe;
 let allRecords = [];
 let groupedFaults = new Map();
 let currentSort = 'newest', currentSearch = '', currentCategory = 'all-open', currentUserDisplayName = '';
@@ -15,6 +15,7 @@ let pendingRecordData = null;
 let isInitialLoad = true;
 let recentlySavedCommentInfo = null;
 let recordForLinking = null;
+let presenceRef = null; // Reference to the current user's presence document
 
 try { app = getApps().length ? getApp() : initializeApp(firebaseConfig); db = getFirestore(app); } catch (e) { console.error("Firebase init failed:", e); }
 
@@ -23,11 +24,10 @@ const dom = {
     addRecordForm: document.getElementById('add-record-form'), addRecordModal: document.getElementById('add-record-modal'),
     addNewRecordBtn: document.getElementById('add-new-record-btn'), cancelAdd: document.getElementById('cancel-add'),
     recordsContainer: document.getElementById('records-container'), loadingState: document.getElementById('loading-state'),
-    searchInput: document.getElementById('search-input'), sortControls: document.getElementById('sort-controls'),
-    filterControls: document.getElementById('filter-controls'), userNameDisplay: document.getElementById('user-name-display'),
+    searchInput: document.getElementById('search-input'),
+    userNameDisplay: document.getElementById('user-name-display'),
     logoutBtn: document.getElementById('logout-btn'),
     authForm: document.getElementById('auth-form'), authPasswordInput: document.getElementById('auth-password'), authErrorEl: document.getElementById('auth-error'),
-    darkModeToggle: document.getElementById('dark-mode-toggle'), sunIcon: document.getElementById('sun-icon'), moonIcon: document.getElementById('moon-icon'),
     categoryMenu: document.getElementById('category-menu'),
     formCategorySelector: document.getElementById('form-category-selector'), formFieldsContainer: document.getElementById('form-fields-container'),
     editRecordModal: document.getElementById('edit-record-modal'), editRecordForm: document.getElementById('edit-record-form'),
@@ -39,10 +39,11 @@ const dom = {
     linkFaultModal: document.getElementById('link-fault-modal'), existingFaultsList: document.getElementById('existing-faults-list'), skipLinkBtn: document.getElementById('skip-link-btn'), confirmLinkBtn: document.getElementById('confirm-link-btn'),
     linkUnlinkModal: document.getElementById('link-unlink-modal'), closeLinkUnlinkModal: document.getElementById('close-link-unlink-modal'),
     unlinkList: document.getElementById('unlink-list'), linkList: document.getElementById('link-list'),
+    activeUsersList: document.getElementById('active-users-list'),
 };
 
-const formInputClasses = "w-full p-2 border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-900 rounded text-slate-900 dark:text-slate-200 placeholder-slate-400 dark:placeholder-slate-500";
-const formLabelClasses = "block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1";
+const formInputClasses = "w-full p-2 border border-slate-300 rounded text-slate-900 placeholder-slate-400";
+const formLabelClasses = "block text-sm font-medium text-slate-700 mb-1";
 
 const formFieldsTemplates = {
     qa: `
@@ -216,7 +217,7 @@ const renderCategoryMenu = () => {
     dom.categoryMenu.appendChild(createAccordion('samsung-action-tracker', 'Samsung Action Tracker', satChildren));
 
     const divider = document.createElement('hr');
-    divider.className = "my-2 border-slate-200 dark:border-slate-700";
+    divider.className = "my-2 border-slate-200";
     dom.categoryMenu.appendChild(divider);
 
     const sortContainer = document.createElement('div');
@@ -243,10 +244,10 @@ const getRecordGroupId = (recordId) => {
 const renderRecordCard = (record) => {
     const card = document.createElement('div');
     card.dataset.id = record.id;
-    card.className = `record-card bg-white dark:bg-slate-800 p-5 rounded-xl shadow-lg transition-all ${record.isClosed ? 'opacity-60' : ''}`;
+    card.className = `record-card bg-white p-5 rounded-xl shadow-lg transition-all ${record.isClosed ? 'opacity-60' : ''}`;
     if (expandedRecordIds.has(record.id)) card.classList.add('expanded');
     
-    const subTitleHtml = `<p class="text-xs text-slate-500 dark:text-slate-400 mt-1">By <span class="font-semibold">${record.addedBy}</span> on ${formatDateTime(record.createdAt)}</p>`;
+    const subTitleHtml = `<p class="text-xs text-slate-500 mt-1">By <span class="font-semibold">${record.addedBy}</span> on ${formatDateTime(record.createdAt)}</p>`;
     const samsungTrackerHtml = record.onSamsungTracker ? `<button class="filter-sat-btn text-xs font-bold bg-green-500 text-white px-2 py-1 rounded-full transition-transform hover:scale-105">Samsung Action Tracker</button>` : '';
     
     const isLinked = record.category === 'common-fault' && ((record.relatedTo && record.relatedTo.length > 0) || (record.relatedBy && record.relatedBy.length > 0));
@@ -256,17 +257,17 @@ const renderRecordCard = (record) => {
     const categoryDisplayNames = { qa: 'Q&A', 'common-fault': 'Common Fault', general: 'General' };
     const categoryColors = { qa: '#5fcae2', 'common-fault': '#4892cf', general: '#3f57ab' };
     const groupId = getRecordGroupId(record.id);
-    const linkedRecordsHtml = groupId ? `<div class="mt-2"><dt class="font-semibold">Linked Faults:</dt><dd><button class="linked-fault-btn text-indigo-600 dark:text-indigo-400 underline" data-group-id="${groupId}">View Group</button></dd></div>` : '';
-    const actionsHtml = `<div class="actions flex-shrink-0 ml-4 space-x-1"><button title="Edit Record" class="edit-record-btn p-1.5 rounded-full hover:bg-slate-200 dark:hover:bg-slate-600">&#9998;</button><button title="Edit Timestamp" class="edit-time-btn p-1.5 rounded-full hover:bg-slate-200 dark:hover:bg-slate-600">&#128337;</button><button title="${record.isClosed ? 'Re-open Record' : 'Close Record'}" class="toggle-close-btn p-1.5 rounded-full hover:bg-slate-200 dark:hover:bg-slate-600">${record.isClosed ? '&#128275;' : '&#128274;'}</button></div>`;
+    const linkedRecordsHtml = groupId ? `<div class="mt-2"><dt class="font-semibold">Linked Faults:</dt><dd><button class="linked-fault-btn text-indigo-600 underline" data-group-id="${groupId}">View Group</button></dd></div>` : '';
+    const actionsHtml = `<div class="actions flex-shrink-0 ml-4 space-x-1"><button title="Edit Record" class="edit-record-btn p-1.5 rounded-full hover:bg-slate-200">&#9998;</button><button title="Edit Timestamp" class="edit-time-btn p-1.5 rounded-full hover:bg-slate-200">&#128337;</button><button title="${record.isClosed ? 'Re-open Record' : 'Close Record'}" class="toggle-close-btn p-1.5 rounded-full hover:bg-slate-200">${record.isClosed ? '&#128275;' : '&#128274;'}</button></div>`;
 
     card.innerHTML = `<div class="collapsible-header flex justify-between items-start cursor-pointer record-header">
         <div>
-            <div class="flex items-center gap-1"><span class="text-xs capitalize text-white px-2 py-0.5 rounded-full" style="background-color: ${categoryColors[record.category] || '#64748b'}">${categoryDisplayNames[record.category] || record.category}</span><h3 class="text-lg font-semibold text-indigo-600 dark:text-indigo-400 break-all">${record.title}</h3>${linkIcon}</div>
+            <div class="flex items-center gap-1"><span class="text-xs capitalize text-white px-2 py-0.5 rounded-full" style="background-color: ${categoryColors[record.category] || '#64748b'}">${categoryDisplayNames[record.category] || record.category}</span><h3 class="text-lg font-semibold text-indigo-600 break-all">${record.title}</h3>${linkIcon}</div>
             ${subTitleHtml}
         </div>
         <div class="flex items-center gap-2">${samsungTrackerHtml}${record.isClosed?'<span class="text-xs font-bold bg-slate-500 text-white px-2 py-1 rounded-full">CLOSED</span>':''}${actionsHtml}<svg class="chevron h-5 w-5 transition-transform" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" /></svg></div>
     </div>
-    <div class="collapsible-content details-container"><div class="mt-4 pt-4 border-t border-slate-200 dark:border-slate-700 text-sm space-y-2"><dl class="grid grid-cols-1 md:grid-cols-2 gap-x-4 gap-y-1">${detailsHtml}${linkedRecordsHtml}</dl>${record.description?`<div class="pt-2"><p class="whitespace-pre-wrap">${record.description}</p></div>`:''}</div><div class="comments-section mt-4 pt-4 border-t border-slate-200 dark:border-slate-700"></div></div>`;
+    <div class="collapsible-content details-container"><div class="mt-4 pt-4 border-t border-slate-200 text-sm space-y-2"><dl class="grid grid-cols-1 md:grid-cols-2 gap-x-4 gap-y-1">${detailsHtml}${linkedRecordsHtml}</dl>${record.description?`<div class="pt-2"><p class="whitespace-pre-wrap">${record.description}</p></div>`:''}</div><div class="comments-section mt-4 pt-4 border-t border-slate-200"></div></div>`;
     
     if (expandedRecordIds.has(record.id)) {
         renderComments(card.querySelector('.comments-section'), record);
@@ -283,20 +284,20 @@ const renderComments = (container, record) => {
          const sortedComments = record.comments.map(c => ({...c, date: c.createdAt?.seconds ? new Date(c.createdAt.seconds * 1000) : new Date() })).sort((a,b) => a.date - b.date);
         sortedComments.forEach((comment, index) => {
             const commentDiv = document.createElement('div');
-            commentDiv.className = 'bg-slate-100 dark:bg-slate-700 p-3 rounded-lg text-sm transition-all duration-300';
+            commentDiv.className = 'bg-slate-100 p-3 rounded-lg text-sm transition-all duration-300';
             
             if (recentlySavedCommentInfo && recentlySavedCommentInfo.recordId === record.id && recentlySavedCommentInfo.commentIndex === index) {
-                commentDiv.classList.add('bg-green-200', 'dark:bg-green-800');
+                commentDiv.classList.add('bg-green-200');
                 setTimeout(() => {
-                    commentDiv.classList.remove('bg-green-200', 'dark:bg-green-800');
+                    commentDiv.classList.remove('bg-green-200');
                     recentlySavedCommentInfo = null; 
                 }, 2000);
             }
             
-            commentDiv.innerHTML = `<p class="text-xs text-slate-500 dark:text-slate-400 mb-1">By: <span class="font-mono">${comment.addedBy}</span> at ${formatDateTime(comment.createdAt)}</p><div class="comment-body flex justify-between items-start"><p class="comment-text break-words whitespace-pre-wrap flex-grow">${comment.text || ''}</p><div class="comment-actions flex-shrink-0 ml-2 space-x-2"><button class="edit-comment-btn" data-index="${index}" title="Edit">&#9998;</button><button class="delete-comment-btn" data-index="${index}" title="Delete">&#10006;</button></div></div>`;
+            commentDiv.innerHTML = `<p class="text-xs text-slate-500 mb-1">By: <span class="font-mono">${comment.addedBy}</span> at ${formatDateTime(comment.createdAt)}</p><div class="comment-body flex justify-between items-start"><p class="comment-text break-words whitespace-pre-wrap flex-grow">${comment.text || ''}</p><div class="comment-actions flex-shrink-0 ml-2 space-x-2"><button class="edit-comment-btn" data-index="${index}" title="Edit">&#9998;</button><button class="delete-comment-btn" data-index="${index}" title="Delete">&#10006;</button></div></div>`;
             commentsList.appendChild(commentDiv);
         });
-    } else { commentsList.innerHTML = '<p class="text-xs text-slate-400 dark:text-slate-500">No comments yet.</p>'; }
+    } else { commentsList.innerHTML = '<p class="text-xs text-slate-400">No comments yet.</p>'; }
 };
 
 const renderRecords = () => {
@@ -314,7 +315,7 @@ const renderRecords = () => {
     }
     
     dom.recordsContainer.innerHTML = '';
-    if (recordsToDisplay.length === 0) { dom.recordsContainer.innerHTML = `<p class="text-slate-500 dark:text-slate-400">No records match your current filters.</p>`; return; }
+    if (recordsToDisplay.length === 0) { dom.recordsContainer.innerHTML = `<p class="text-slate-500">No records match your current filters.</p>`; return; }
     recordsToDisplay.forEach(recordData => dom.recordsContainer.appendChild(renderRecordCard(recordData)));
 };
 
@@ -349,7 +350,6 @@ const setupRecordsListener = () => {
     const constraints = [];
     const isGroupId = currentCategory.length === 20 && /^[a-zA-Z0-9]+$/.test(currentCategory);
     
-    // --- BUG FIX: Robustly parse category ID ---
     let mainCategory, subCategory;
     const lastHyphenIndex = currentCategory.lastIndexOf('-');
     const possibleSubCategory = currentCategory.substring(lastHyphenIndex + 1);
@@ -406,9 +406,66 @@ const setupRecordsListener = () => {
     }, (error) => { console.error("Firestore error:", error); dom.loadingState.innerHTML = `<p class="text-red-500">Error loading data. A required index is likely missing. Check console (F12) for a link.</p>`; });
 };
 
+// --- TASK 2: Presence detection logic ---
+const setupPresence = async () => {
+    // Create a reference to a new document in the 'presence' collection
+    presenceRef = doc(collection(db, 'presence'));
+    
+    // Set the user's online status
+    await setDoc(presenceRef, { name: currentUserDisplayName, onlineSince: serverTimestamp() });
 
-const showApp = () => { dom.authContainer.style.display = 'none'; dom.namePromptModal.classList.add('hidden'); dom.appContainer.style.display = 'block'; dom.userNameDisplay.textContent = currentUserDisplayName; setupRecordsListener(); };
-const showLogin = () => { dom.authContainer.style.display = 'flex'; dom.appContainer.style.display = 'none'; if (recordsUnsubscribe) recordsUnsubscribe(); };
+    // Listen for changes in the presence collection
+    if(presenceUnsubscribe) presenceUnsubscribe(); // Unsubscribe from any previous listener
+    presenceUnsubscribe = onSnapshot(query(collection(db, 'presence')), (snapshot) => {
+        const users = new Set();
+        snapshot.docs.forEach(doc => {
+            const user = doc.data();
+            if (user.name !== currentUserDisplayName) { // Don't show self in the list
+                users.add(user.name);
+            }
+        });
+        
+        dom.activeUsersList.innerHTML = '';
+        if (users.size > 0) {
+            users.forEach(name => {
+                const li = document.createElement('li');
+                li.textContent = name;
+                dom.activeUsersList.appendChild(li);
+            });
+        } else {
+            dom.activeUsersList.innerHTML = `<li class="text-slate-400">Only you</li>`;
+        }
+    });
+
+    // Attempt to remove the presence document when the user leaves
+    window.addEventListener('beforeunload', () => {
+        if(presenceRef) deleteDoc(presenceRef);
+    });
+};
+
+const removePresence = async () => {
+    if (presenceUnsubscribe) presenceUnsubscribe();
+    if (presenceRef) {
+        await deleteDoc(presenceRef);
+        presenceRef = null;
+    }
+}
+
+
+const showApp = () => { 
+    dom.authContainer.style.display = 'none'; 
+    dom.namePromptModal.classList.add('hidden'); 
+    dom.appContainer.style.display = 'block'; 
+    dom.userNameDisplay.textContent = currentUserDisplayName; 
+    setupRecordsListener(); 
+    setupPresence();
+};
+const showLogin = () => { 
+    dom.authContainer.style.display = 'flex'; 
+    dom.appContainer.style.display = 'none'; 
+    if (recordsUnsubscribe) recordsUnsubscribe(); 
+    removePresence();
+};
 
 dom.searchInput.addEventListener('input', (e) => { currentSearch = e.target.value.toLowerCase(); renderRecords(); });
 
@@ -748,14 +805,11 @@ dom.namePromptForm.addEventListener('submit', (e) => {
     if (name) { currentUserDisplayName = name; sessionStorage.setItem('displayName', name); showApp(); }
 });
 
-dom.logoutBtn.addEventListener('click', () => { sessionStorage.clear(); showLogin(); });
-
-const applyTheme = () => {
-    if (localStorage.getItem('theme') === 'dark') { document.documentElement.classList.add('dark'); dom.sunIcon.classList.add('hidden'); dom.moonIcon.classList.remove('hidden'); } 
-    else { document.documentElement.classList.remove('dark'); dom.sunIcon.classList.remove('hidden'); dom.moonIcon.classList.add('hidden'); }
-};
-dom.darkModeToggle.addEventListener('click', () => { localStorage.setItem('theme', document.documentElement.classList.contains('dark') ? 'light' : 'dark'); applyTheme(); });
+dom.logoutBtn.addEventListener('click', () => { 
+    sessionStorage.clear(); 
+    removePresence();
+    showLogin();
+});
 
 if (sessionStorage.getItem('isLoggedIn') === 'true' && sessionStorage.getItem('displayName')) { currentUserDisplayName = sessionStorage.getItem('displayName'); showApp(); } 
 else { showLogin(); }
-applyTheme();
