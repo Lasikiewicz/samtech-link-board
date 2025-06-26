@@ -123,14 +123,15 @@ const groupCommonFaults = () => {
     groupedFaults = groups;
 };
 
+// --- TASK 1: Rewritten menu generation logic ---
 const renderCategoryMenu = () => {
     dom.categoryMenu.innerHTML = '';
     
-    const createBtn = (id, text) => {
+    const createMenuButton = (id, text, className = '') => {
         const btn = document.createElement('button');
         btn.dataset.id = id;
         btn.textContent = text;
-        btn.className = `category-menu-item w-full text-left px-3 py-2 rounded-md text-sm truncate hover:bg-slate-200 dark:hover:bg-slate-700`;
+        btn.className = `category-menu-item w-full text-left px-3 py-2 rounded-md text-sm truncate hover:bg-slate-200 dark:hover:bg-slate-700 ${className}`;
         if (currentCategory === id) btn.classList.add('active');
         btn.addEventListener('click', (e) => { 
             e.stopPropagation();
@@ -139,64 +140,48 @@ const renderCategoryMenu = () => {
             setupRecordsListener();
         });
         return btn;
-    }
-
-    const createSubMenu = (baseCategory, title) => {
-        const details = document.createElement('details');
-        const summary = document.createElement('summary');
-        summary.className = `flex items-center justify-between category-menu-item w-full text-left px-3 py-2 rounded-md text-sm font-semibold truncate hover:bg-slate-200 dark:hover:bg-slate-700`;
-        summary.innerHTML = `<span>${title}</span><svg class="chevron h-4 w-4 text-slate-500" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" /></svg>`;
-        
-        details.appendChild(summary);
-
-        // --- TASK 2: Restructure Common Faults menu ---
-        if (baseCategory === 'common-fault') {
-            if (groupedFaults.size > 0) {
-                const linkedIssuesDetails = document.createElement('details');
-                const linkedIssuesSummary = document.createElement('summary');
-                linkedIssuesSummary.className = `flex items-center justify-between category-menu-item w-full text-left rounded-md text-sm truncate hover:bg-slate-200 dark:hover:bg-slate-700 submenu-item font-medium`;
-                linkedIssuesSummary.innerHTML = `<span>Linked Issues</span><svg class="chevron h-4 w-4 text-slate-500" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" /></svg>`;
-                linkedIssuesDetails.appendChild(linkedIssuesSummary);
-
-                groupedFaults.forEach((group, groupId) => {
-                    const groupBtn = createBtn(groupId, group.title);
-                    groupBtn.classList.add('submenu-item-nested', 'font-normal');
-                    linkedIssuesDetails.appendChild(groupBtn);
-                });
-                details.appendChild(linkedIssuesDetails);
-                
-                const isGroupId = (id) => id.length === 20 && /^[a-zA-Z0-9]+$/.test(id);
-                if (isGroupId(currentCategory)) {
-                    linkedIssuesDetails.open = true;
-                }
-            }
-        }
-        
-        const openBtn = createBtn(`${baseCategory}-open`, 'Open');
-        openBtn.classList.add('submenu-item');
-        const closedBtn = createBtn(`${baseCategory}-closed`, 'Closed');
-        closedBtn.classList.add('submenu-item');
-        
-        details.appendChild(openBtn);
-        details.appendChild(closedBtn);
-        
-        const isGroupId = mainCategory => mainCategory.length === 20 && /^[a-zA-Z0-9]+$/.test(mainCategory);
-        if (currentCategory.startsWith(baseCategory) || (baseCategory === 'common-fault' && isGroupId(currentCategory))) {
-            details.open = true;
-        }
-
-        return details;
     };
+
+    const createMenuHeader = (text, className = '') => {
+        const div = document.createElement('div');
+        div.textContent = text;
+        div.className = `px-3 pt-4 pb-1 text-xs font-bold uppercase text-slate-500 dark:text-slate-400 ${className}`;
+        return div;
+    };
+
+    // Common Faults
+    dom.categoryMenu.appendChild(createMenuHeader('Common Faults'));
+    const linkedIssuesHeader = createMenuHeader('Linked Issues', 'submenu-item !pt-2');
+    dom.categoryMenu.appendChild(linkedIssuesHeader);
+    if (groupedFaults.size > 0) {
+        groupedFaults.forEach((group, groupId) => {
+            dom.categoryMenu.appendChild(createMenuButton(groupId, group.records[0].title, 'submenu-item-nested font-normal'));
+        });
+    } else {
+        const noLinked = document.createElement('p');
+        noLinked.className = 'text-xs text-slate-400 submenu-item-nested';
+        noLinked.textContent = 'No linked issues.';
+        dom.categoryMenu.appendChild(noLinked);
+    }
+    dom.categoryMenu.appendChild(createMenuButton('common-fault-open', 'Open', 'submenu-item'));
+    dom.categoryMenu.appendChild(createMenuButton('common-fault-closed', 'Closed', 'submenu-item'));
+
+    // General
+    dom.categoryMenu.appendChild(createMenuHeader('General'));
+    dom.categoryMenu.appendChild(createMenuButton('general-open', 'Open', 'submenu-item'));
+    dom.categoryMenu.appendChild(createMenuButton('general-closed', 'Closed', 'submenu-item'));
+
+    // Q&A
+    dom.categoryMenu.appendChild(createMenuHeader('Q&A'));
+    dom.categoryMenu.appendChild(createMenuButton('qa-open', 'Open', 'submenu-item'));
+    dom.categoryMenu.appendChild(createMenuButton('qa-closed', 'Closed', 'submenu-item'));
     
-    dom.categoryMenu.appendChild(createBtn('all', 'All Records'));
-    dom.categoryMenu.appendChild(createSubMenu('qa', 'Q&A'));
-    dom.categoryMenu.appendChild(createSubMenu('common-fault', 'Common Faults'));
-    dom.categoryMenu.appendChild(createSubMenu('general', 'General'));
-    
+    // Other Filters
     const divider = document.createElement('hr');
     divider.className = "my-2 border-slate-200 dark:border-slate-700";
     dom.categoryMenu.appendChild(divider);
-    dom.categoryMenu.appendChild(createBtn('samsung-action-tracker', 'Samsung Action Tracker'));
+    dom.categoryMenu.appendChild(createMenuButton('samsung-action-tracker', 'Samsung Action Tracker'));
+    dom.categoryMenu.appendChild(createMenuButton('all', 'All Records'));
 };
 
 
@@ -418,6 +403,7 @@ dom.closeLinkUnlinkModal.addEventListener('click', () => {
     recordForLinking = null;
 });
 
+// --- TASK 2: Updated "Manage Links" logic ---
 const openLinkUnlinkModal = (record) => {
     document.getElementById('link-unlink-title').textContent = record.title;
     
@@ -437,18 +423,23 @@ const openLinkUnlinkModal = (record) => {
     }
 
     dom.linkList.innerHTML = '';
-    const similarFaults = findSimilarFaults(record.title, record.modelNumber)
-        .filter(fault => fault.id !== record.id && !currentlyLinkedIds.has(fault.id));
+    // Show all open common faults, not just similar ones
+    const availableToLink = allRecords.filter(fault => 
+        fault.category === 'common-fault' && 
+        !fault.isClosed &&
+        fault.id !== record.id && 
+        !currentlyLinkedIds.has(fault.id)
+    );
     
-    if (similarFaults.length > 0) {
-        similarFaults.forEach(fault => {
+    if (availableToLink.length > 0) {
+        availableToLink.forEach(fault => {
             const item = document.createElement('div');
             item.className = 'flex justify-between items-center';
             item.innerHTML = `<span>${fault.title}</span><button data-id="${fault.id}" data-title="${fault.title}" class="link-fault-btn text-green-500 hover:text-green-700 text-xs">Link</button>`;
             dom.linkList.appendChild(item);
         });
     } else {
-         dom.linkList.innerHTML = `<p class="text-xs text-slate-400">No new similar faults found to link.</p>`;
+         dom.linkList.innerHTML = `<p class="text-xs text-slate-400">No other open faults to link.</p>`;
     }
 
     dom.linkUnlinkModal.classList.remove('hidden');
@@ -649,8 +640,22 @@ const createRecord = async (recordData, relatedTo = []) => {
 
 dom.addRecordForm.addEventListener('submit', async (e) => {
     e.preventDefault();
-    const formData = new FormData(dom.addRecordForm); const recordData = Object.fromEntries(formData.entries());
+    const formData = new FormData(dom.addRecordForm);
+    const recordData = Object.fromEntries(formData.entries());
     if (!recordData.title || !currentUserDisplayName) return;
+
+    // --- TASK 3: Auto-link by serial number ---
+    if (recordData.serialNumber) {
+        const sn = recordData.serialNumber.trim().toLowerCase();
+        if (sn) {
+            const existingRecord = allRecords.find(r => r.serialNumber && r.serialNumber.trim().toLowerCase() === sn);
+            if (existingRecord) {
+                createRecord(recordData, [{ id: existingRecord.id, title: existingRecord.title }]);
+                alert(`Record created and automatically linked to existing record with the same serial number:\n"${existingRecord.title}"`);
+                return; 
+            }
+        }
+    }
     
     if (currentFormCategory === 'common-fault') {
         const similarFaults = findSimilarFaults(recordData.title, recordData.modelNumber);
