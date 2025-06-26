@@ -8,7 +8,7 @@ const SHARED_PASSWORD = "__SHARED_PASSWORD__" || "samtech";
 let app, db, recordsUnsubscribe;
 let allRecords = [];
 let groupedFaults = new Map();
-let currentSort = 'newest', currentSearch = '', currentCategory = '', currentUserDisplayName = '';
+let currentSort = 'newest', currentSearch = '', currentCategory = 'all-open', currentUserDisplayName = '';
 let recordToDelete = null;
 let expandedRecordIds = new Set();
 let pendingRecordData = null;
@@ -135,6 +135,7 @@ const renderCategoryMenu = () => {
         btn.addEventListener('click', (e) => { 
             e.stopPropagation();
             currentCategory = id;
+            dom.filterControls.querySelectorAll('.control-btn').forEach(b => b.classList.remove('active'));
             setupRecordsListener();
         });
         return btn;
@@ -155,7 +156,21 @@ const renderCategoryMenu = () => {
         details.appendChild(openBtn);
         details.appendChild(closedBtn);
         
-        if (currentCategory.startsWith(baseCategory)) {
+        // --- BUG FIX: Add Linked Groups back to Common Faults sub-menu ---
+        if (baseCategory === 'common-fault' && groupedFaults.size > 0) {
+            const divider = document.createElement('hr');
+            divider.className = "my-1 mx-3 border-slate-200 dark:border-slate-700";
+            details.appendChild(divider);
+
+            groupedFaults.forEach((group, groupId) => {
+                const groupBtn = createBtn(groupId, group.title);
+                groupBtn.classList.add('submenu-item', 'font-semibold', 'truncate');
+                details.appendChild(groupBtn);
+            });
+        }
+        
+        const isGroupId = mainCategory => mainCategory.length === 20 && /^[a-zA-Z0-9]+$/.test(mainCategory);
+        if (currentCategory.startsWith(baseCategory) || (baseCategory === 'common-fault' && isGroupId(currentCategory))) {
             details.open = true;
         }
 
@@ -172,6 +187,7 @@ const renderCategoryMenu = () => {
     dom.categoryMenu.appendChild(divider);
     dom.categoryMenu.appendChild(createBtn('samsung-action-tracker', 'Samsung Action Tracker'));
 };
+
 
 const getRecordGroupId = (recordId) => {
     for (const [groupId, group] of groupedFaults.entries()) {
@@ -191,7 +207,6 @@ const renderRecordCard = (record) => {
     const subTitleHtml = `<p class="text-xs text-slate-500 dark:text-slate-400 mt-1">By <span class="font-semibold">${record.addedBy}</span> on ${formatDateTime(record.createdAt)}</p>`;
     const samsungTrackerHtml = record.onSamsungTracker ? `<button class="filter-sat-btn text-xs font-bold bg-green-500 text-white px-2 py-1 rounded-full transition-transform hover:scale-105">Samsung Action Tracker</button>` : '';
     
-    // --- TASK 1: Add link icon visual indicator ---
     const isLinked = record.category === 'common-fault' && ((record.relatedTo && record.relatedTo.length > 0) || (record.relatedBy && record.relatedBy.length > 0));
     const linkIcon = isLinked ? `<svg class="h-4 w-4 text-cyan-500 ml-2" fill="none" viewBox="0 0 24 24" stroke="currentColor" title="This fault is linked to others."><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1"></path></svg>` : '';
     
@@ -243,9 +258,19 @@ const renderComments = (container, record) => {
 };
 
 const renderRecords = () => {
-    let recordsToDisplay = [...allRecords];
+    // --- BUG FIX: Corrected client-side display logic ---
+    let recordsToDisplay;
+    const isGroupId = currentCategory.length === 20 && /^[a-zA-Z0-9]+$/.test(currentCategory);
+
+    if (isGroupId && groupedFaults.has(currentCategory)) {
+        recordsToDisplay = groupedFaults.get(currentCategory).records;
+    } else {
+        recordsToDisplay = [...allRecords];
+    }
     
-    if (currentSearch) recordsToDisplay = recordsToDisplay.filter(r => Object.values(r).join(' ').toLowerCase().includes(currentSearch));
+    if (currentSearch) {
+        recordsToDisplay = recordsToDisplay.filter(r => Object.values(r).join(' ').toLowerCase().includes(currentSearch));
+    }
     
     dom.recordsContainer.innerHTML = '';
     if (recordsToDisplay.length === 0) { dom.recordsContainer.innerHTML = `<p class="text-slate-500 dark:text-slate-400">No records match your current filters.</p>`; return; }
@@ -256,7 +281,6 @@ const openEditModal = (record) => {
     document.getElementById('edit-record-title').textContent = record.title;
     dom.editRecordForm.querySelector('[name="id"]').value = record.id;
     setFormCategory(record.category, dom.editFormFieldsContainer, record);
-    // TASK 2: Show/Hide Manage Links button
     dom.manageLinksBtn.classList.toggle('hidden', record.category !== 'common-fault');
     dom.editRecordModal.classList.remove('hidden');
 };
@@ -275,17 +299,25 @@ const setupRecordsListener = () => {
     if (recordsUnsubscribe) recordsUnsubscribe();
     dom.loadingState.style.display = 'block';
     
-    let q;
-    let constraints = [];
-    const [mainCategory, subCategory] = currentCategory.split('-');
+    const constraints = [];
+    const isGroupId = currentCategory.length === 20 && /^[a-zA-Z0-9]+$/.test(currentCategory);
+    let [mainCategory, subCategory] = currentCategory.split('-');
+
+    // --- BUG FIX: Corrected query logic ---
+    let effectiveCategory = mainCategory;
+    if (isGroupId) {
+        effectiveCategory = 'common-fault'; // If viewing a group, query all common faults
+    }
     
-    // --- TASK 3: Updated query logic for sub-menus ---
-    if (mainCategory === 'all') {
-        // No category filter
-    } else if (mainCategory === 'samsung-action-tracker') {
+    if (effectiveCategory === 'my') {
+        constraints.push(where('addedBy', '==', currentUserDisplayName));
+    } else if (effectiveCategory === 'samsung-action-tracker') {
         constraints.push(where('onSamsungTracker', '==', true));
-    } else {
-        constraints.push(where('category', '==', mainCategory));
+    } else if (effectiveCategory !== 'all') {
+        constraints.push(where('category', '==', effectiveCategory));
+    }
+    
+    if (!isGroupId) { // Don't apply status filter when viewing a specific group
         if (subCategory === 'closed') {
             constraints.push(where('isClosed', '==', true));
         } else if (subCategory === 'open') {
@@ -297,7 +329,7 @@ const setupRecordsListener = () => {
     const sortDirection = currentSort === 'oldest' ? 'asc' : 'desc';
     constraints.push(orderBy(sortField, sortDirection));
 
-    q = query(collection(db, `/artifacts/${appId}/public/data/records`), ...constraints);
+    const q = query(collection(db, `/artifacts/${appId}/public/data/records`), ...constraints);
     
     recordsUnsubscribe = onSnapshot(q, (snapshot) => {
         dom.loadingState.style.display = 'none';
@@ -337,9 +369,9 @@ dom.filterControls.addEventListener('click', (e) => {
     if (btn && btn.dataset.filter) {
         const filter = btn.dataset.filter;
         let newCategory = 'all';
-        if(filter === 'open') newCategory = 'all-open';
-        else if(filter === 'closed') newCategory = 'all-closed';
-        else if(filter === 'my') newCategory = 'my';
+        if (filter === 'open') newCategory = 'all-open';
+        else if (filter === 'closed') newCategory = 'all-closed';
+        else if (filter === 'my') newCategory = 'my';
         currentCategory = newCategory;
         
         dom.filterControls.querySelectorAll('.control-btn').forEach(b => b.classList.remove('active'));
@@ -365,7 +397,6 @@ dom.deleteRecordBtn.addEventListener('click', () => {
 dom.cancelDelete.addEventListener('click', () => { recordToDelete = null; dom.confirmDeleteModal.classList.add('hidden'); });
 dom.confirmDeleteBtn.addEventListener('click', async () => { if (recordToDelete) { await deleteDoc(doc(db, `/artifacts/${appId}/public/data/records`, recordToDelete)); dom.editRecordModal.classList.add('hidden'); dom.confirmDeleteModal.classList.add('hidden'); recordToDelete = null; } });
 
-// --- TASK 2: Event listeners for linking/unlinking ---
 dom.manageLinksBtn.addEventListener('click', () => {
     const recordId = dom.editRecordForm.querySelector('[name="id"]').value;
     recordForLinking = allRecords.find(r => r.id === recordId);
@@ -380,7 +411,6 @@ dom.closeLinkUnlinkModal.addEventListener('click', () => {
 const openLinkUnlinkModal = (record) => {
     document.getElementById('link-unlink-title').textContent = record.title;
     
-    // Populate Unlink List
     dom.unlinkList.innerHTML = '';
     const currentlyLinkedIds = new Set();
     const linkedFaults = [...(record.relatedTo || []), ...(record.relatedBy || [])];
@@ -396,7 +426,6 @@ const openLinkUnlinkModal = (record) => {
         dom.unlinkList.innerHTML = `<p class="text-xs text-slate-400">Not linked to any faults.</p>`;
     }
 
-    // Populate Link List
     dom.linkList.innerHTML = '';
     const similarFaults = findSimilarFaults(record.title, record.modelNumber)
         .filter(fault => fault.id !== record.id && !currentlyLinkedIds.has(fault.id));
@@ -430,7 +459,8 @@ dom.linkUnlinkModal.addEventListener('click', async (e) => {
             transaction.update(sourceRef, { relatedTo: arrayUnion({ id: linkId, title: linkTitle }) });
             transaction.update(targetRef, { relatedBy: arrayUnion({ id: recordForLinking.id, title: recordForLinking.title }) });
         });
-        openLinkUnlinkModal(allRecords.find(r => r.id === recordForLinking.id)); // Refresh modal
+        const updatedRecord = allRecords.find(r => r.id === recordForLinking.id);
+        if(updatedRecord) openLinkUnlinkModal(updatedRecord);
     } else if (target.matches('.unlink-fault-btn')) {
         target.disabled = true;
         await runTransaction(db, async (transaction) => {
@@ -448,7 +478,8 @@ dom.linkUnlinkModal.addEventListener('click', async (e) => {
                 relatedBy: arrayRemove({ id: recordForLinking.id, title: sourceData.title })
             });
         });
-        openLinkUnlinkModal(allRecords.find(r => r.id === recordForLinking.id)); // Refresh modal
+        const updatedRecord = allRecords.find(r => r.id === recordForLinking.id);
+        if(updatedRecord) openLinkUnlinkModal(updatedRecord);
     }
 });
 
@@ -583,14 +614,12 @@ const findSimilarFaults = (title, modelNumber) => {
     return allRecords.filter(r => {
         if (r.category !== 'common-fault') return false;
         
-        // Model number match is a strong indicator
         if (modelNum && r.modelNumber && r.modelNumber.toLowerCase().trim() === modelNum) return true;
         
-        // Title similarity check
         if(titleWords.length === 0) return false;
         const existingWords = r.title.toLowerCase().split(' ');
         const matchCount = titleWords.filter(word => existingWords.includes(word)).length;
-        return matchCount >= 2; // At least two words in common
+        return matchCount >= 2;
     });
 };
 
