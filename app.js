@@ -144,30 +144,41 @@ const renderCategoryMenu = () => {
     const createSubMenu = (baseCategory, title) => {
         const details = document.createElement('details');
         const summary = document.createElement('summary');
-        summary.className = `flex items-center justify-between category-menu-item w-full text-left px-3 py-2 rounded-md text-sm truncate hover:bg-slate-200 dark:hover:bg-slate-700`;
+        summary.className = `flex items-center justify-between category-menu-item w-full text-left px-3 py-2 rounded-md text-sm font-semibold truncate hover:bg-slate-200 dark:hover:bg-slate-700`;
         summary.innerHTML = `<span>${title}</span><svg class="chevron h-4 w-4 text-slate-500" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" /></svg>`;
+        
+        details.appendChild(summary);
+
+        // --- TASK 2: Restructure Common Faults menu ---
+        if (baseCategory === 'common-fault') {
+            if (groupedFaults.size > 0) {
+                const linkedIssuesDetails = document.createElement('details');
+                const linkedIssuesSummary = document.createElement('summary');
+                linkedIssuesSummary.className = `flex items-center justify-between category-menu-item w-full text-left rounded-md text-sm truncate hover:bg-slate-200 dark:hover:bg-slate-700 submenu-item font-medium`;
+                linkedIssuesSummary.innerHTML = `<span>Linked Issues</span><svg class="chevron h-4 w-4 text-slate-500" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" /></svg>`;
+                linkedIssuesDetails.appendChild(linkedIssuesSummary);
+
+                groupedFaults.forEach((group, groupId) => {
+                    const groupBtn = createBtn(groupId, group.title);
+                    groupBtn.classList.add('submenu-item-nested', 'font-normal');
+                    linkedIssuesDetails.appendChild(groupBtn);
+                });
+                details.appendChild(linkedIssuesDetails);
+                
+                const isGroupId = (id) => id.length === 20 && /^[a-zA-Z0-9]+$/.test(id);
+                if (isGroupId(currentCategory)) {
+                    linkedIssuesDetails.open = true;
+                }
+            }
+        }
         
         const openBtn = createBtn(`${baseCategory}-open`, 'Open');
         openBtn.classList.add('submenu-item');
         const closedBtn = createBtn(`${baseCategory}-closed`, 'Closed');
         closedBtn.classList.add('submenu-item');
         
-        details.appendChild(summary);
         details.appendChild(openBtn);
         details.appendChild(closedBtn);
-        
-        // --- BUG FIX: Add Linked Groups back to Common Faults sub-menu ---
-        if (baseCategory === 'common-fault' && groupedFaults.size > 0) {
-            const divider = document.createElement('hr');
-            divider.className = "my-1 mx-3 border-slate-200 dark:border-slate-700";
-            details.appendChild(divider);
-
-            groupedFaults.forEach((group, groupId) => {
-                const groupBtn = createBtn(groupId, group.title);
-                groupBtn.classList.add('submenu-item', 'font-semibold', 'truncate');
-                details.appendChild(groupBtn);
-            });
-        }
         
         const isGroupId = mainCategory => mainCategory.length === 20 && /^[a-zA-Z0-9]+$/.test(mainCategory);
         if (currentCategory.startsWith(baseCategory) || (baseCategory === 'common-fault' && isGroupId(currentCategory))) {
@@ -258,7 +269,6 @@ const renderComments = (container, record) => {
 };
 
 const renderRecords = () => {
-    // --- BUG FIX: Corrected client-side display logic ---
     let recordsToDisplay;
     const isGroupId = currentCategory.length === 20 && /^[a-zA-Z0-9]+$/.test(currentCategory);
 
@@ -302,11 +312,10 @@ const setupRecordsListener = () => {
     const constraints = [];
     const isGroupId = currentCategory.length === 20 && /^[a-zA-Z0-9]+$/.test(currentCategory);
     let [mainCategory, subCategory] = currentCategory.split('-');
-
-    // --- BUG FIX: Corrected query logic ---
+    
     let effectiveCategory = mainCategory;
     if (isGroupId) {
-        effectiveCategory = 'common-fault'; // If viewing a group, query all common faults
+        effectiveCategory = 'common-fault';
     }
     
     if (effectiveCategory === 'my') {
@@ -317,7 +326,7 @@ const setupRecordsListener = () => {
         constraints.push(where('category', '==', effectiveCategory));
     }
     
-    if (!isGroupId) { // Don't apply status filter when viewing a specific group
+    if (!isGroupId) {
         if (subCategory === 'closed') {
             constraints.push(where('isClosed', '==', true));
         } else if (subCategory === 'open') {
@@ -347,6 +356,7 @@ const setupRecordsListener = () => {
         }
     }, (error) => { console.error("Firestore error:", error); dom.loadingState.innerHTML = `<p class="text-red-500">Error loading data. A required index is likely missing. Check console (F12) for a link.</p>`; });
 };
+
 
 const showApp = () => { dom.authContainer.style.display = 'none'; dom.namePromptModal.classList.add('hidden'); dom.appContainer.style.display = 'block'; dom.userNameDisplay.textContent = currentUserDisplayName; setupRecordsListener(); };
 const showLogin = () => { dom.authContainer.style.display = 'flex'; dom.appContainer.style.display = 'none'; if (recordsUnsubscribe) recordsUnsubscribe(); };

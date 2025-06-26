@@ -31,17 +31,17 @@
         .collapsible-header .chevron { transition: transform 0.3s; }
         .expanded > .collapsible-header .chevron { transform: rotate(180deg); }
 
-        /* --- TASK 4: Styles for visually pleasing sub-menu --- */
+        /* --- TASK 1 & 2: Styles for indented sub-menu hierarchy --- */
         details summary { list-style: none; cursor: pointer; }
         details summary::-webkit-details-marker { display: none; }
         details summary .chevron { transition: transform 0.2s; }
-        details[open] summary .chevron { transform: rotate(90deg); }
-        .submenu-item { padding-left: 2.5rem; }
+        details[open] > summary .chevron { transform: rotate(90deg); }
+        .submenu-item { padding-left: 2rem; }
+        .submenu-item-nested { padding-left: 3rem; }
     </style>
 </head>
 <body class="text-slate-800 dark:text-slate-200">
 
-    <!-- Authentication Container -->
     <div id="auth-container" class="min-h-screen flex items-center justify-center p-4">
         <div class="max-w-md w-full bg-white dark:bg-slate-800 p-8 rounded-2xl shadow-xl">
             <div class="text-center mb-8"><img src="image/logo1.png" alt="Samtech Solutions Logo" class="mx-auto mb-4 h-16 w-auto"><h1 class="text-2xl font-bold text-slate-900 dark:text-white">Enter Access Password</h1></div>
@@ -89,7 +89,6 @@
     <div id="edit-time-modal" class="fixed inset-0 bg-black bg-opacity-70 flex items-center justify-center p-4 hidden"><div class="bg-white dark:bg-slate-800 rounded-xl shadow-2xl p-6 w-full max-w-sm"><h2 class="text-xl font-semibold mb-1 text-slate-900 dark:text-white">Edit Timestamp</h2><p id="edit-time-title" class="text-sm text-slate-500 dark:text-slate-400 mb-4 truncate"></p><form id="edit-time-form"><input type="hidden" name="id"><div class="space-y-4"><input id="edit-time-input" type="datetime-local" class="w-full p-2 border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-700 rounded-lg text-slate-900 dark:text-slate-200"></div><div class="mt-6 flex justify-end space-x-3"><button type="button" id="cancel-time-edit" class="bg-slate-200 dark:bg-slate-600 font-semibold px-4 py-2 rounded-lg">Cancel</button><button type="submit" id="save-time-edit" class="bg-indigo-600 text-white font-semibold px-4 py-2 rounded-lg">Save Time</button></div></form></div></div>
     <div id="confirm-delete-modal" class="fixed inset-0 bg-black bg-opacity-70 flex items-center justify-center p-4 hidden"><div class="bg-white dark:bg-slate-800 rounded-xl shadow-2xl p-6 w-full max-w-sm"><h2 class="text-xl font-semibold mb-2 text-slate-900 dark:text-white">Are you sure?</h2><p class="text-sm text-slate-600 dark:text-slate-400 mb-1">You are about to delete:</p><p id="delete-record-title" class="text-sm font-semibold text-red-600 dark:text-red-400 mb-4 truncate"></p><p class="text-sm text-slate-600 dark:text-slate-400 mb-4">This action cannot be undone.</p><div class="mt-6 flex justify-end space-x-3"><button type="button" id="cancel-delete" class="bg-slate-200 dark:bg-slate-600 font-semibold px-4 py-2 rounded-lg">Cancel</button><button type="button" id="confirm-delete-btn" class="bg-red-600 text-white font-semibold px-4 py-2 rounded-lg">Delete Record</button></div></div></div>
     <div id="link-fault-modal" class="fixed inset-0 bg-black bg-opacity-70 flex items-center justify-center p-4 hidden"><div class="bg-white dark:bg-slate-800 rounded-xl shadow-2xl p-6 w-full max-w-lg"><h2 class="text-xl font-semibold mb-1 text-slate-900 dark:text-white">Link to Existing Fault?</h2><p id="link-fault-title" class="text-sm text-slate-500 dark:text-slate-400 mb-4 truncate"></p><p class="text-sm mb-4">Found existing faults with a similar title or model number. Do you want to link this new fault to them?</p><div id="existing-faults-list" class="space-y-2 mb-4"></div><div class="mt-6 flex justify-end space-x-3"><button type="button" id="skip-link-btn" class="bg-slate-200 dark:bg-slate-600 font-semibold px-4 py-2 rounded-lg">Don't Link, Create New</button><button type="button" id="confirm-link-btn" class="bg-indigo-600 text-white font-semibold px-4 py-2 rounded-lg">Link and Create</button></div></div></div>
-    <!-- TASK 2: New modal for linking/unlinking -->
     <div id="link-unlink-modal" class="fixed inset-0 bg-black bg-opacity-70 flex items-center justify-center p-4 hidden"><div class="bg-white dark:bg-slate-800 rounded-xl shadow-2xl p-6 w-full max-w-2xl"><h2 class="text-xl font-semibold mb-1 text-slate-900 dark:text-white">Manage Links</h2><p id="link-unlink-title" class="text-sm text-slate-500 dark:text-slate-400 mb-4 truncate"></p><div class="grid grid-cols-1 md:grid-cols-2 gap-6"><div id="unlink-container"> <h3 class="font-semibold mb-2">Currently Linked</h3> <div id="unlink-list" class="space-y-2 text-sm"></div></div><div id="link-container"> <h3 class="font-semibold mb-2">Available to Link</h3> <div id="link-list" class="space-y-2 text-sm"></div></div></div><div class="mt-6 flex justify-end space-x-3"><button type="button" id="close-link-unlink-modal" class="bg-slate-200 dark:bg-slate-600 font-semibold px-4 py-2 rounded-lg">Close</button></div></div></div>
 
     <script src="app.js" type="module"></script>
