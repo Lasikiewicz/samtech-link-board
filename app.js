@@ -9,7 +9,7 @@ let app, db, recordsUnsubscribe, presenceUnsubscribe;
 let allRecords = [];
 let groupedFaults = new Map();
 let currentSearch = '', currentCategory = 'all', currentUserDisplayName = '';
-let currentStatusFilter = 'open'; // --- TASK 1: New state for status filter
+let currentStatusFilter = 'open';
 let recordToDelete = null;
 let expandedRecordIds = new Set();
 let pendingRecordData = null;
@@ -34,8 +34,8 @@ const dom = {
     formCategorySelector: document.getElementById('form-category-selector'), formFieldsContainer: document.getElementById('form-fields-container'),
     editRecordModal: document.getElementById('edit-record-modal'), editRecordForm: document.getElementById('edit-record-form'),
     editFormFieldsContainer: document.getElementById('edit-form-fields-container'), cancelEdit: document.getElementById('cancel-edit'),
-    deleteRecordBtn: document.getElementById('delete-record-btn'), 
-    deleteRecordBtnBottom: document.getElementById('delete-record-btn-bottom'),
+    // --- BUG FIX: Removed duplicate button references ---
+    deleteRecordBtn: document.getElementById('delete-record-btn-bottom'), 
     manageLinksBtn: document.getElementById('manage-links-btn'),
     editTimeModal: document.getElementById('edit-time-modal'), editTimeForm: document.getElementById('edit-time-form'), cancelTimeEdit: document.getElementById('cancel-time-edit'),
     namePromptModal: document.getElementById('name-prompt-modal'), namePromptForm: document.getElementById('name-prompt-form'),
@@ -129,7 +129,6 @@ const groupCommonFaults = () => {
     groupedFaults = groups;
 };
 
-// --- TASK 1, 2, 3: Simplified menu, adding model filters ---
 const renderCategoryMenu = () => {
     dom.categoryMenu.innerHTML = '';
     const isGroupId = (id) => id.length === 20 && /^[a-zA-Z0-9]+$/.test(id);
@@ -148,24 +147,26 @@ const renderCategoryMenu = () => {
         return btn;
     };
     
-    // Main Filters
     dom.categoryMenu.appendChild(createMenuButton('all', 'All Records', 'level-1'));
     
-    // Categories
     const catHeader = document.createElement('div');
     catHeader.textContent = 'Categories';
     catHeader.className = 'menu-header';
     dom.categoryMenu.appendChild(catHeader);
     dom.categoryMenu.appendChild(createMenuButton('common-fault', 'Common Faults', 'level-2'));
     if(groupedFaults.size > 0) {
-        groupedFaults.forEach((group, groupId) => {
+        const sortedGroups = Array.from(groupedFaults.entries()).sort(([, groupA], [, groupB]) => {
+            const timeA = groupA.records[0]?.createdAt?.seconds || 0;
+            const timeB = groupB.records[0]?.createdAt?.seconds || 0;
+            return timeB - timeA;
+        });
+        sortedGroups.forEach(([groupId, group]) => {
             dom.categoryMenu.appendChild(createMenuButton(groupId, group.records[0].title, 'level-3 font-normal'));
         });
     }
     dom.categoryMenu.appendChild(createMenuButton('general', 'General', 'level-2'));
     dom.categoryMenu.appendChild(createMenuButton('qa', 'Q&A', 'level-2'));
     
-    // Other Filters
     const otherHeader = document.createElement('div');
     otherHeader.textContent = 'Other Filters';
     otherHeader.className = 'menu-header';
@@ -301,7 +302,6 @@ const openTimeEditModal = (record) => {
     dom.editTimeModal.classList.remove('hidden');
 };
 
-// --- TASK 1: Refactored query logic ---
 const setupRecordsListener = () => {
     if (recordsUnsubscribe) recordsUnsubscribe();
     dom.loadingState.style.display = 'block';
@@ -310,7 +310,6 @@ const setupRecordsListener = () => {
     const isGroupId = currentCategory.length === 20 && /^[a-zA-Z0-9]+$/.test(currentCategory);
     let effectiveCategory = isGroupId ? 'common-fault' : currentCategory;
     
-    // Handle main category filter
     if (effectiveCategory.startsWith('model-')) {
         const prefix = effectiveCategory.split('-')[1];
         constraints.push(where('modelNumber', '>=', prefix));
@@ -323,7 +322,6 @@ const setupRecordsListener = () => {
         constraints.push(where('category', '==', effectiveCategory));
     }
     
-    // Handle status filter from top controls
     if (currentStatusFilter === 'closed') {
         constraints.push(where('isClosed', '==', true));
     } else if (currentStatusFilter === 'open') {
@@ -414,7 +412,7 @@ dom.cancelAdd.addEventListener('click', () => dom.addRecordModal.classList.add('
 dom.cancelEdit.addEventListener('click', () => dom.editRecordModal.classList.add('hidden'));
 dom.cancelTimeEdit.addEventListener('click', () => dom.editTimeModal.classList.add('hidden'));
 
-// --- TASK 1: Add listener for new filter controls ---
+// --- BUG FIX: Add listener for new filter controls ---
 dom.filterControls.addEventListener('click', (e) => {
     const btn = e.target.closest('.control-btn');
     if (btn) {
@@ -425,17 +423,18 @@ dom.filterControls.addEventListener('click', (e) => {
     }
 });
 
-// Both delete buttons trigger the same confirmation flow
 [dom.deleteRecordBtn, dom.deleteRecordBtnBottom].forEach(btn => {
-    btn.addEventListener('click', () => {
-        const recordId = dom.editRecordForm.querySelector('[name="id"]').value;
-        recordToDelete = recordId;
-        const record = allRecords.find(r => r.id === recordToDelete);
-        if (record) {
-            document.getElementById('delete-record-title').textContent = record.title;
-        }
-        dom.confirmDeleteModal.classList.remove('hidden');
-    });
+    if (btn) { // Check if button exists before adding listener
+        btn.addEventListener('click', () => {
+            const recordId = dom.editRecordForm.querySelector('[name="id"]').value;
+            recordToDelete = recordId;
+            const record = allRecords.find(r => r.id === recordToDelete);
+            if (record) {
+                document.getElementById('delete-record-title').textContent = record.title;
+            }
+            dom.confirmDeleteModal.classList.remove('hidden');
+        });
+    }
 });
 
 dom.cancelDelete.addEventListener('click', () => { recordToDelete = null; dom.confirmDeleteModal.classList.add('hidden'); });
@@ -564,7 +563,6 @@ dom.recordsContainer.addEventListener('click', async (e) => {
         return;
     }
     
-    // --- TASK 3: Add handler for new model filter buttons ---
     if (e.target.closest('.filter-model-btn')) {
         e.stopPropagation();
         const prefix = e.target.dataset.filterPrefix;
