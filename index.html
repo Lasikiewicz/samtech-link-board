@@ -56,26 +56,27 @@
     <div id="app-container" class="mx-auto p-4 sm:p-6 lg:p-8" style="max-width: 80%;">
       <div class="grid grid-cols-1 lg:grid-cols-4 gap-8">
         <aside class="lg:col-span-1">
-            <div class="sticky top-8">
-                <img src="image/logo1.png" alt="Samtech Solutions Logo" class="w-full mb-6">
-                <div class="mb-4 text-xs text-slate-500">Signed in as: <span id="user-name-display" class="font-mono font-semibold"></span></div>
-                <div class="mt-4"><h3 class="text-xs font-bold uppercase text-slate-500">Active Users</h3><ul id="active-users-list" class="mt-1 text-sm space-y-1 font-mono"></ul></div>
-                <hr class="my-4 border-slate-200">
-                <nav id="category-menu" class="space-y-1"></nav>
+            <div class="sticky top-8 flex flex-col h-[calc(100vh-4rem)]">
+                <div>
+                    <img src="image/logo1.png" alt="Samtech Solutions Logo" class="w-full mb-6">
+                    <div class="mb-4 text-xs text-slate-500">Signed in as: <span id="user-name-display" class="font-mono font-semibold"></span></div>
+                    <div class="mt-4"><h3 class="text-xs font-bold uppercase text-slate-500">Active Users</h3><ul id="active-users-list" class="mt-1 text-sm space-y-1 font-mono"></ul></div>
+                    <hr class="my-4 border-slate-200">
+                    <nav id="category-menu" class="space-y-1"></nav>
+                </div>
+                <div class="mt-auto pt-4">
+                    <button id="logout-btn" class="w-full bg-red-500 text-white font-semibold px-4 py-2 rounded-lg hover:bg-red-600">Logout</button>
+                </div>
             </div>
         </aside>
         <main class="lg:col-span-3">
-            <header class="mb-6">
-                <div class="flex flex-wrap gap-4 justify-between items-center">
-                    <div><h1 class="text-3xl sm:text-4xl font-bold text-slate-900">Samtech Tracker</h1></div>
-                    <div class="flex items-center gap-4">
-                        <button id="add-new-record-btn" class="bg-indigo-600 text-white font-semibold px-4 py-2 rounded-lg hover:bg-indigo-700">Add New Record</button>
-                        <button id="logout-btn" class="bg-red-500 text-white font-semibold px-4 py-2 rounded-lg hover:bg-red-600">Logout</button>
-                    </div>
+            <header class="mb-6 flex items-center gap-4">
+                <div class="flex-grow">
+                    <input id="search-input" type="search" placeholder="&#x1F50D; Search all record fields..." class="w-full px-4 py-2 border border-slate-300 bg-white rounded-lg">
                 </div>
+                <button id="add-new-record-btn" class="bg-indigo-600 text-white font-semibold px-4 py-2 rounded-lg hover:bg-indigo-700 flex-shrink-0">Add New Record</button>
             </header>
             <div class="bg-white p-4 rounded-xl shadow-lg mb-4 space-y-4">
-                <input id="search-input" type="search" placeholder="&#x1F50D; Search all record fields..." class="w-full px-4 py-2 border border-slate-300 bg-white rounded-lg">
                 <div class="flex items-center gap-2">
                     <span class="text-sm font-semibold">Show:</span>
                     <div id="filter-controls" class="flex gap-2">
@@ -98,9 +99,6 @@
                 <h2 class="text-xl font-semibold mb-1 text-slate-900">Edit Record</h2>
                 <p id="edit-record-title" class="text-sm text-slate-500 truncate"></p>
             </div>
-            <button type="button" id="delete-record-btn" title="Delete Record" class="p-2 -mt-2 -mr-2 text-slate-400 rounded-full hover:bg-red-100 hover:text-red-600">
-                <svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
-            </button>
         </div>
         <form id="edit-record-form"><input type="hidden" name="id"><div id="edit-form-fields-container" class="space-y-4"></div>
         <div id="edit-form-actions" class="mt-6 flex justify-end items-center space-x-2">

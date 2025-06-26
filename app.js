@@ -129,7 +129,7 @@ const groupCommonFaults = () => {
     groupedFaults = groups;
 };
 
-// --- TASK 1: Simplified menu, removed sub-menus for open/closed ---
+// --- TASK 1, 2, 3: Simplified menu, adding model filters ---
 const renderCategoryMenu = () => {
     dom.categoryMenu.innerHTML = '';
     const isGroupId = (id) => id.length === 20 && /^[a-zA-Z0-9]+$/.test(id);
@@ -150,7 +150,6 @@ const renderCategoryMenu = () => {
     
     // Main Filters
     dom.categoryMenu.appendChild(createMenuButton('all', 'All Records', 'level-1'));
-    dom.categoryMenu.appendChild(createMenuButton('my', 'My Records', 'level-1'));
     
     // Categories
     const catHeader = document.createElement('div');
@@ -172,7 +171,6 @@ const renderCategoryMenu = () => {
     otherHeader.className = 'menu-header';
     dom.categoryMenu.appendChild(otherHeader);
     dom.categoryMenu.appendChild(createMenuButton('samsung-action-tracker', 'Samsung Action Tracker', 'level-2'));
-    // TASK 3: Add Model Type filters
     dom.categoryMenu.appendChild(createMenuButton('model-RB', 'REF Models', 'level-2'));
     dom.categoryMenu.appendChild(createMenuButton('model-DW', 'DW Models', 'level-2'));
 };
@@ -199,7 +197,6 @@ const renderRecordCard = (record) => {
     if (record.onSamsungTracker) {
         specialTags.push(`<button class="filter-sat-btn text-xs font-bold bg-green-500 text-white px-2 py-1 rounded-full transition-transform hover:scale-105">Samsung Action Tracker</button>`);
     }
-    // TASK 3: Add REF/DW buttons
     if (record.modelNumber?.toUpperCase().startsWith('RB')) {
         specialTags.push(`<button class="filter-model-btn text-xs font-bold bg-sky-500 text-white px-2 py-1 rounded-full transition-transform hover:scale-105" data-filter-prefix="RB">REF</button>`);
     }
@@ -304,6 +301,7 @@ const openTimeEditModal = (record) => {
     dom.editTimeModal.classList.remove('hidden');
 };
 
+// --- TASK 1: Refactored query logic ---
 const setupRecordsListener = () => {
     if (recordsUnsubscribe) recordsUnsubscribe();
     dom.loadingState.style.display = 'block';
@@ -316,7 +314,7 @@ const setupRecordsListener = () => {
     if (effectiveCategory.startsWith('model-')) {
         const prefix = effectiveCategory.split('-')[1];
         constraints.push(where('modelNumber', '>=', prefix));
-        constraints.push(where('modelNumber', '<', prefix + 'Z')); // 'Z' is a simple way to get a range
+        constraints.push(where('modelNumber', '<', prefix + 'Z'));
     } else if (effectiveCategory === 'my') {
         constraints.push(where('addedBy', '==', currentUserDisplayName));
     } else if (effectiveCategory === 'samsung-action-tracker') {
@@ -325,7 +323,7 @@ const setupRecordsListener = () => {
         constraints.push(where('category', '==', effectiveCategory));
     }
     
-    // Handle status filter (Open/Closed/All)
+    // Handle status filter from top controls
     if (currentStatusFilter === 'closed') {
         constraints.push(where('isClosed', '==', true));
     } else if (currentStatusFilter === 'open') {
@@ -416,7 +414,7 @@ dom.cancelAdd.addEventListener('click', () => dom.addRecordModal.classList.add('
 dom.cancelEdit.addEventListener('click', () => dom.editRecordModal.classList.add('hidden'));
 dom.cancelTimeEdit.addEventListener('click', () => dom.editTimeModal.classList.add('hidden'));
 
-// TASK 1: Add listener for new filter controls
+// --- TASK 1: Add listener for new filter controls ---
 dom.filterControls.addEventListener('click', (e) => {
     const btn = e.target.closest('.control-btn');
     if (btn) {
@@ -566,7 +564,7 @@ dom.recordsContainer.addEventListener('click', async (e) => {
         return;
     }
     
-    // TASK 3: Add handler for new model filter buttons
+    // --- TASK 3: Add handler for new model filter buttons ---
     if (e.target.closest('.filter-model-btn')) {
         e.stopPropagation();
         const prefix = e.target.dataset.filterPrefix;
