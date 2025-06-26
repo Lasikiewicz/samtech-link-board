@@ -6,13 +6,14 @@ const appId = 'samtech-record-board';
 const SHARED_PASSWORD = "__SHARED_PASSWORD__" || "samtech";
 
 let app, db, recordsUnsubscribe;
-let allRecords = [];
+let allRecords = []; // This will hold the full dataset from the current main filter
 let groupedFaults = new Map();
 let currentSort = 'newest', currentSearch = '', currentCategory = '', currentFilter = 'all', currentUserDisplayName = '';
 let recordToDelete = null;
 let expandedRecordIds = new Set();
 let pendingRecordData = null;
 let isInitialLoad = true;
+let recentlySavedCommentInfo = null; // To track the last saved comment
 
 try { app = getApps().length ? getApp() : initializeApp(firebaseConfig); db = getFirestore(app); } catch (e) { console.error("Firebase init failed:", e); }
 
@@ -25,6 +26,7 @@ const dom = {
     filterControls: document.getElementById('filter-controls'), userNameDisplay: document.getElementById('user-name-display'),
     logoutBtn: document.getElementById('logout-btn'),
     authForm: document.getElementById('auth-form'), authPasswordInput: document.getElementById('auth-password'), authErrorEl: document.getElementById('auth-error'),
+    darkModeToggle: document.getElementById('dark-mode-toggle'), sunIcon: document.getElementById('sun-icon'), moonIcon: document.getElementById('moon-icon'),
     categoryMenu: document.getElementById('category-menu'),
     formCategorySelector: document.getElementById('form-category-selector'), formFieldsContainer: document.getElementById('form-fields-container'),
     editRecordModal: document.getElementById('edit-record-modal'), editRecordForm: document.getElementById('edit-record-form'),
@@ -36,11 +38,11 @@ const dom = {
     linkFaultModal: document.getElementById('link-fault-modal'), existingFaultsList: document.getElementById('existing-faults-list'), skipLinkBtn: document.getElementById('skip-link-btn'), confirmLinkBtn: document.getElementById('confirm-link-btn')
 };
 
-const formInputClasses = "w-full p-2 border border-slate-300 bg-white rounded placeholder-slate-400";
+const formInputClasses = "w-full p-2 border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-900 rounded text-slate-900 dark:text-slate-200 placeholder-slate-400 dark:placeholder-slate-500";
 const formFieldsTemplates = {
-    qa: `<input name="title" type="text" placeholder="Q&A Title" class="${formInputClasses}" required><input name="qaId" type="text" placeholder="Q&A Question ID" pattern="\\d{8}" title="8 digits" class="${formInputClasses}" required><input name="modelNumber" type="text" placeholder="Model Number" class="${formInputClasses}"><input name="serialNumber" type="text" placeholder="Serial Number" class="${formInputClasses}"><input name="serviceOrderNumber" type="text" placeholder="Service Order Number" pattern="\\d{10}" title="10 digits" class="${formInputClasses}"><input name="salesforceCaseNumber" type="text" placeholder="Salesforce Case Number" pattern="\\d{8}" title="8 digits" class="${formInputClasses}"><textarea name="description" placeholder="Description" class="${formInputClasses}" rows="4"></textarea>`,
-    'common-fault': `<input name="title" type="text" placeholder="Title / Description" class="${formInputClasses}" required><input name="modelNumber" type="text" placeholder="Model Number" class="${formInputClasses}"><input name="serialNumber" type="text" placeholder="Serial Number" class="${formInputClasses}"><input name="serviceOrderNumber" type="text" placeholder="Service Order Number" pattern="\\d{10}" title="10 digits" class="${formInputClasses}"><input name="salesforceCaseNumber" type="text" placeholder="Salesforce Case Number" pattern="\\d{8}" title="8 digits" class="${formInputClasses}"><textarea name="description" placeholder="Description" class="${formInputClasses}" rows="4"></textarea><label class="flex items-center mt-4"><input type="checkbox" name="onSamsungTracker" class="rounded mr-2"> On Samsung Action Tracker</label>`,
-    general: `<input name="title" type="text" placeholder="Title / Description" class="${formInputClasses}" required><input name="modelNumber" type="text" placeholder="Model Number" class="${formInputClasses}"><input name="serialNumber" type="text" placeholder="Serial Number" class="${formInputClasses}"><input name="serviceOrderNumber" type="text" placeholder="Service Order Number" pattern="\\d{10}" title="10 digits" class="${formInputClasses}"><input name="salesforceCaseNumber" type="text" placeholder="Salesforce Case Number" pattern="\\d{8}" title="8 digits" class="${formInputClasses}"><textarea name="description" placeholder="Description" class="${formInputClasses}" rows="4"></textarea>`
+    qa: `<input name="title" type="text" placeholder="Q&A Title" class="${formInputClasses}" required><input name="qaId" type="text" placeholder="Q&A Question ID" pattern="\\d{8}" title="8 digits" class="${formInputClasses}" required><input name="modelNumber" type="text" placeholder="Model Number" class="${formInputClasses}"><input name="serialNumber" type="text" placeholder="Serial Number" class="${formInputClasses}"><input name="serviceOrderNumber" type="text" placeholder="Service Order Number" pattern="\\d{10}" title="10 digits" class="${formInputClasses}"><input name="salesforceCaseNumber" type="text" placeholder="Salesforce Case Number" class="${formInputClasses}"><textarea name="description" placeholder="Description" class="${formInputClasses}" rows="4"></textarea>`,
+    'common-fault': `<input name="title" type="text" placeholder="Title" class="${formInputClasses}" required><input name="modelNumber" type="text" placeholder="Model Number" class="${formInputClasses}"><input name="serialNumber" type="text" placeholder="Serial Number" class="${formInputClasses}"><input name="serviceOrderNumber" type="text" placeholder="Service Order Number" pattern="\\d{10}" title="10 digits" class="${formInputClasses}"><input name="salesforceCaseNumber" type="text" placeholder="Salesforce Case Number" class="${formInputClasses}"><textarea name="description" placeholder="Description" class="${formInputClasses}" rows="4"></textarea><label class="flex items-center mt-4"><input type="checkbox" name="onSamsungTracker" class="rounded mr-2"> On Samsung Action Tracker</label>`,
+    general: `<input name="title" type="text" placeholder="Title" class="${formInputClasses}" required><input name="modelNumber" type="text" placeholder="Model Number" class="${formInputClasses}"><input name="serialNumber" type="text" placeholder="Serial Number" class="${formInputClasses}"><input name="serviceOrderNumber" type="text" placeholder="Service Order Number" pattern="\\d{10}" title="10 digits" class="${formInputClasses}"><input name="salesforceCaseNumber" type="text" placeholder="Salesforce Case Number" class="${formInputClasses}"><textarea name="description" placeholder="Description" class="${formInputClasses}" rows="4"></textarea>`
 };
 
 let currentFormCategory = 'qa';
@@ -58,25 +60,20 @@ const setFormCategory = (category, container, record = {}) => {
 };
 
 const formatDateTime = (timestamp) => timestamp?.seconds ? new Date(timestamp.seconds * 1000).toLocaleString('en-GB', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' }) : 'N/A';
-const calculateDaysOpen = (record) => {
-    if (!record.createdAt?.seconds) return '';
-    const start = new Date(record.createdAt.seconds * 1000);
-    const end = record.isClosed && record.closedAt?.seconds ? new Date(record.closedAt.seconds * 1000) : new Date();
-    const diffTime = Math.abs(end - start);
-    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-    return `(${diffDays} day${diffDays !== 1 ? 's' : ''})`;
-};
 
 const groupCommonFaults = () => {
     const commonFaults = allRecords.filter(r => r.category === 'common-fault');
     const recordMap = new Map(commonFaults.map(r => [r.id, r]));
-    groupedFaults.clear();
+    const groups = new Map();
     const visited = new Set();
+
     for (const fault of commonFaults) {
         if (visited.has(fault.id)) continue;
+        
         let currentGroupIds = new Set([fault.id]);
         let queue = [fault];
         visited.add(fault.id);
+
         while (queue.length > 0) {
             const currentFault = queue.shift();
             const allRelated = [...(currentFault.relatedTo || []), ...(currentFault.relatedBy || [])];
@@ -88,13 +85,15 @@ const groupCommonFaults = () => {
                 }
             }
         }
-        if (currentGroupIds.size > 1) {
-            const groupRecords = Array.from(currentGroupIds).map(id => recordMap.get(id));
-            groupRecords.sort((a,b) => (a.createdAt?.seconds || 0) - (b.createdAt?.seconds || 0));
-            const rootRecord = groupRecords[0];
-            if (rootRecord) groupedFaults.set(rootRecord.id, { title: rootRecord.title, records: groupRecords });
+        
+        const groupRecords = Array.from(currentGroupIds).map(id => recordMap.get(id));
+        groupRecords.sort((a,b) => (a.createdAt?.seconds || 0) - (b.createdAt?.seconds || 0));
+        const rootRecord = groupRecords[0];
+        if (rootRecord) {
+            groups.set(rootRecord.id, { title: rootRecord.title, records: groupRecords });
         }
     }
+    groupedFaults = groups;
 };
 
 const renderCategoryMenu = () => {
@@ -106,48 +105,48 @@ const renderCategoryMenu = () => {
         btn.dataset.id = id;
         btn.textContent = text;
         btn.title = text;
-        btn.className = `category-menu-item w-full text-left px-3 py-2 rounded-md text-sm truncate hover:bg-slate-200`;
+        btn.className = `category-menu-item w-full text-left px-3 py-2 rounded-md text-sm truncate hover:bg-slate-200 dark:hover:bg-slate-700`;
         if (level > 0) btn.style.paddingLeft = `${0.75 + (level * 0.75)}rem`;
         if (isGroupTitle) btn.classList.add('font-semibold');
         if (currentCategory === id) btn.classList.add('active');
         btn.addEventListener('click', () => { 
             currentCategory = id; 
-            currentFilter = id === 'action-tracker' ? 'open' : 'all'; 
+            currentFilter = 'all'; 
             dom.filterControls.querySelectorAll('.control-btn').forEach(b => b.classList.remove('active'));
-            dom.filterControls.querySelector(`[data-filter="${currentFilter}"]`).classList.add('active');
+            dom.filterControls.querySelector(`[data-filter="all"]`).classList.add('active');
             setupRecordsListener();
         });
         return btn;
     }
 
-    Object.entries(categories).forEach(([key, value]) => {
-        dom.categoryMenu.appendChild(createBtn(key, value));
-        if (key !== '') {
-            const details = document.createElement('details');
-            details.className = 'pl-4';
-            details.innerHTML = `<summary class="cursor-pointer text-sm font-medium py-1">Closed</summary>`;
-            details.appendChild(createBtn(`${key}-closed`, 'View Closed', 1));
-            dom.categoryMenu.appendChild(details);
+    dom.categoryMenu.appendChild(createBtn('', 'All Records'));
+    dom.categoryMenu.appendChild(createBtn('qa', 'Q&A'));
+    dom.categoryMenu.appendChild(createBtn('common-fault', 'Common Faults'));
+
+    if (groupedFaults.size > 0) {
+        const details = document.createElement('details');
+        details.className = 'pl-4';
+        details.innerHTML = `<summary class="cursor-pointer text-sm font-medium py-1">Linked Faults</summary>`;
+        if (groupedFaults.has(currentCategory)) {
+            details.open = true;
         }
-        if (key === 'common-fault' && groupedFaults.size > 0) {
-            const linkedDetails = document.createElement('details');
-            linkedDetails.className = 'pl-4';
-            linkedDetails.innerHTML = `<summary class="cursor-pointer text-sm font-medium py-1">Linked Faults</summary>`;
-            if (groupedFaults.has(currentCategory)) linkedDetails.open = true;
-            const subList = document.createElement('div');
-            subList.className = 'ml-2 border-l border-slate-200';
-            groupedFaults.forEach((group, groupId) => subList.appendChild(createBtn(groupId, group.title, 1, true)));
-            linkedDetails.appendChild(subList);
-            dom.categoryMenu.appendChild(linkedDetails);
-        }
-    });
-    
-    dom.categoryMenu.appendChild(createBtn('action-tracker', 'Samsung Action Tracker'));
+        const subList = document.createElement('div');
+        subList.className = 'ml-2 border-l border-slate-200 dark:border-slate-700';
+        groupedFaults.forEach((group, groupId) => {
+            const groupBtn = createBtn(groupId, group.title, 1, true);
+            subList.appendChild(groupBtn);
+        });
+        details.appendChild(subList);
+        dom.categoryMenu.appendChild(details);
+    }
+    dom.categoryMenu.appendChild(createBtn('general', 'General'));
 };
 
 const getRecordGroupId = (recordId) => {
     for (const [groupId, group] of groupedFaults.entries()) {
-        if(group.records.some(r => r.id === recordId)) return groupId;
+        if(group.records.some(r => r.id === recordId)) {
+            return groupId;
+        }
     }
     return null;
 };
@@ -155,116 +154,67 @@ const getRecordGroupId = (recordId) => {
 const renderRecordCard = (record) => {
     const card = document.createElement('div');
     card.dataset.id = record.id;
-    card.className = `record-card bg-white p-5 rounded-xl shadow-lg transition-all ${record.isClosed ? 'opacity-60' : ''}`;
+    card.className = `record-card bg-white dark:bg-slate-800 p-5 rounded-xl shadow-lg transition-all ${record.isClosed ? 'opacity-60' : ''}`;
     if (expandedRecordIds.has(record.id)) card.classList.add('expanded');
     
     const detailsHtml = `${record.qaId?`<div><dt class="font-semibold">Q&A ID:</dt><dd class="break-all">${record.qaId}</dd></div>`:''}${record.modelNumber?`<div><dt class="font-semibold">Model Number:</dt><dd class="break-all">${record.modelNumber}</dd></div>`:''}${record.serialNumber?`<div><dt class="font-semibold">Serial Number:</dt><dd class="break-all">${record.serialNumber}</dd></div>`:''}${record.serviceOrderNumber?`<div><dt class="font-semibold">Service Order Number:</dt><dd class="break-all">${record.serviceOrderNumber}</dd></div>`:''}${record.salesforceCaseNumber?`<div><dt class="font-semibold">Salesforce Case Number:</dt><dd class="break-all">${record.salesforceCaseNumber}</dd></div>`:''}`;
     const categoryDisplayNames = { qa: 'Q&A', 'common-fault': 'Common Fault', general: 'General' };
     const categoryColors = { qa: '#5fcae2', 'common-fault': '#4892cf', general: '#3f57ab' };
     const groupId = getRecordGroupId(record.id);
-    const linkedRecordsHtml = groupId ? `<div class="mt-2"><dt class="font-semibold">Linked Faults:</dt><dd><button class="linked-fault-btn text-indigo-600 underline" data-group-id="${groupId}">View Group</button></dd></div>` : '';
-    const descriptionHtml = `<div class="pt-2 font-semibold">Description:</div><p class="whitespace-pre-wrap">${record.description || 'N/A'}</p>`;
+    const linkedRecordsHtml = groupId ? `<div class="mt-2"><dt class="font-semibold">Linked Faults:</dt><dd><button class="linked-fault-btn text-indigo-600 dark:text-indigo-400 underline" data-group-id="${groupId}">View Group</button></dd></div>` : '';
 
-    const trackerBadge = record.onSamsungTracker ? `<span class="text-xs font-bold bg-green-500 text-white px-2 py-1 rounded-full">Samsung Action Tracker</span>` : '';
-    const closedBadge = record.isClosed ? `<span class="text-xs font-bold bg-slate-500 text-white px-2 py-1 rounded-full">CLOSED</span>` : '';
-    const daysOpenBadge = `<span class="text-xs text-slate-500">${calculateDaysOpen(record)}</span>`;
-
-    card.innerHTML = `
-        <div class="collapsible-header flex justify-between items-start cursor-pointer record-header">
-            <div class="flex items-center gap-3">
-                <span class="text-xs capitalize text-white px-2 py-0.5 rounded-full" style="background-color: ${categoryColors[record.category] || '#64748b'}">${categoryDisplayNames[record.category] || record.category}</span>
-                <h3 class="text-lg font-semibold text-indigo-600">${record.title}</h3>
-            </div>
-            <div class="flex items-center gap-2">
-                ${trackerBadge} ${closedBadge} ${daysOpenBadge}
-                <div class="actions flex-shrink-0 ml-4 space-x-2"></div>
-                <svg class="chevron h-5 w-5 transition-transform" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" /></svg>
-            </div>
-        </div>
-        <div class="collapsible-content details-container">
-            <div class="mt-4 pt-4 border-t text-sm space-y-2">
-                <dl class="grid grid-cols-1 md:grid-cols-2 gap-x-4 gap-y-1">${detailsHtml}${linkedRecordsHtml}</dl>
-                ${descriptionHtml}
-            </div>
-            <div class="comments-section mt-4 pt-4 border-t"></div>
-            <p class="text-xs text-slate-400 mt-4">Added by <span class="font-mono">${record.addedBy}</span> on ${formatDateTime(record.createdAt)}</p>
-        </div>`;
+    card.innerHTML = `<div class="collapsible-header flex justify-between items-start cursor-pointer record-header"><div class="flex items-center gap-3"><span class="text-xs capitalize text-white px-2 py-0.5 rounded-full" style="background-color: ${categoryColors[record.category] || '#64748b'}">${categoryDisplayNames[record.category] || record.category}</span><h3 class="text-lg font-semibold text-indigo-600 dark:text-indigo-400 break-all">${record.title}</h3></div><div class="flex items-center gap-2">${record.onSamsungTracker ? '<span class="text-xs font-bold bg-green-500 text-white px-2 py-1 rounded-full">Samsung Action Tracker</span>' : ''}${record.isClosed?'<span class="text-xs font-bold bg-slate-500 text-white px-2 py-1 rounded-full">CLOSED</span>':''}<div class="actions flex-shrink-0 ml-4 space-x-2"></div><svg class="chevron h-5 w-5 transition-transform" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" /></svg></div></div><div class="collapsible-content details-container"><div class="mt-4 pt-4 border-t border-slate-200 dark:border-slate-700 text-sm space-y-2"><dl class="grid grid-cols-1 md:grid-cols-2 gap-x-4 gap-y-1">${detailsHtml}${linkedRecordsHtml}</dl>${record.description?`<div class="pt-2"><p class="whitespace-pre-wrap">${record.description}</p></div>`:''}</div><div class="comments-section mt-4 pt-4 border-t border-slate-200 dark:border-slate-700"></div><p class="text-xs text-slate-400 dark:text-slate-500 mt-4">Added by <span class="font-mono">${record.addedBy}</span> on ${formatDateTime(record.createdAt)}</p></div>`;
     
-    renderComments(card.querySelector('.comments-section'), record);
-    if(card.classList.contains('expanded')) {
-        card.querySelector('.comments-section')?.classList.add('expanded');
+    // Automatically render comments if the card is expanded on initial render
+    if (expandedRecordIds.has(record.id)) {
+        renderComments(card.querySelector('.comments-section'), record);
     }
-    
-    const actions = card.querySelector('.actions');
-    actions.innerHTML = `<button class="time-btn" title="Edit Timestamp">&#x1F4C5;</button><button class="edit-btn" title="Edit">&#9998;</button><button class="close-btn" title="${record.isClosed ? 'Re-open' : 'Close'}">${record.isClosed ? '&#x1F513;' : '&#x1F512;'}</button>`;
-    actions.classList.add('text-slate-500');
-    actions.querySelectorAll('button').forEach(btn => btn.classList.add('hover:text-indigo-600', 'transition'));
-    actions.querySelector('.close-btn').classList.add('hover:text-red-600');
     
     return card;
 };
 
 const renderComments = (container, record) => {
-    container.innerHTML = `<h4 class="text-sm font-semibold mb-2">Comments</h4><div class="comments-list mt-2 space-y-3"></div>${!record.isClosed ? '<form class="add-comment-form mt-3 flex items-start gap-2"><textarea placeholder="Add a comment..." class="flex-grow w-full text-sm p-2 border rounded" rows="2"></textarea><button type="submit" class="bg-slate-600 text-white font-semibold text-sm px-4 py-2 rounded-lg hover:bg-slate-700 flex-shrink-0 disabled:opacity-50">Post</button></form>' : ''}`;
+    container.innerHTML = `<div class="collapsible-header flex justify-between items-center cursor-pointer"><h4 class="text-sm font-semibold">Updates & Comments</h4><svg class="chevron h-5 w-5 transition-transform" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" /></svg></div><div class="collapsible-content"><div class="comments-list mt-2 space-y-3 pr-2"></div>${!record.isClosed ? '<form class="add-comment-form mt-3 flex items-start gap-2"><textarea placeholder="Add a comment..." class="flex-grow w-full text-sm px-3 py-2 border rounded" rows="2"></textarea><button type="submit" class="bg-slate-600 text-white font-semibold text-sm px-4 py-2 rounded-lg hover:bg-slate-700 flex-shrink-0 disabled:opacity-50">Post</button></form>' : ''}</div>`;
     
     const commentsList = container.querySelector('.comments-list');
     if (record.comments && record.comments.length > 0) {
-         const sortedComments = record.comments.map((c, index) => ({...c, originalIndex: index, date: c.createdAt?.seconds ? new Date(c.createdAt.seconds * 1000) : new Date() })).sort((a,b) => a.date - b.date);
-        sortedComments.forEach((comment) => {
+         const sortedComments = record.comments.map(c => ({...c, date: c.createdAt?.seconds ? new Date(c.createdAt.seconds * 1000) : new Date() })).sort((a,b) => a.date - b.date);
+        sortedComments.forEach((comment, index) => {
             const commentDiv = document.createElement('div');
-            commentDiv.className = 'bg-slate-100 p-3 rounded-lg text-sm';
-            commentDiv.innerHTML = `<p class="text-xs text-slate-500 mb-1">By: <span class="font-mono">${comment.addedBy}</span> at ${formatDateTime(comment.createdAt)}</p><div class="comment-body flex justify-between items-start"><p class="comment-text break-words whitespace-pre-wrap flex-grow">${comment.text || ''}</p><div class="comment-actions flex-shrink-0 ml-2 space-x-2"><button class="edit-comment-btn" data-index="${comment.originalIndex}" title="Edit">&#9998;</button><button class="delete-comment-btn" data-index="${comment.originalIndex}" title="Delete">&#10006;</button></div></div>`;
+            commentDiv.className = 'bg-slate-100 dark:bg-slate-700 p-3 rounded-lg text-sm transition-all duration-300';
+            
+            // --- VISUAL INDICATOR LOGIC ---
+            if (recentlySavedCommentInfo && recentlySavedCommentInfo.recordId === record.id && recentlySavedCommentInfo.commentIndex === index) {
+                commentDiv.classList.add('bg-green-200', 'dark:bg-green-800');
+                setTimeout(() => {
+                    commentDiv.classList.remove('bg-green-200', 'dark:bg-green-800');
+                    recentlySavedCommentInfo = null; 
+                }, 2000);
+            }
+            
+            commentDiv.innerHTML = `<p class="text-xs text-slate-500 dark:text-slate-400 mb-1">By: <span class="font-mono">${comment.addedBy}</span> at ${formatDateTime(comment.createdAt)}</p><div class="comment-body flex justify-between items-start"><p class="comment-text break-words whitespace-pre-wrap flex-grow">${comment.text || ''}</p><div class="comment-actions flex-shrink-0 ml-2 space-x-2"><button class="edit-comment-btn" data-index="${index}" title="Edit">&#9998;</button><button class="delete-comment-btn" data-index="${index}" title="Delete">&#10006;</button></div></div>`;
             commentsList.appendChild(commentDiv);
         });
-    } else { commentsList.innerHTML = '<p class="text-xs text-slate-400">No comments yet.</p>'; }
+    } else { commentsList.innerHTML = '<p class="text-xs text-slate-400 dark:text-slate-500">No comments yet.</p>'; }
 };
 
 const renderRecords = () => {
-    dom.recordsContainer.innerHTML = '';
-    let recordsToDisplay = [...allRecords];
+     let recordsToDisplay = [...allRecords];
     if (currentCategory) {
-        if (currentCategory === 'action-tracker') {
-            recordsToDisplay = recordsToDisplay.filter(r => r.onSamsungTracker);
-        } else if(groupedFaults.has(currentCategory)) {
+        if(groupedFaults.has(currentCategory)) {
              recordsToDisplay = groupedFaults.get(currentCategory).records;
-        } else if (currentCategory.endsWith('-closed')) {
-            const cat = currentCategory.replace('-closed', '');
-            recordsToDisplay = allRecords.filter(r => r.category === cat && r.isClosed);
         } else {
-            recordsToDisplay = allRecords.filter(r => r.category === currentCategory);
+            recordsToDisplay = recordsToDisplay.filter(r => r.category === currentCategory);
         }
     }
     if (currentSearch) recordsToDisplay = recordsToDisplay.filter(r => Object.values(r).join(' ').toLowerCase().includes(currentSearch));
     
-    if (recordsToDisplay.length === 0) { dom.recordsContainer.innerHTML = `<p class="text-slate-500">No records match your current filters.</p>`; return; }
-    
+    dom.recordsContainer.innerHTML = '';
+    if (recordsToDisplay.length === 0) { dom.recordsContainer.innerHTML = `<p class="text-slate-500 dark:text-slate-400">No records match your current filters.</p>`; return; }
     recordsToDisplay.forEach(recordData => dom.recordsContainer.appendChild(renderRecordCard(recordData)));
 };
 
-const openEditModal = (record) => { 
-    dom.editRecordForm.querySelector('[name="id"]').value = record.id; 
-    setFormCategory(record.category, dom.editFormFieldsContainer, record); 
-    
-    if (record.category === 'common-fault') {
-        const allRelated = [...(record.relatedTo || []), ...(record.relatedBy || [])];
-        if (allRelated.length > 0) {
-            const unlinkContainer = document.createElement('div');
-            unlinkContainer.className = "mt-4 pt-4 border-t";
-            unlinkContainer.innerHTML = `<h3 class="text-md font-semibold mb-2">Linked Records</h3>`;
-            const list = document.createElement('ul');
-            list.className = "space-y-1";
-            allRelated.forEach(related => {
-                const item = document.createElement('li');
-                item.className = "flex justify-between items-center";
-                item.innerHTML = `<span>${related.title}</span><button type="button" class="unlink-btn text-red-500 text-xs hover:underline" data-unlink-id="${related.id}" data-unlink-title="${related.title}">Unlink</button>`;
-                list.appendChild(item);
-            });
-            unlinkContainer.appendChild(list);
-            dom.editFormFieldsContainer.appendChild(unlinkContainer);
-        }
-    }
-    dom.editRecordModal.classList.remove('hidden'); 
-};
+const openEditModal = (record) => { dom.editRecordForm.querySelector('[name="id"]').value = record.id; setFormCategory(record.category, dom.editFormFieldsContainer, record); dom.editRecordModal.classList.remove('hidden'); };
 const openTimeEditModal = (record) => {
     const form = dom.editTimeForm;
     form.querySelector('[name="id"]').value = record.id;
@@ -291,13 +241,17 @@ const setupRecordsListener = () => {
     
     recordsUnsubscribe = onSnapshot(q, (snapshot) => {
         dom.loadingState.style.display = 'none';
+        
+        const changes = snapshot.docChanges();
+        let shouldRerender = changes.some(change => change.type !== 'modified' || expandedRecordIds.has(change.doc.id));
+
         allRecords = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
         groupCommonFaults();
         renderRecords();
         renderCategoryMenu();
         if (isInitialLoad && currentSort === 'newest' && allRecords.length > 0) {
             expandedRecordIds.add(allRecords[0].id);
-            renderRecords();
+            renderRecords(); // Rerender to apply expansion
             isInitialLoad = false;
         }
     }, (error) => { console.error("Firestore error:", error); dom.loadingState.innerHTML = `<p class="text-red-500">Error loading data. A required index is likely missing. Check console (F12) for a link.</p>`; });
@@ -305,81 +259,6 @@ const setupRecordsListener = () => {
 
 const showApp = () => { dom.authContainer.style.display = 'none'; dom.namePromptModal.classList.add('hidden'); dom.appContainer.style.display = 'block'; dom.userNameDisplay.textContent = currentUserDisplayName; setupRecordsListener(); };
 const showLogin = () => { dom.authContainer.style.display = 'flex'; dom.appContainer.style.display = 'none'; if (recordsUnsubscribe) recordsUnsubscribe(); };
-
-dom.recordsContainer.addEventListener('click', async (e) => {
-    const recordCard = e.target.closest('.record-card');
-    if (!recordCard) return;
-    const recordId = recordCard.dataset.id;
-    let record = allRecords.find(r => r.id === recordId);
-    if (!record) return;
-
-    if (e.target.closest('.record-header') && !e.target.closest('.actions')) {
-        const isCurrentlyExpanded = recordCard.classList.contains('expanded');
-        if (!isCurrentlyExpanded) {
-            expandedRecordIds.add(recordId);
-        } else {
-            expandedRecordIds.delete(recordId);
-        }
-        renderRecords();
-    } else if (e.target.closest('.comments-section > .collapsible-header')) {
-        e.target.closest('.comments-section').classList.toggle('expanded');
-    } else if (e.target.classList.contains('edit-comment-btn')) {
-        const commentBody = e.target.closest('.comment-body');
-        const commentIndex = parseInt(e.target.dataset.index);
-        const currentText = commentBody.querySelector('.comment-text').textContent;
-        commentBody.innerHTML = `<textarea class="edit-comment-textarea flex-grow w-full text-sm p-2 border rounded">${currentText}</textarea><div class="flex flex-col ml-2 space-y-1"><button class="save-comment-btn text-xs bg-green-500 text-white px-2 py-1 rounded" data-index="${commentIndex}">Save</button><button class="cancel-comment-btn text-xs bg-gray-500 text-white px-2 py-1 rounded">Cancel</button></div>`;
-    } else if (e.target.classList.contains('save-comment-btn')) {
-         const commentIndex = parseInt(e.target.dataset.index);
-         const newText = e.target.closest('.comment-body').querySelector('.edit-comment-textarea').value;
-         const recordRef = doc(db, `/artifacts/${appId}/public/data/records`, recordId);
-         await runTransaction(db, async (transaction) => {
-             const recordDoc = await transaction.get(recordRef);
-             if (!recordDoc.exists()) throw "Document does not exist!";
-             const comments = recordDoc.data().comments;
-             comments[commentIndex].text = newText;
-             transaction.update(recordRef, { comments });
-         });
-    } else if (e.target.classList.contains('delete-comment-btn')) {
-        const commentIndex = parseInt(e.target.dataset.index);
-        await runTransaction(db, async (transaction) => {
-             const recordRef = doc(db, `/artifacts/${appId}/public/data/records`, recordId);
-             const recordDoc = await transaction.get(recordRef);
-             if(!recordDoc.exists()) throw "Document does not exist!";
-             const comments = recordDoc.data().comments;
-             comments.splice(commentIndex, 1);
-             transaction.update(recordRef, { comments });
-         });
-    } else if (e.target.classList.contains('cancel-comment-btn')) {
-        renderComments(e.target.closest('.comments-section'), record);
-        e.target.closest('.comments-section').classList.add('expanded');
-    } else if (e.target.classList.contains('linked-fault-btn')) {
-        e.stopPropagation();
-        const groupId = e.target.dataset.groupId;
-        dom.categoryMenu.querySelector(`[data-id="${groupId}"]`).click();
-    } else {
-        const actions = e.target.closest('.actions');
-        if (!actions) return;
-        if(e.target.closest('.edit-btn')) { e.stopPropagation(); openEditModal(record); }
-        if(e.target.closest('.close-btn')) { e.stopPropagation(); updateDoc(doc(db,`/artifacts/${appId}/public/data/records`,record.id),{isClosed:!record.isClosed, closedAt: !record.isClosed ? Timestamp.now() : null }); }
-        if(e.target.closest('.time-btn')) { e.stopPropagation(); openTimeEditModal(record); }
-    }
-});
-
-dom.recordsContainer.addEventListener('submit', async (e) => {
-    if (e.target.classList.contains('add-comment-form')) {
-        e.preventDefault();
-        const form = e.target; const textarea = form.querySelector('textarea'); const text = textarea.value.trim(); const submitBtn = form.querySelector('button');
-        const card = form.closest('.record-card');
-        const recordId = card.dataset.id;
-        if (!text) return;
-        submitBtn.disabled = true; submitBtn.textContent = '...';
-        try {
-            await updateDoc(doc(db, `/artifacts/${appId}/public/data/records`, recordId), { comments: arrayUnion({ text, addedBy: currentUserDisplayName, createdAt: Timestamp.now() }) });
-            textarea.value = '';
-            expandedRecordIds.add(recordId);
-        } finally { submitBtn.disabled = false; submitBtn.textContent = 'Post'; }
-    }
-});
 
 dom.searchInput.addEventListener('input', (e) => { currentSearch = e.target.value.toLowerCase(); renderRecords(); });
 [dom.sortControls, dom.filterControls].forEach(container => {
@@ -405,6 +284,121 @@ dom.deleteRecordBtn.addEventListener('click', () => { recordToDelete = dom.editR
 dom.cancelDelete.addEventListener('click', () => { recordToDelete = null; dom.confirmDeleteModal.classList.add('hidden'); });
 dom.confirmDeleteBtn.addEventListener('click', async () => { if (recordToDelete) { await deleteDoc(doc(db, `/artifacts/${appId}/public/data/records`, recordToDelete)); dom.editRecordModal.classList.add('hidden'); dom.confirmDeleteModal.classList.add('hidden'); recordToDelete = null; } });
 
+// --- MAIN EVENT DELEGATION LISTENER ---
+dom.recordsContainer.addEventListener('click', async (e) => {
+    const recordCard = e.target.closest('.record-card');
+    if (!recordCard) return;
+    const recordId = recordCard.dataset.id;
+    let record = allRecords.find(r => r.id === recordId);
+    if (!record) return;
+
+    if (e.target.closest('.record-header') && !e.target.closest('.actions')) {
+        const wasExpanded = recordCard.classList.contains('expanded');
+        if (recordCard.classList.toggle('expanded')) {
+            expandedRecordIds.add(recordId);
+            if (!wasExpanded) { // Only render comments if it was just expanded
+                renderComments(recordCard.querySelector('.comments-section'), record);
+                recordCard.querySelector('.comments-section').classList.add('expanded');
+            }
+        } else {
+            expandedRecordIds.delete(recordId);
+        }
+        return;
+    }
+    
+    if(e.target.closest('.comments-section > .collapsible-header')) {
+        const commentsSection = e.target.closest('.comments-section');
+        commentsSection.classList.toggle('expanded');
+        // If we are expanding and the comments haven't been rendered yet
+        if (commentsSection.classList.contains('expanded') && !commentsSection.querySelector('.comments-list')) {
+            renderComments(commentsSection, record);
+        }
+        return;
+    }
+
+    if (e.target.closest('.add-comment-form') && e.target.tagName === 'BUTTON') {
+        e.preventDefault();
+        const form = e.target.closest('form');
+        const textarea = form.querySelector('textarea');
+        const text = textarea.value.trim();
+        const submitBtn = form.querySelector('button');
+        
+        if (!text) return;
+        submitBtn.disabled = true;
+        submitBtn.textContent = '...';
+        try {
+            await updateDoc(doc(db, `/artifacts/${appId}/public/data/records`, recordId), { 
+                comments: arrayUnion({ text, addedBy: currentUserDisplayName, createdAt: Timestamp.now() }) 
+            });
+            textarea.value = '';
+            expandedRecordIds.add(recordId);
+        } finally {
+            submitBtn.disabled = false;
+            submitBtn.textContent = 'Post';
+        }
+        return;
+    }
+
+    if(e.target.classList.contains('edit-comment-btn')) {
+        const commentBody = e.target.closest('.comment-body');
+        const commentIndex = parseInt(e.target.dataset.index);
+        const currentText = commentBody.querySelector('.comment-text').textContent;
+        commentBody.innerHTML = `<textarea class="edit-comment-textarea flex-grow w-full text-sm p-2 border rounded">${currentText}</textarea><div class="flex flex-col ml-2 space-y-1"><button class="save-comment-btn text-xs bg-green-500 text-white px-2 py-1 rounded" data-index="${commentIndex}">Save</button><button class="cancel-comment-btn text-xs bg-gray-500 text-white px-2 py-1 rounded">Cancel</button></div>`;
+        return;
+    }
+
+    if(e.target.classList.contains('save-comment-btn')) {
+        const saveBtn = e.target;
+        saveBtn.disabled = true;
+        saveBtn.textContent = '...';
+        
+        const commentIndex = parseInt(e.target.dataset.index);
+        const newText = e.target.closest('.comment-body').querySelector('.edit-comment-textarea').value;
+        const recordRef = doc(db, `/artifacts/${appId}/public/data/records`, recordId);
+        
+        try {
+            await runTransaction(db, async (transaction) => {
+                const recordDoc = await transaction.get(recordRef);
+                if (!recordDoc.exists()) throw "Document does not exist!";
+                const comments = recordDoc.data().comments;
+                comments[commentIndex].text = newText;
+                transaction.update(recordRef, { comments });
+            });
+            // --- SET FLAG FOR VISUAL INDICATOR ---
+            recentlySavedCommentInfo = { recordId: recordId, commentIndex: commentIndex };
+        } catch (error) {
+            console.error("Failed to save comment:", error);
+            saveBtn.disabled = false;
+            saveBtn.textContent = 'Save';
+            // Optionally show an error to the user here
+        }
+        return;
+    }
+    
+    if(e.target.classList.contains('delete-comment-btn')) {
+        const commentIndex = parseInt(e.target.dataset.index);
+        await runTransaction(db, async (transaction) => {
+             const recordRef = doc(db, `/artifacts/${appId}/public/data/records`, recordId);
+             const recordDoc = await transaction.get(recordRef);
+             if(!recordDoc.exists()) throw "Document does not exist!";
+             const comments = recordDoc.data().comments;
+             comments.splice(commentIndex, 1);
+             transaction.update(recordRef, { comments });
+         });
+         return;
+    }
+    
+    if (e.target.classList.contains('cancel-comment-btn')) {
+        // Find the full record data to pass to renderComments
+        const fullRecord = allRecords.find(r => r.id === recordId);
+        if (fullRecord) {
+            renderComments(e.target.closest('.comments-section'), fullRecord);
+        }
+        return;
+    }
+});
+
+
 dom.formCategorySelector.addEventListener('click', (e) => { if (e.target.matches('.form-category-btn')) setFormCategory(e.target.dataset.category, dom.formFieldsContainer); });
 
 const findSimilarFaults = (newTitle, modelNumber) => {
@@ -425,7 +419,7 @@ const createRecord = async (recordData, relatedTo = []) => {
      submitBtn.disabled = true; submitBtn.textContent = '...';
      try {
         recordData.onSamsungTracker = recordData.onSamsungTracker === 'on';
-        const newRecordRef = await addDoc(collection(db, `/artifacts/${appId}/public/data/records`), { ...recordData, category: currentFormCategory, addedBy: currentUserDisplayName, createdAt: serverTimestamp(), isClosed: false, comments: [], relatedTo: [], relatedBy: relatedTo });
+        const newRecordRef = await addDoc(collection(db, `/artifacts/${appId}/public/data/records`), { ...recordData, category: currentFormCategory, addedBy: currentUserDisplayName, createdAt: serverTimestamp(), isClosed: false, comments: [], relatedTo: relatedTo, relatedBy: [] });
         for(const related of relatedTo) {
             const relatedDocRef = doc(db, `/artifacts/${appId}/public/data/records`, related.id);
             await updateDoc(relatedDocRef, { relatedBy: arrayUnion({ id: newRecordRef.id, title: recordData.title }) });
@@ -526,5 +520,12 @@ dom.namePromptForm.addEventListener('submit', (e) => {
 
 dom.logoutBtn.addEventListener('click', () => { sessionStorage.clear(); showLogin(); });
 
+const applyTheme = () => {
+    if (localStorage.getItem('theme') === 'dark') { document.documentElement.classList.add('dark'); dom.sunIcon.classList.add('hidden'); dom.moonIcon.classList.remove('hidden'); } 
+    else { document.documentElement.classList.remove('dark'); dom.sunIcon.classList.remove('hidden'); dom.moonIcon.classList.add('hidden'); }
+};
+dom.darkModeToggle.addEventListener('click', () => { localStorage.setItem('theme', document.documentElement.classList.contains('dark') ? 'light' : 'dark'); applyTheme(); });
+
 if (sessionStorage.getItem('isLoggedIn') === 'true' && sessionStorage.getItem('displayName')) { currentUserDisplayName = sessionStorage.getItem('displayName'); showApp(); } 
 else { showLogin(); }
+applyTheme();
