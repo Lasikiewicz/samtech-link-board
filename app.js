@@ -467,15 +467,18 @@ dom.filterControls.addEventListener('click', (e) => {
 });
 
 // TASK 4: Add event listener for new category filter bar
-dom.categoryFilterBar.addEventListener('click', (e) => {
-    const btn = e.target.closest('.control-btn');
-    if (btn && btn.dataset.category) {
-        currentCategory = btn.dataset.category;
-        dom.categoryFilterBar.querySelectorAll('.control-btn').forEach(b => b.classList.remove('active'));
-        btn.classList.add('active');
-        setupRecordsListener();
-    }
-});
+// BUG FIX: Added a check to ensure the element exists before adding a listener.
+if (dom.categoryFilterBar) {
+    dom.categoryFilterBar.addEventListener('click', (e) => {
+        const btn = e.target.closest('.control-btn');
+        if (btn && btn.dataset.category) {
+            currentCategory = btn.dataset.category;
+            dom.categoryFilterBar.querySelectorAll('.control-btn').forEach(b => b.classList.remove('active'));
+            btn.classList.add('active');
+            setupRecordsListener();
+        }
+    });
+}
 
 dom.deleteRecordBtn.addEventListener('click', () => {
     const recordId = dom.editRecordForm.querySelector('[name="id"]').value;
