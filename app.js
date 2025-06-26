@@ -34,8 +34,8 @@ const dom = {
     formCategorySelector: document.getElementById('form-category-selector'), formFieldsContainer: document.getElementById('form-fields-container'),
     editRecordModal: document.getElementById('edit-record-modal'), editRecordForm: document.getElementById('edit-record-form'),
     editFormFieldsContainer: document.getElementById('edit-form-fields-container'), cancelEdit: document.getElementById('cancel-edit'),
-    // --- BUG FIX: Removed duplicate button references ---
-    deleteRecordBtn: document.getElementById('delete-record-btn-bottom'), 
+    // --- BUG FIX: Simplified to a single, correct button ID ---
+    deleteRecordBtn: document.getElementById('delete-record-btn'), 
     manageLinksBtn: document.getElementById('manage-links-btn'),
     editTimeModal: document.getElementById('edit-time-modal'), editTimeForm: document.getElementById('edit-time-form'), cancelTimeEdit: document.getElementById('cancel-time-edit'),
     namePromptModal: document.getElementById('name-prompt-modal'), namePromptForm: document.getElementById('name-prompt-form'),
@@ -280,6 +280,12 @@ const openEditModal = (record) => {
     const form = dom.editRecordForm;
     form.querySelector('[name="id"]').value = record.id;
     setFormCategory(record.category, dom.editFormFieldsContainer, record);
+
+    // This field is no longer added here, it's in the timestamp modal
+    // const addedByDiv = document.createElement('div');
+    // addedByDiv.innerHTML = `<label class="${formLabelClasses}">Added By</label><input name="addedBy" value="${record.addedBy}" class="${formInputClasses}">`;
+    // dom.editFormFieldsContainer.prepend(addedByDiv);
+
     dom.manageLinksBtn.classList.toggle('hidden', record.category !== 'common-fault');
     dom.editRecordModal.classList.remove('hidden');
 };
@@ -412,7 +418,6 @@ dom.cancelAdd.addEventListener('click', () => dom.addRecordModal.classList.add('
 dom.cancelEdit.addEventListener('click', () => dom.editRecordModal.classList.add('hidden'));
 dom.cancelTimeEdit.addEventListener('click', () => dom.editTimeModal.classList.add('hidden'));
 
-// --- BUG FIX: Add listener for new filter controls ---
 dom.filterControls.addEventListener('click', (e) => {
     const btn = e.target.closest('.control-btn');
     if (btn) {
@@ -423,18 +428,15 @@ dom.filterControls.addEventListener('click', (e) => {
     }
 });
 
-[dom.deleteRecordBtn, dom.deleteRecordBtnBottom].forEach(btn => {
-    if (btn) { // Check if button exists before adding listener
-        btn.addEventListener('click', () => {
-            const recordId = dom.editRecordForm.querySelector('[name="id"]').value;
-            recordToDelete = recordId;
-            const record = allRecords.find(r => r.id === recordToDelete);
-            if (record) {
-                document.getElementById('delete-record-title').textContent = record.title;
-            }
-            dom.confirmDeleteModal.classList.remove('hidden');
-        });
+// --- BUG FIX: Simplified event listener for single delete button ---
+dom.deleteRecordBtn.addEventListener('click', () => {
+    const recordId = dom.editRecordForm.querySelector('[name="id"]').value;
+    recordToDelete = recordId;
+    const record = allRecords.find(r => r.id === recordToDelete);
+    if (record) {
+        document.getElementById('delete-record-title').textContent = record.title;
     }
+    dom.confirmDeleteModal.classList.remove('hidden');
 });
 
 dom.cancelDelete.addEventListener('click', () => { recordToDelete = null; dom.confirmDeleteModal.classList.add('hidden'); });
