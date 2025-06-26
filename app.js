@@ -8,7 +8,8 @@ const SHARED_PASSWORD = "__SHARED_PASSWORD__" || "samtech";
 let app, db, recordsUnsubscribe, presenceUnsubscribe;
 let allRecords = [];
 let groupedFaults = new Map();
-let currentSearch = '', currentCategory = 'all-open', currentUserDisplayName = '';
+let currentSearch = '', currentCategory = 'all', currentUserDisplayName = '';
+let currentStatusFilter = 'open'; // --- TASK 1: New state for status filter
 let recordToDelete = null;
 let expandedRecordIds = new Set();
 let pendingRecordData = null;
@@ -25,6 +26,7 @@ const dom = {
     addNewRecordBtn: document.getElementById('add-new-record-btn'), cancelAdd: document.getElementById('cancel-add'),
     recordsContainer: document.getElementById('records-container'), loadingState: document.getElementById('loading-state'),
     searchInput: document.getElementById('search-input'),
+    filterControls: document.getElementById('filter-controls'),
     userNameDisplay: document.getElementById('user-name-display'),
     logoutBtn: document.getElementById('logout-btn'),
     authForm: document.getElementById('auth-form'), authPasswordInput: document.getElementById('auth-password'), authErrorEl: document.getElementById('auth-error'),
@@ -32,7 +34,9 @@ const dom = {
     formCategorySelector: document.getElementById('form-category-selector'), formFieldsContainer: document.getElementById('form-fields-container'),
     editRecordModal: document.getElementById('edit-record-modal'), editRecordForm: document.getElementById('edit-record-form'),
     editFormFieldsContainer: document.getElementById('edit-form-fields-container'), cancelEdit: document.getElementById('cancel-edit'),
-    deleteRecordBtn: document.getElementById('delete-record-btn'), manageLinksBtn: document.getElementById('manage-links-btn'),
+    deleteRecordBtn: document.getElementById('delete-record-btn'), 
+    deleteRecordBtnBottom: document.getElementById('delete-record-btn-bottom'),
+    manageLinksBtn: document.getElementById('manage-links-btn'),
     editTimeModal: document.getElementById('edit-time-modal'), editTimeForm: document.getElementById('edit-time-form'), cancelTimeEdit: document.getElementById('cancel-time-edit'),
     namePromptModal: document.getElementById('name-prompt-modal'), namePromptForm: document.getElementById('name-prompt-form'),
     confirmDeleteModal: document.getElementById('confirm-delete-modal'), cancelDelete: document.getElementById('cancel-delete'), confirmDeleteBtn: document.getElementById('confirm-delete-btn'),
@@ -125,6 +129,7 @@ const groupCommonFaults = () => {
     groupedFaults = groups;
 };
 
+// --- TASK 1: Simplified menu, removed sub-menus for open/closed ---
 const renderCategoryMenu = () => {
     dom.categoryMenu.innerHTML = '';
     const isGroupId = (id) => id.length === 20 && /^[a-zA-Z0-9]+$/.test(id);
@@ -142,76 +147,34 @@ const renderCategoryMenu = () => {
         });
         return btn;
     };
-
-    const createAccordion = (id, title, children) => {
-        const details = document.createElement('details');
-        details.className = 'menu-accordion-item';
-        details.innerHTML = `
-            <summary class="menu-summary level-1">
-                <span>${title}</span>
-                <svg class="chevron h-4 w-4 text-slate-500" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" /></svg>
-            </summary>
-            <div class="space-y-1 mt-1"></div>`;
-        
-        const content = details.querySelector('div');
-        children.forEach(child => content.appendChild(child));
-        
-        details.querySelector('.menu-summary').addEventListener('click', (e) => {
-            if (details.open) {
-                e.preventDefault();
-                details.removeAttribute('open');
-            } else {
-                document.querySelectorAll('.menu-accordion-item').forEach(d => {
-                    if (d !== details) d.removeAttribute('open');
-                });
-            }
-        });
-
-        if (currentCategory.startsWith(id) || (id === 'common-fault' && isGroupId(currentCategory))) {
-            details.open = true;
-        }
-
-        return details;
-    };
     
+    // Main Filters
     dom.categoryMenu.appendChild(createMenuButton('all', 'All Records', 'level-1'));
     dom.categoryMenu.appendChild(createMenuButton('my', 'My Records', 'level-1'));
     
-    const commonFaultsChildren = [];
-    if (groupedFaults.size > 0) {
-        const linkedIssuesDetails = document.createElement('details');
-        linkedIssuesDetails.innerHTML = `
-            <summary class="menu-summary level-2">
-                <span>Linked Issues</span>
-                <svg class="chevron h-4 w-4 text-slate-500" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" /></svg>
-            </summary>
-            <div class="space-y-1 mt-1"></div>`;
-        const linkedContent = linkedIssuesDetails.querySelector('div');
-        
-        const sortedGroups = Array.from(groupedFaults.entries()).sort(([, groupA], [, groupB]) => {
-            const timeA = groupA.records[0]?.createdAt?.seconds || 0;
-            const timeB = groupB.records[0]?.createdAt?.seconds || 0;
-            return timeB - timeA;
+    // Categories
+    const catHeader = document.createElement('div');
+    catHeader.textContent = 'Categories';
+    catHeader.className = 'menu-header';
+    dom.categoryMenu.appendChild(catHeader);
+    dom.categoryMenu.appendChild(createMenuButton('common-fault', 'Common Faults', 'level-2'));
+    if(groupedFaults.size > 0) {
+        groupedFaults.forEach((group, groupId) => {
+            dom.categoryMenu.appendChild(createMenuButton(groupId, group.records[0].title, 'level-3 font-normal'));
         });
-
-        sortedGroups.forEach(([groupId, group]) => {
-            linkedContent.appendChild(createMenuButton(groupId, group.records[0].title, 'level-3 font-normal'));
-        });
-
-        commonFaultsChildren.push(linkedIssuesDetails);
-        if (isGroupId(currentCategory)) linkedIssuesDetails.open = true;
     }
-    commonFaultsChildren.push(createMenuButton('common-fault-open', 'Open', 'level-2'));
-    commonFaultsChildren.push(createMenuButton('common-fault-closed', 'Closed', 'level-2'));
-
-    const generalChildren = [ createMenuButton('general-open', 'Open', 'level-2'), createMenuButton('general-closed', 'Closed', 'level-2') ];
-    const qaChildren = [ createMenuButton('qa-open', 'Open', 'level-2'), createMenuButton('qa-closed', 'Closed', 'level-2') ];
-    const satChildren = [ createMenuButton('samsung-action-tracker-open', 'Open', 'level-2'), createMenuButton('samsung-action-tracker-closed', 'Closed', 'level-2') ];
+    dom.categoryMenu.appendChild(createMenuButton('general', 'General', 'level-2'));
+    dom.categoryMenu.appendChild(createMenuButton('qa', 'Q&A', 'level-2'));
     
-    dom.categoryMenu.appendChild(createAccordion('common-fault', 'Common Faults', commonFaultsChildren));
-    dom.categoryMenu.appendChild(createAccordion('general', 'General', generalChildren));
-    dom.categoryMenu.appendChild(createAccordion('qa', 'Q&A', qaChildren));
-    dom.categoryMenu.appendChild(createAccordion('samsung-action-tracker', 'Samsung Action Tracker', satChildren));
+    // Other Filters
+    const otherHeader = document.createElement('div');
+    otherHeader.textContent = 'Other Filters';
+    otherHeader.className = 'menu-header';
+    dom.categoryMenu.appendChild(otherHeader);
+    dom.categoryMenu.appendChild(createMenuButton('samsung-action-tracker', 'Samsung Action Tracker', 'level-2'));
+    // TASK 3: Add Model Type filters
+    dom.categoryMenu.appendChild(createMenuButton('model-RB', 'REF Models', 'level-2'));
+    dom.categoryMenu.appendChild(createMenuButton('model-DW', 'DW Models', 'level-2'));
 };
 
 
@@ -231,8 +194,19 @@ const renderRecordCard = (record) => {
     if (expandedRecordIds.has(record.id)) card.classList.add('expanded');
     
     const subTitleHtml = `<p class="text-xs text-slate-500 mt-1">By <span class="font-semibold">${record.addedBy}</span> on ${formatDateTime(record.createdAt)}</p>`;
-    const samsungTrackerHtml = record.onSamsungTracker ? `<button class="filter-sat-btn text-xs font-bold bg-green-500 text-white px-2 py-1 rounded-full transition-transform hover:scale-105">Samsung Action Tracker</button>` : '';
     
+    const specialTags = [];
+    if (record.onSamsungTracker) {
+        specialTags.push(`<button class="filter-sat-btn text-xs font-bold bg-green-500 text-white px-2 py-1 rounded-full transition-transform hover:scale-105">Samsung Action Tracker</button>`);
+    }
+    // TASK 3: Add REF/DW buttons
+    if (record.modelNumber?.toUpperCase().startsWith('RB')) {
+        specialTags.push(`<button class="filter-model-btn text-xs font-bold bg-sky-500 text-white px-2 py-1 rounded-full transition-transform hover:scale-105" data-filter-prefix="RB">REF</button>`);
+    }
+    if (record.modelNumber?.toUpperCase().startsWith('DW')) {
+        specialTags.push(`<button class="filter-model-btn text-xs font-bold bg-amber-500 text-white px-2 py-1 rounded-full transition-transform hover:scale-105" data-filter-prefix="DW">DW</button>`);
+    }
+
     const isLinked = record.category === 'common-fault' && ((record.relatedTo && record.relatedTo.length > 0) || (record.relatedBy && record.relatedBy.length > 0));
     const linkIcon = isLinked ? `<svg class="h-4 w-4 text-cyan-500 ml-2" fill="none" viewBox="0 0 24 24" stroke="currentColor" title="This fault is linked to others."><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1"></path></svg>` : '';
     
@@ -248,7 +222,7 @@ const renderRecordCard = (record) => {
             <div class="flex items-center gap-1"><span class="text-xs capitalize text-white px-2 py-0.5 rounded-full" style="background-color: ${categoryColors[record.category] || '#64748b'}">${categoryDisplayNames[record.category] || record.category}</span><h3 class="text-lg font-semibold text-indigo-600 break-all">${record.title}</h3>${linkIcon}</div>
             ${subTitleHtml}
         </div>
-        <div class="flex items-center gap-2">${samsungTrackerHtml}${record.isClosed?'<span class="text-xs font-bold bg-slate-500 text-white px-2 py-1 rounded-full">CLOSED</span>':''}${actionsHtml}<svg class="chevron h-5 w-5 transition-transform" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" /></svg></div>
+        <div class="flex items-center gap-2">${specialTags.join('')}${record.isClosed?'<span class="text-xs font-bold bg-slate-500 text-white px-2 py-1 rounded-full">CLOSED</span>':''}${actionsHtml}<svg class="chevron h-5 w-5 transition-transform" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" /></svg></div>
     </div>
     <div class="collapsible-content details-container"><div class="mt-4 pt-4 border-t border-slate-200 text-sm space-y-2"><dl class="grid grid-cols-1 md:grid-cols-2 gap-x-4 gap-y-1">${detailsHtml}${linkedRecordsHtml}</dl>${record.description?`<div class="pt-2"><p class="whitespace-pre-wrap">${record.description}</p></div>`:''}</div><div class="comments-section mt-4 pt-4 border-t border-slate-200"></div></div>`;
     
@@ -289,7 +263,6 @@ const renderRecords = () => {
 
     if (isGroupId && groupedFaults.has(currentCategory)) {
         const groupRecords = groupedFaults.get(currentCategory).records;
-        // --- TASK 1: Ensure linked group records are displayed newest first ---
         recordsToDisplay = [...groupRecords].sort((a, b) => (b.createdAt?.seconds || 0) - (a.createdAt?.seconds || 0));
     } else {
         recordsToDisplay = [...allRecords];
@@ -337,25 +310,14 @@ const setupRecordsListener = () => {
     
     const constraints = [];
     const isGroupId = currentCategory.length === 20 && /^[a-zA-Z0-9]+$/.test(currentCategory);
+    let effectiveCategory = isGroupId ? 'common-fault' : currentCategory;
     
-    let mainCategory, subCategory;
-    const lastHyphenIndex = currentCategory.lastIndexOf('-');
-    const possibleSubCategory = currentCategory.substring(lastHyphenIndex + 1);
-
-    if (lastHyphenIndex !== -1 && ['open', 'closed'].includes(possibleSubCategory)) {
-        mainCategory = currentCategory.substring(0, lastHyphenIndex);
-        subCategory = possibleSubCategory;
-    } else {
-        mainCategory = currentCategory;
-        subCategory = undefined;
-    }
-    
-    let effectiveCategory = mainCategory;
-    if (isGroupId) {
-        effectiveCategory = 'common-fault';
-    }
-    
-    if (effectiveCategory === 'my') {
+    // Handle main category filter
+    if (effectiveCategory.startsWith('model-')) {
+        const prefix = effectiveCategory.split('-')[1];
+        constraints.push(where('modelNumber', '>=', prefix));
+        constraints.push(where('modelNumber', '<', prefix + 'Z')); // 'Z' is a simple way to get a range
+    } else if (effectiveCategory === 'my') {
         constraints.push(where('addedBy', '==', currentUserDisplayName));
     } else if (effectiveCategory === 'samsung-action-tracker') {
         constraints.push(where('onSamsungTracker', '==', true));
@@ -363,12 +325,11 @@ const setupRecordsListener = () => {
         constraints.push(where('category', '==', effectiveCategory));
     }
     
-    if (!isGroupId) {
-        if (subCategory === 'closed') {
-            constraints.push(where('isClosed', '==', true));
-        } else if (subCategory === 'open') {
-             constraints.push(where('isClosed', '==', false));
-        }
+    // Handle status filter (Open/Closed/All)
+    if (currentStatusFilter === 'closed') {
+        constraints.push(where('isClosed', '==', true));
+    } else if (currentStatusFilter === 'open') {
+        constraints.push(where('isClosed', '==', false));
     }
     
     constraints.push(orderBy('createdAt', 'desc'));
@@ -454,15 +415,31 @@ dom.addNewRecordBtn.addEventListener('click', () => { setFormCategory('qa', dom.
 dom.cancelAdd.addEventListener('click', () => dom.addRecordModal.classList.add('hidden'));
 dom.cancelEdit.addEventListener('click', () => dom.editRecordModal.classList.add('hidden'));
 dom.cancelTimeEdit.addEventListener('click', () => dom.editTimeModal.classList.add('hidden'));
-dom.deleteRecordBtn.addEventListener('click', () => {
-    const recordId = dom.editRecordForm.querySelector('[name="id"]').value;
-    recordToDelete = recordId;
-    const record = allRecords.find(r => r.id === recordToDelete);
-    if (record) {
-        document.getElementById('delete-record-title').textContent = record.title;
+
+// TASK 1: Add listener for new filter controls
+dom.filterControls.addEventListener('click', (e) => {
+    const btn = e.target.closest('.control-btn');
+    if (btn) {
+        currentStatusFilter = btn.dataset.filter;
+        dom.filterControls.querySelectorAll('.control-btn').forEach(b => b.classList.remove('active'));
+        btn.classList.add('active');
+        setupRecordsListener();
     }
-    dom.confirmDeleteModal.classList.remove('hidden');
 });
+
+// Both delete buttons trigger the same confirmation flow
+[dom.deleteRecordBtn, dom.deleteRecordBtnBottom].forEach(btn => {
+    btn.addEventListener('click', () => {
+        const recordId = dom.editRecordForm.querySelector('[name="id"]').value;
+        recordToDelete = recordId;
+        const record = allRecords.find(r => r.id === recordToDelete);
+        if (record) {
+            document.getElementById('delete-record-title').textContent = record.title;
+        }
+        dom.confirmDeleteModal.classList.remove('hidden');
+    });
+});
+
 dom.cancelDelete.addEventListener('click', () => { recordToDelete = null; dom.confirmDeleteModal.classList.add('hidden'); });
 dom.confirmDeleteBtn.addEventListener('click', async () => { if (recordToDelete) { await deleteDoc(doc(db, `/artifacts/${appId}/public/data/records`, recordToDelete)); dom.editRecordModal.classList.add('hidden'); dom.confirmDeleteModal.classList.add('hidden'); recordToDelete = null; } });
 
@@ -589,9 +566,18 @@ dom.recordsContainer.addEventListener('click', async (e) => {
         return;
     }
     
+    // TASK 3: Add handler for new model filter buttons
+    if (e.target.closest('.filter-model-btn')) {
+        e.stopPropagation();
+        const prefix = e.target.dataset.filterPrefix;
+        currentCategory = `model-${prefix}`;
+        setupRecordsListener();
+        return;
+    }
+
     if (e.target.closest('.filter-sat-btn')) {
         e.stopPropagation();
-        currentCategory = 'samsung-action-tracker-open';
+        currentCategory = 'samsung-action-tracker';
         setupRecordsListener();
         return;
     }
