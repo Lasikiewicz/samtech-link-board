@@ -8,7 +8,8 @@ const SHARED_PASSWORD = "__SHARED_PASSWORD__" || "samtech";
 let app, db, recordsUnsubscribe, presenceUnsubscribe;
 let allRecords = [];
 let groupedFaults = new Map();
-let currentSort = 'newest', currentSearch = '', currentCategory = 'all-open', currentUserDisplayName = '';
+// TASK 1: Removed currentSort variable
+let currentSearch = '', currentCategory = 'all-open', currentUserDisplayName = '';
 let recordToDelete = null;
 let expandedRecordIds = new Set();
 let pendingRecordData = null;
@@ -62,7 +63,6 @@ const formFieldsTemplates = {
         <div><label class="${formLabelClasses}">Salesforce Case Number</label><input name="salesforceCaseNumber" type="text" class="${formInputClasses}"></div>
         <div><label class="${formLabelClasses}">Description</label><textarea name="description" class="${formInputClasses}" rows="4"></textarea></div>
         <label class="flex items-center mt-4"><input type="checkbox" name="onSamsungTracker" class="rounded mr-2"> On Samsung Action Tracker</label>`,
-    // --- TASK 2: Added Samsung Action Tracker option to General category ---
     general: `
         <div><label class="${formLabelClasses}">Title</label><input name="title" type="text" class="${formInputClasses}" required></div>
         <div><label class="${formLabelClasses}">Model Number</label><input name="modelNumber" type="text" class="${formInputClasses}"></div>
@@ -143,18 +143,6 @@ const renderCategoryMenu = () => {
         });
         return btn;
     };
-    
-    const createSortButton = (id, text) => {
-        const btn = document.createElement('button');
-        btn.textContent = text;
-        btn.className = `menu-item block w-full text-left level-2 ${currentSort === id ? 'active' : ''}`;
-        btn.addEventListener('click', (e) => {
-            e.stopPropagation();
-            currentSort = id;
-            setupRecordsListener();
-        });
-        return btn;
-    };
 
     const createAccordion = (id, title, children) => {
         const details = document.createElement('details');
@@ -218,19 +206,7 @@ const renderCategoryMenu = () => {
     dom.categoryMenu.appendChild(createAccordion('qa', 'Q&A', qaChildren));
     dom.categoryMenu.appendChild(createAccordion('samsung-action-tracker', 'Samsung Action Tracker', satChildren));
 
-    const divider = document.createElement('hr');
-    divider.className = "my-2 border-slate-200";
-    dom.categoryMenu.appendChild(divider);
-
-    const sortContainer = document.createElement('div');
-    const sortHeader = document.createElement('div');
-    sortHeader.textContent = 'Sort Order';
-    sortHeader.className = 'menu-header px-3 !pt-0';
-    sortContainer.appendChild(sortHeader);
-    sortContainer.appendChild(createSortButton('newest', 'Newest'));
-    sortContainer.appendChild(createSortButton('oldest', 'Oldest'));
-    sortContainer.appendChild(createSortButton('alpha', 'A-Z'));
-    dom.categoryMenu.appendChild(sortContainer);
+    // TASK 1: Removed Sort Order menu
 };
 
 
@@ -321,6 +297,7 @@ const renderRecords = () => {
     recordsToDisplay.forEach(recordData => dom.recordsContainer.appendChild(renderRecordCard(recordData)));
 };
 
+// --- TASK 3: "Added By" field removed from this modal ---
 const openEditModal = (record) => {
     document.getElementById('edit-record-title').textContent = record.title;
     const form = dom.editRecordForm;
@@ -330,7 +307,6 @@ const openEditModal = (record) => {
     dom.editRecordModal.classList.remove('hidden');
 };
 
-// --- TASK 3: "Added By" field moved here ---
 const openTimeEditModal = (record) => {
     document.getElementById('edit-time-title').textContent = record.title;
     const form = dom.editTimeForm;
@@ -340,7 +316,7 @@ const openTimeEditModal = (record) => {
     const localISOString = new Date(date.getTime() - (date.getTimezoneOffset() * 60000)).toISOString().slice(0, 16);
     form.querySelector('[name="timestamp"]').value = localISOString;
 
-    // Clear old field if it exists, then add new one for "Added By"
+    // --- TASK 3: "Added By" field added here ---
     form.querySelector('#added-by-container')?.remove(); 
     const addedByDiv = document.createElement('div');
     addedByDiv.id = 'added-by-container';
@@ -390,9 +366,8 @@ const setupRecordsListener = () => {
         }
     }
     
-    const sortField = currentSort === 'alpha' ? 'title' : 'createdAt';
-    const sortDirection = currentSort === 'oldest' ? 'asc' : 'desc';
-    constraints.push(orderBy(sortField, sortDirection));
+    // --- TASK 1: Hardcoded sort order ---
+    constraints.push(orderBy('createdAt', 'desc'));
 
     const q = query(collection(db, `/artifacts/${appId}/public/data/records`), ...constraints);
     
@@ -404,7 +379,7 @@ const setupRecordsListener = () => {
         renderRecords();
         renderCategoryMenu();
         if (isInitialLoad) {
-            if (currentSort === 'newest' && allRecords.length > 0) {
+            if (allRecords.length > 0) {
                  expandedRecordIds.add(allRecords[0].id);
                  renderRecords(); 
             }
@@ -598,6 +573,17 @@ dom.recordsContainer.addEventListener('click', async (e) => {
         return;
     }
     
+    // --- TASK 3: Add event handler for View Group button ---
+    if (e.target.closest('.linked-fault-btn')) {
+        e.preventDefault();
+        const groupId = e.target.dataset.groupId;
+        if (groupId) {
+            currentCategory = groupId;
+            setupRecordsListener();
+        }
+        return;
+    }
+    
     if (e.target.closest('.filter-sat-btn')) {
         e.stopPropagation();
         currentCategory = 'samsung-action-tracker-open';
@@ -783,7 +769,6 @@ dom.editRecordForm.addEventListener('submit', async (e) => {
     }
 });
 
-// --- TASK 3: Updated submit handler for timestamp modal ---
 dom.editTimeForm.addEventListener('submit', async (e) => {
     e.preventDefault();
     const formData = new FormData(e.target);
