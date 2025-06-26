@@ -126,12 +126,13 @@ const groupCommonFaults = () => {
 // --- TASK 1: Rewritten menu generation logic ---
 const renderCategoryMenu = () => {
     dom.categoryMenu.innerHTML = '';
+    const isGroupId = (id) => id.length === 20 && /^[a-zA-Z0-9]+$/.test(id);
     
     const createMenuButton = (id, text, className = '') => {
         const btn = document.createElement('button');
         btn.dataset.id = id;
         btn.textContent = text;
-        btn.className = `category-menu-item w-full text-left px-3 py-2 rounded-md text-sm truncate hover:bg-slate-200 dark:hover:bg-slate-700 ${className}`;
+        btn.className = `menu-item truncate ${className}`;
         if (currentCategory === id) btn.classList.add('active');
         btn.addEventListener('click', (e) => { 
             e.stopPropagation();
@@ -142,46 +143,72 @@ const renderCategoryMenu = () => {
         return btn;
     };
 
-    const createMenuHeader = (text, className = '') => {
-        const div = document.createElement('div');
-        div.textContent = text;
-        div.className = `px-3 pt-4 pb-1 text-xs font-bold uppercase text-slate-500 dark:text-slate-400 ${className}`;
-        return div;
-    };
-
-    // Common Faults
-    dom.categoryMenu.appendChild(createMenuHeader('Common Faults'));
-    const linkedIssuesHeader = createMenuHeader('Linked Issues', 'submenu-item !pt-2');
-    dom.categoryMenu.appendChild(linkedIssuesHeader);
-    if (groupedFaults.size > 0) {
-        groupedFaults.forEach((group, groupId) => {
-            dom.categoryMenu.appendChild(createMenuButton(groupId, group.records[0].title, 'submenu-item-nested font-normal'));
+    const createAccordion = (id, title, children) => {
+        const details = document.createElement('details');
+        details.className = 'menu-accordion-item';
+        details.innerHTML = `
+            <summary class="menu-summary level-1">
+                <span>${title}</span>
+                <svg class="chevron h-4 w-4 text-slate-500" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" /></svg>
+            </summary>
+            <div class="space-y-1 mt-1"></div>`;
+        
+        const content = details.querySelector('div');
+        children.forEach(child => content.appendChild(child));
+        
+        details.addEventListener('click', (e) => {
+            if (e.target.tagName === 'SUMMARY') {
+                document.querySelectorAll('.menu-accordion-item').forEach(d => {
+                    if (d !== details) d.removeAttribute('open');
+                });
+            }
         });
-    } else {
-        const noLinked = document.createElement('p');
-        noLinked.className = 'text-xs text-slate-400 submenu-item-nested';
-        noLinked.textContent = 'No linked issues.';
-        dom.categoryMenu.appendChild(noLinked);
-    }
-    dom.categoryMenu.appendChild(createMenuButton('common-fault-open', 'Open', 'submenu-item'));
-    dom.categoryMenu.appendChild(createMenuButton('common-fault-closed', 'Closed', 'submenu-item'));
 
-    // General
-    dom.categoryMenu.appendChild(createMenuHeader('General'));
-    dom.categoryMenu.appendChild(createMenuButton('general-open', 'Open', 'submenu-item'));
-    dom.categoryMenu.appendChild(createMenuButton('general-closed', 'Closed', 'submenu-item'));
+        if (currentCategory.startsWith(id) || (id === 'common-fault' && isGroupId(currentCategory))) {
+            details.open = true;
+        }
 
-    // Q&A
-    dom.categoryMenu.appendChild(createMenuHeader('Q&A'));
-    dom.categoryMenu.appendChild(createMenuButton('qa-open', 'Open', 'submenu-item'));
-    dom.categoryMenu.appendChild(createMenuButton('qa-closed', 'Closed', 'submenu-item'));
+        return details;
+    };
     
-    // Other Filters
+    // Define Menu Structure
+    const commonFaultsChildren = [];
+    if (groupedFaults.size > 0) {
+        const linkedIssuesDetails = document.createElement('details');
+        linkedIssuesDetails.innerHTML = `
+            <summary class="menu-summary level-2">
+                <span>Linked Issues</span>
+                <svg class="chevron h-4 w-4 text-slate-500" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" /></svg>
+            </summary>
+            <div class="space-y-1 mt-1"></div>`;
+        const linkedContent = linkedIssuesDetails.querySelector('div');
+        groupedFaults.forEach((group, groupId) => {
+            linkedContent.appendChild(createMenuButton(groupId, group.records[0].title, 'level-3 font-normal'));
+        });
+        commonFaultsChildren.push(linkedIssuesDetails);
+        if (isGroupId(currentCategory)) linkedIssuesDetails.open = true;
+    }
+    commonFaultsChildren.push(createMenuButton('common-fault-open', 'Open', 'level-2'));
+    commonFaultsChildren.push(createMenuButton('common-fault-closed', 'Closed', 'level-2'));
+
+    const generalChildren = [
+        createMenuButton('general-open', 'Open', 'level-2'),
+        createMenuButton('general-closed', 'Closed', 'level-2'),
+    ];
+    const qaChildren = [
+        createMenuButton('qa-open', 'Open', 'level-2'),
+        createMenuButton('qa-closed', 'Closed', 'level-2'),
+    ];
+    
+    dom.categoryMenu.appendChild(createAccordion('common-fault', 'Common Faults', commonFaultsChildren));
+    dom.categoryMenu.appendChild(createAccordion('general', 'General', generalChildren));
+    dom.categoryMenu.appendChild(createAccordion('qa', 'Q&A', qaChildren));
+
     const divider = document.createElement('hr');
     divider.className = "my-2 border-slate-200 dark:border-slate-700";
     dom.categoryMenu.appendChild(divider);
-    dom.categoryMenu.appendChild(createMenuButton('samsung-action-tracker', 'Samsung Action Tracker'));
-    dom.categoryMenu.appendChild(createMenuButton('all', 'All Records'));
+    dom.categoryMenu.appendChild(createMenuButton('samsung-action-tracker', 'Samsung Action Tracker', 'level-1'));
+    dom.categoryMenu.appendChild(createMenuButton('all', 'All Records', 'level-1'));
 };
 
 
@@ -423,7 +450,6 @@ const openLinkUnlinkModal = (record) => {
     }
 
     dom.linkList.innerHTML = '';
-    // Show all open common faults, not just similar ones
     const availableToLink = allRecords.filter(fault => 
         fault.category === 'common-fault' && 
         !fault.isClosed &&
