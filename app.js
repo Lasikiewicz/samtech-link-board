@@ -187,9 +187,18 @@ const renderCategoryMenu = () => {
             </summary>
             <div class="space-y-1 mt-1"></div>`;
         const linkedContent = linkedIssuesDetails.querySelector('div');
-        groupedFaults.forEach((group, groupId) => {
+        
+        // --- TASK 1: Sort linked issue groups from newest to oldest ---
+        const sortedGroups = Array.from(groupedFaults.entries()).sort(([, groupA], [, groupB]) => {
+            const timeA = groupA.records[0]?.createdAt?.seconds || 0;
+            const timeB = groupB.records[0]?.createdAt?.seconds || 0;
+            return timeB - timeA;
+        });
+
+        sortedGroups.forEach(([groupId, group]) => {
             linkedContent.appendChild(createMenuButton(groupId, group.records[0].title, 'level-3 font-normal'));
         });
+
         commonFaultsChildren.push(linkedIssuesDetails);
         if (isGroupId(currentCategory)) linkedIssuesDetails.open = true;
     }
@@ -445,7 +454,8 @@ dom.cancelAdd.addEventListener('click', () => dom.addRecordModal.classList.add('
 dom.cancelEdit.addEventListener('click', () => dom.editRecordModal.classList.add('hidden'));
 dom.cancelTimeEdit.addEventListener('click', () => dom.editTimeModal.classList.add('hidden'));
 dom.deleteRecordBtn.addEventListener('click', () => {
-    recordToDelete = dom.editRecordForm.querySelector('[name="id"]').value;
+    const recordId = dom.editRecordForm.querySelector('[name="id"]').value;
+    recordToDelete = recordId;
     const record = allRecords.find(r => r.id === recordToDelete);
     if (record) {
         document.getElementById('delete-record-title').textContent = record.title;
@@ -550,8 +560,7 @@ dom.linkUnlinkModal.addEventListener('click', async (e) => {
 dom.recordsContainer.addEventListener('click', async (e) => {
     const recordCard = e.target.closest('.record-card');
     if (!recordCard) return;
-    
-    // --- TASK 1: Bug Fix for View Group button ---
+
     if (e.target.closest('.linked-fault-btn')) {
         e.preventDefault();
         const groupId = e.target.dataset.groupId;
