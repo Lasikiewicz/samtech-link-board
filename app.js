@@ -467,7 +467,7 @@ dom.filterControls.addEventListener('click', (e) => {
 });
 
 // TASK 4: Add event listener for new category filter bar
-// BUG FIX: Added a check to ensure the element exists before adding a listener.
+// BUG FIX: This check ensures the element exists before adding a listener.
 if (dom.categoryFilterBar) {
     dom.categoryFilterBar.addEventListener('click', (e) => {
         const btn = e.target.closest('.control-btn');
