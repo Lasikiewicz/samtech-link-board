@@ -39,11 +39,35 @@ const dom = {
 };
 
 const formInputClasses = "w-full p-2 border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-900 rounded text-slate-900 dark:text-slate-200 placeholder-slate-400 dark:placeholder-slate-500";
+const formLabelClasses = "block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1";
+
+// TASK 4: Replaced placeholders with titles (labels)
 const formFieldsTemplates = {
-    qa: `<input name="title" type="text" placeholder="Q&A Title" class="${formInputClasses}" required><input name="qaId" type="text" placeholder="Q&A Question ID" pattern="\\d{8}" title="8 digits" class="${formInputClasses}" required><input name="modelNumber" type="text" placeholder="Model Number" class="${formInputClasses}"><input name="serialNumber" type="text" placeholder="Serial Number" class="${formInputClasses}"><input name="serviceOrderNumber" type="text" placeholder="Service Order Number" pattern="\\d{10}" title="10 digits" class="${formInputClasses}"><input name="salesforceCaseNumber" type="text" placeholder="Salesforce Case Number" class="${formInputClasses}"><textarea name="description" placeholder="Description" class="${formInputClasses}" rows="4"></textarea>`,
-    'common-fault': `<input name="title" type="text" placeholder="Title" class="${formInputClasses}" required><input name="modelNumber" type="text" placeholder="Model Number" class="${formInputClasses}"><input name="serialNumber" type="text" placeholder="Serial Number" class="${formInputClasses}"><input name="serviceOrderNumber" type="text" placeholder="Service Order Number" pattern="\\d{10}" title="10 digits" class="${formInputClasses}"><input name="salesforceCaseNumber" type="text" placeholder="Salesforce Case Number" class="${formInputClasses}"><textarea name="description" placeholder="Description" class="${formInputClasses}" rows="4"></textarea><label class="flex items-center mt-4"><input type="checkbox" name="onSamsungTracker" class="rounded mr-2"> On Samsung Action Tracker</label>`,
-    general: `<input name="title" type="text" placeholder="Title" class="${formInputClasses}" required><input name="modelNumber" type="text" placeholder="Model Number" class="${formInputClasses}"><input name="serialNumber" type="text" placeholder="Serial Number" class="${formInputClasses}"><input name="serviceOrderNumber" type="text" placeholder="Service Order Number" pattern="\\d{10}" title="10 digits" class="${formInputClasses}"><input name="salesforceCaseNumber" type="text" placeholder="Salesforce Case Number" class="${formInputClasses}"><textarea name="description" placeholder="Description" class="${formInputClasses}" rows="4"></textarea>`
+    qa: `
+        <div><label class="${formLabelClasses}">Q&A Title</label><input name="title" type="text" class="${formInputClasses}" required></div>
+        <div><label class="${formLabelClasses}">Q&A Question ID</label><input name="qaId" type="text" pattern="\\d{8}" title="8 digits" class="${formInputClasses}" required></div>
+        <div><label class="${formLabelClasses}">Model Number</label><input name="modelNumber" type="text" class="${formInputClasses}"></div>
+        <div><label class="${formLabelClasses}">Serial Number</label><input name="serialNumber" type="text" class="${formInputClasses}"></div>
+        <div><label class="${formLabelClasses}">Service Order Number</label><input name="serviceOrderNumber" type="text" pattern="\\d{10}" title="10 digits" class="${formInputClasses}"></div>
+        <div><label class="${formLabelClasses}">Salesforce Case Number</label><input name="salesforceCaseNumber" type="text" class="${formInputClasses}"></div>
+        <div><label class="${formLabelClasses}">Description</label><textarea name="description" class="${formInputClasses}" rows="4"></textarea></div>`,
+    'common-fault': `
+        <div><label class="${formLabelClasses}">Title</label><input name="title" type="text" class="${formInputClasses}" required></div>
+        <div><label class="${formLabelClasses}">Model Number</label><input name="modelNumber" type="text" class="${formInputClasses}"></div>
+        <div><label class="${formLabelClasses}">Serial Number</label><input name="serialNumber" type="text" class="${formInputClasses}"></div>
+        <div><label class="${formLabelClasses}">Service Order Number</label><input name="serviceOrderNumber" type="text" pattern="\\d{10}" title="10 digits" class="${formInputClasses}"></div>
+        <div><label class="${formLabelClasses}">Salesforce Case Number</label><input name="salesforceCaseNumber" type="text" class="${formInputClasses}"></div>
+        <div><label class="${formLabelClasses}">Description</label><textarea name="description" class="${formInputClasses}" rows="4"></textarea></div>
+        <label class="flex items-center mt-4"><input type="checkbox" name="onSamsungTracker" class="rounded mr-2"> On Samsung Action Tracker</label>`,
+    general: `
+        <div><label class="${formLabelClasses}">Title</label><input name="title" type="text" class="${formInputClasses}" required></div>
+        <div><label class="${formLabelClasses}">Model Number</label><input name="modelNumber" type="text" class="${formInputClasses}"></div>
+        <div><label class="${formLabelClasses}">Serial Number</label><input name="serialNumber" type="text" class="${formInputClasses}"></div>
+        <div><label class="${formLabelClasses}">Service Order Number</label><input name="serviceOrderNumber" type="text" pattern="\\d{10}" title="10 digits" class="${formInputClasses}"></div>
+        <div><label class="${formLabelClasses}">Salesforce Case Number</label><input name="salesforceCaseNumber" type="text" class="${formInputClasses}"></div>
+        <div><label class="${formLabelClasses}">Description</label><textarea name="description" class="${formInputClasses}" rows="4"></textarea></div>`
 };
+
 
 let currentFormCategory = 'qa';
 const setFormCategory = (category, container, record = {}) => {
@@ -110,10 +134,12 @@ const renderCategoryMenu = () => {
         if (isGroupTitle) btn.classList.add('font-semibold');
         if (currentCategory === id) btn.classList.add('active');
         btn.addEventListener('click', () => { 
-            currentCategory = id; 
-            currentFilter = 'all'; 
-            dom.filterControls.querySelectorAll('.control-btn').forEach(b => b.classList.remove('active'));
-            dom.filterControls.querySelector(`[data-filter="all"]`).classList.add('active');
+            currentCategory = id;
+            if (id === '' || id === 'samsung-action-tracker') { // Reset main filters for these special categories
+                 currentFilter = 'all'; 
+                 dom.filterControls.querySelectorAll('.control-btn').forEach(b => b.classList.remove('active'));
+                 dom.filterControls.querySelector(`[data-filter="all"]`).classList.add('active');
+            }
             setupRecordsListener();
         });
         return btn;
@@ -140,6 +166,12 @@ const renderCategoryMenu = () => {
         dom.categoryMenu.appendChild(details);
     }
     dom.categoryMenu.appendChild(createBtn('general', 'General'));
+    
+    // TASK 3: Add Samsung Action Tracker to left menu
+    const divider = document.createElement('hr');
+    divider.className = "my-2 border-slate-200 dark:border-slate-700";
+    dom.categoryMenu.appendChild(divider);
+    dom.categoryMenu.appendChild(createBtn('samsung-action-tracker', 'Samsung Action Tracker'));
 };
 
 const getRecordGroupId = (recordId) => {
@@ -157,6 +189,12 @@ const renderRecordCard = (record) => {
     card.className = `record-card bg-white dark:bg-slate-800 p-5 rounded-xl shadow-lg transition-all ${record.isClosed ? 'opacity-60' : ''}`;
     if (expandedRecordIds.has(record.id)) card.classList.add('expanded');
     
+    // TASK 2: Create subtitle with creator and date
+    const subTitleHtml = `<p class="text-xs text-slate-500 dark:text-slate-400 mt-1">By <span class="font-semibold">${record.addedBy}</span> on ${formatDateTime(record.createdAt)}</p>`;
+    
+    // TASK 3: Make Samsung Action Tracker tag a clickable button
+    const samsungTrackerHtml = record.onSamsungTracker ? `<button class="filter-sat-btn text-xs font-bold bg-green-500 text-white px-2 py-1 rounded-full transition-transform hover:scale-105">Samsung Action Tracker</button>` : '';
+
     const detailsHtml = `${record.qaId?`<div><dt class="font-semibold">Q&A ID:</dt><dd class="break-all">${record.qaId}</dd></div>`:''}${record.modelNumber?`<div><dt class="font-semibold">Model Number:</dt><dd class="break-all">${record.modelNumber}</dd></div>`:''}${record.serialNumber?`<div><dt class="font-semibold">Serial Number:</dt><dd class="break-all">${record.serialNumber}</dd></div>`:''}${record.serviceOrderNumber?`<div><dt class="font-semibold">Service Order Number:</dt><dd class="break-all">${record.serviceOrderNumber}</dd></div>`:''}${record.salesforceCaseNumber?`<div><dt class="font-semibold">Salesforce Case Number:</dt><dd class="break-all">${record.salesforceCaseNumber}</dd></div>`:''}`;
     const categoryDisplayNames = { qa: 'Q&A', 'common-fault': 'Common Fault', general: 'General' };
     const categoryColors = { qa: '#5fcae2', 'common-fault': '#4892cf', general: '#3f57ab' };
@@ -164,7 +202,14 @@ const renderRecordCard = (record) => {
     const linkedRecordsHtml = groupId ? `<div class="mt-2"><dt class="font-semibold">Linked Faults:</dt><dd><button class="linked-fault-btn text-indigo-600 dark:text-indigo-400 underline" data-group-id="${groupId}">View Group</button></dd></div>` : '';
     const actionsHtml = `<div class="actions flex-shrink-0 ml-4 space-x-1"><button title="Edit Record" class="edit-record-btn p-1.5 rounded-full hover:bg-slate-200 dark:hover:bg-slate-600">&#9998;</button><button title="Edit Timestamp" class="edit-time-btn p-1.5 rounded-full hover:bg-slate-200 dark:hover:bg-slate-600">&#128337;</button><button title="${record.isClosed ? 'Re-open Record' : 'Close Record'}" class="toggle-close-btn p-1.5 rounded-full hover:bg-slate-200 dark:hover:bg-slate-600">${record.isClosed ? '&#128275;' : '&#128274;'}</button></div>`;
 
-    card.innerHTML = `<div class="collapsible-header flex justify-between items-start cursor-pointer record-header"><div class="flex items-center gap-3"><span class="text-xs capitalize text-white px-2 py-0.5 rounded-full" style="background-color: ${categoryColors[record.category] || '#64748b'}">${categoryDisplayNames[record.category] || record.category}</span><h3 class="text-lg font-semibold text-indigo-600 dark:text-indigo-400 break-all">${record.title}</h3></div><div class="flex items-center gap-2">${record.onSamsungTracker ? '<span class="text-xs font-bold bg-green-500 text-white px-2 py-1 rounded-full">Samsung Action Tracker</span>' : ''}${record.isClosed?'<span class="text-xs font-bold bg-slate-500 text-white px-2 py-1 rounded-full">CLOSED</span>':''}${actionsHtml}<svg class="chevron h-5 w-5 transition-transform" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" /></svg></div></div><div class="collapsible-content details-container"><div class="mt-4 pt-4 border-t border-slate-200 dark:border-slate-700 text-sm space-y-2"><dl class="grid grid-cols-1 md:grid-cols-2 gap-x-4 gap-y-1">${detailsHtml}${linkedRecordsHtml}</dl>${record.description?`<div class="pt-2"><p class="whitespace-pre-wrap">${record.description}</p></div>`:''}</div><div class="comments-section mt-4 pt-4 border-t border-slate-200 dark:border-slate-700"></div><p class="text-xs text-slate-400 dark:text-slate-500 mt-4">Added by <span class="font-mono">${record.addedBy}</span> on ${formatDateTime(record.createdAt)}</p></div>`;
+    card.innerHTML = `<div class="collapsible-header flex justify-between items-start cursor-pointer record-header">
+        <div>
+            <div class="flex items-center gap-3"><span class="text-xs capitalize text-white px-2 py-0.5 rounded-full" style="background-color: ${categoryColors[record.category] || '#64748b'}">${categoryDisplayNames[record.category] || record.category}</span><h3 class="text-lg font-semibold text-indigo-600 dark:text-indigo-400 break-all">${record.title}</h3></div>
+            ${subTitleHtml}
+        </div>
+        <div class="flex items-center gap-2">${samsungTrackerHtml}${record.isClosed?'<span class="text-xs font-bold bg-slate-500 text-white px-2 py-1 rounded-full">CLOSED</span>':''}${actionsHtml}<svg class="chevron h-5 w-5 transition-transform" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" /></svg></div>
+    </div>
+    <div class="collapsible-content details-container"><div class="mt-4 pt-4 border-t border-slate-200 dark:border-slate-700 text-sm space-y-2"><dl class="grid grid-cols-1 md:grid-cols-2 gap-x-4 gap-y-1">${detailsHtml}${linkedRecordsHtml}</dl>${record.description?`<div class="pt-2"><p class="whitespace-pre-wrap">${record.description}</p></div>`:''}</div><div class="comments-section mt-4 pt-4 border-t border-slate-200 dark:border-slate-700"></div></div>`;
     
     if (expandedRecordIds.has(record.id)) {
         renderComments(card.querySelector('.comments-section'), record);
@@ -174,7 +219,6 @@ const renderRecordCard = (record) => {
 };
 
 const renderComments = (container, record) => {
-    // --- FEATURE: Removed collapsible header and wrapper for comments ---
     container.innerHTML = `<h4 class="text-sm font-semibold mb-2">Updates & Comments</h4><div class="comments-list mt-2 space-y-3 pr-2"></div>${!record.isClosed ? '<form class="add-comment-form mt-3 flex items-start gap-2"><textarea placeholder="Add a comment..." class="flex-grow w-full text-sm px-3 py-2 border rounded" rows="2"></textarea><button type="submit" class="bg-slate-600 text-white font-semibold text-sm px-4 py-2 rounded-lg hover:bg-slate-700 flex-shrink-0 disabled:opacity-50">Post</button></form>' : ''}`;
     
     const commentsList = container.querySelector('.comments-list');
@@ -199,14 +243,17 @@ const renderComments = (container, record) => {
 };
 
 const renderRecords = () => {
-     let recordsToDisplay = [...allRecords];
-    if (currentCategory) {
+    let recordsToDisplay = [...allRecords];
+    
+    // Handle main category filtering, but not for SAT
+    if (currentCategory && currentCategory !== 'samsung-action-tracker') {
         if(groupedFaults.has(currentCategory)) {
              recordsToDisplay = groupedFaults.get(currentCategory).records;
         } else {
             recordsToDisplay = recordsToDisplay.filter(r => r.category === currentCategory);
         }
     }
+    
     if (currentSearch) recordsToDisplay = recordsToDisplay.filter(r => Object.values(r).join(' ').toLowerCase().includes(currentSearch));
     
     dom.recordsContainer.innerHTML = '';
@@ -236,6 +283,12 @@ const setupRecordsListener = () => {
     dom.loadingState.style.display = 'block';
     
     const constraints = [];
+    
+    // TASK 3: Add where clause for Samsung Action Tracker filter
+    if (currentCategory === 'samsung-action-tracker') {
+        constraints.push(where('onSamsungTracker', '==', true));
+    }
+    
     if (currentFilter === 'my') constraints.push(where('addedBy', '==', currentUserDisplayName));
     else if (currentFilter === 'open') constraints.push(where('isClosed', '==', false));
     else if (currentFilter === 'closed') constraints.push(where('isClosed', '==', true));
@@ -249,9 +302,6 @@ const setupRecordsListener = () => {
     recordsUnsubscribe = onSnapshot(q, (snapshot) => {
         dom.loadingState.style.display = 'none';
         
-        const changes = snapshot.docChanges();
-        let shouldRerender = changes.some(change => change.type !== 'modified' || expandedRecordIds.has(change.doc.id));
-
         allRecords = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
         groupCommonFaults();
         renderRecords();
@@ -273,7 +323,11 @@ dom.searchInput.addEventListener('input', (e) => { currentSearch = e.target.valu
         const btn = e.target.closest('.control-btn');
         if (btn) {
             if (btn.dataset.sort) currentSort = btn.dataset.sort;
-            if (btn.dataset.filter) currentFilter = btn.dataset.filter;
+            if (btn.dataset.filter) {
+                currentFilter = btn.dataset.filter;
+                // If using a main filter, clear the special category filter
+                currentCategory = '';
+            }
             dom.searchInput.value = ''; currentSearch = '';
             container.querySelectorAll('.control-btn').forEach(b => b.classList.remove('active'));
             btn.classList.add('active');
@@ -306,7 +360,6 @@ dom.recordsContainer.addEventListener('click', async (e) => {
     let record = allRecords.find(r => r.id === recordId);
     if (!record) return;
 
-    // --- BUG FIX: Handlers for new action buttons ---
     if (e.target.closest('.edit-record-btn')) {
         openEditModal(record);
         return;
@@ -317,6 +370,14 @@ dom.recordsContainer.addEventListener('click', async (e) => {
     }
     if (e.target.closest('.toggle-close-btn')) {
         await updateDoc(doc(db, `/artifacts/${appId}/public/data/records`, recordId), { isClosed: !record.isClosed });
+        return;
+    }
+    
+    // TASK 3: Handle click on Samsung Action Tracker button
+    if (e.target.closest('.filter-sat-btn')) {
+        e.stopPropagation(); // prevent card from expanding
+        const satMenuItem = dom.categoryMenu.querySelector('[data-id="samsung-action-tracker"]');
+        if (satMenuItem) satMenuItem.click();
         return;
     }
 
@@ -332,8 +393,6 @@ dom.recordsContainer.addEventListener('click', async (e) => {
         }
         return;
     }
-    
-    // --- FEATURE REMOVED: No longer need handler for collapsing comments ---
 
     if (e.target.closest('.add-comment-form') && e.target.tagName === 'BUTTON') {
         e.preventDefault();
