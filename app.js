@@ -15,7 +15,7 @@ let pendingRecordData = null;
 let isInitialLoad = true;
 let recentlySavedCommentInfo = null;
 let recordForLinking = null;
-let presenceRef = null; // Reference to the current user's presence document
+let presenceRef = null;
 
 try { app = getApps().length ? getApp() : initializeApp(firebaseConfig); db = getFirestore(app); } catch (e) { console.error("Firebase init failed:", e); }
 
@@ -62,13 +62,15 @@ const formFieldsTemplates = {
         <div><label class="${formLabelClasses}">Salesforce Case Number</label><input name="salesforceCaseNumber" type="text" class="${formInputClasses}"></div>
         <div><label class="${formLabelClasses}">Description</label><textarea name="description" class="${formInputClasses}" rows="4"></textarea></div>
         <label class="flex items-center mt-4"><input type="checkbox" name="onSamsungTracker" class="rounded mr-2"> On Samsung Action Tracker</label>`,
+    // --- TASK 2: Added Samsung Action Tracker option to General category ---
     general: `
         <div><label class="${formLabelClasses}">Title</label><input name="title" type="text" class="${formInputClasses}" required></div>
         <div><label class="${formLabelClasses}">Model Number</label><input name="modelNumber" type="text" class="${formInputClasses}"></div>
         <div><label class="${formLabelClasses}">Serial Number</label><input name="serialNumber" type="text" class="${formInputClasses}"></div>
         <div><label class="${formLabelClasses}">Service Order Number</label><input name="serviceOrderNumber" type="text" pattern="\\d{10}" title="10 digits" class="${formInputClasses}"></div>
         <div><label class="${formLabelClasses}">Salesforce Case Number</label><input name="salesforceCaseNumber" type="text" class="${formInputClasses}"></div>
-        <div><label class="${formLabelClasses}">Description</label><textarea name="description" class="${formInputClasses}" rows="4"></textarea></div>`
+        <div><label class="${formLabelClasses}">Description</label><textarea name="description" class="${formInputClasses}" rows="4"></textarea></div>
+        <label class="flex items-center mt-4"><input type="checkbox" name="onSamsungTracker" class="rounded mr-2"> On Samsung Action Tracker</label>`
 };
 
 let currentFormCategory = 'qa';
@@ -324,22 +326,27 @@ const openEditModal = (record) => {
     const form = dom.editRecordForm;
     form.querySelector('[name="id"]').value = record.id;
     setFormCategory(record.category, dom.editFormFieldsContainer, record);
-
-    const addedByDiv = document.createElement('div');
-    addedByDiv.innerHTML = `<label class="${formLabelClasses}">Added By</label><input name="addedBy" value="${record.addedBy}" class="${formInputClasses}">`;
-    dom.editFormFieldsContainer.prepend(addedByDiv);
-
     dom.manageLinksBtn.classList.toggle('hidden', record.category !== 'common-fault');
     dom.editRecordModal.classList.remove('hidden');
 };
 
+// --- TASK 3: "Added By" field moved here ---
 const openTimeEditModal = (record) => {
     document.getElementById('edit-time-title').textContent = record.title;
     const form = dom.editTimeForm;
     form.querySelector('[name="id"]').value = record.id;
+    
     const date = record.createdAt.seconds ? new Date(record.createdAt.seconds * 1000) : new Date();
     const localISOString = new Date(date.getTime() - (date.getTimezoneOffset() * 60000)).toISOString().slice(0, 16);
-    form.querySelector('#edit-time-input').value = localISOString;
+    form.querySelector('[name="timestamp"]').value = localISOString;
+
+    // Clear old field if it exists, then add new one for "Added By"
+    form.querySelector('#added-by-container')?.remove(); 
+    const addedByDiv = document.createElement('div');
+    addedByDiv.id = 'added-by-container';
+    addedByDiv.innerHTML = `<label class="${formLabelClasses} mt-4">Added By</label><input name="addedBy" value="${record.addedBy}" class="${formInputClasses}">`;
+    form.querySelector('.space-y-4').appendChild(addedByDiv);
+
     dom.editTimeModal.classList.remove('hidden');
 };
 
@@ -406,21 +413,17 @@ const setupRecordsListener = () => {
     }, (error) => { console.error("Firestore error:", error); dom.loadingState.innerHTML = `<p class="text-red-500">Error loading data. A required index is likely missing. Check console (F12) for a link.</p>`; });
 };
 
-// --- TASK 2: Presence detection logic ---
 const setupPresence = async () => {
-    // Create a reference to a new document in the 'presence' collection
     presenceRef = doc(collection(db, 'presence'));
     
-    // Set the user's online status
     await setDoc(presenceRef, { name: currentUserDisplayName, onlineSince: serverTimestamp() });
 
-    // Listen for changes in the presence collection
-    if(presenceUnsubscribe) presenceUnsubscribe(); // Unsubscribe from any previous listener
+    if(presenceUnsubscribe) presenceUnsubscribe();
     presenceUnsubscribe = onSnapshot(query(collection(db, 'presence')), (snapshot) => {
         const users = new Set();
         snapshot.docs.forEach(doc => {
             const user = doc.data();
-            if (user.name !== currentUserDisplayName) { // Don't show self in the list
+            if (user.name !== currentUserDisplayName) {
                 users.add(user.name);
             }
         });
@@ -437,7 +440,6 @@ const setupPresence = async () => {
         }
     });
 
-    // Attempt to remove the presence document when the user leaves
     window.addEventListener('beforeunload', () => {
         if(presenceRef) deleteDoc(presenceRef);
     });
@@ -780,12 +782,20 @@ dom.editRecordForm.addEventListener('submit', async (e) => {
         } finally { submitBtn.disabled = false; submitBtn.textContent = 'Save Changes'; }
     }
 });
- dom.editTimeForm.addEventListener('submit', async (e) => {
+
+// --- TASK 3: Updated submit handler for timestamp modal ---
+dom.editTimeForm.addEventListener('submit', async (e) => {
     e.preventDefault();
-    const id = e.target.querySelector('[name="id"]').value;
-    const newDate = new Date(e.target.querySelector('#edit-time-input').value);
-    if (id && newDate) {
-         await updateDoc(doc(db, `/artifacts/${appId}/public/data/records`, id), { createdAt: Timestamp.fromDate(newDate) });
+    const formData = new FormData(e.target);
+    const id = formData.get('id');
+    const newDateValue = formData.get('timestamp');
+    const newAddedBy = formData.get('addedBy').trim();
+
+    if (id && newDateValue && newAddedBy) {
+         await updateDoc(doc(db, `/artifacts/${appId}/public/data/records`, id), { 
+             createdAt: Timestamp.fromDate(new Date(newDateValue)),
+             addedBy: newAddedBy
+         });
          dom.editTimeModal.classList.add('hidden');
     }
 });
