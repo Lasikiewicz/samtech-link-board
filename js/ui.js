@@ -1,5 +1,6 @@
 import { state, dom, groupColorAssignments, groupBackgroundColors } from './state.js';
 import { formatDateTime, getModelCategory } from './utils.js';
+import { renderRecords } from './firestore.js';
 
 export const formInputClasses = "w-full p-2 border border-slate-300 rounded text-slate-900 placeholder-slate-400";
 export const formLabelClasses = "block text-sm font-medium text-slate-700 mb-1";
@@ -181,17 +182,20 @@ export function renderRecordCard(record) {
     const categoryDisplayNames = { qa: 'Q&A', 'common-fault': 'Common Fault', general: 'General' };
     
     let sublineItems = [];
-    const buttonClasses = "record-filter-btn bg-gray-200 hover:bg-gray-300 text-gray-800 font-semibold py-1 px-2 rounded-md shadow";
+    const baseButtonClasses = "record-filter-btn text-xs font-semibold py-1 px-3 rounded-full shadow-sm transition-transform transform hover:scale-105";
+    const categoryButtonClasses = `${baseButtonClasses} bg-blue-100 text-blue-800 hover:bg-blue-200`;
+    const modelButtonClasses = `${baseButtonClasses} bg-green-100 text-green-800 hover:bg-green-200`;
+    const satButtonClasses = `${baseButtonClasses} bg-purple-100 text-purple-800 hover:bg-purple-200`;
 
-    sublineItems.push(`<button class="${buttonClasses}" data-filter-type="category" data-filter-value="${record.category}">${categoryDisplayNames[record.category] || record.category}</button>`);
+    sublineItems.push(`<button class="${categoryButtonClasses}" data-filter-type="category" data-filter-value="${record.category}">${categoryDisplayNames[record.category] || record.category}</button>`);
 
     const modelCategory = getModelCategory(record.modelNumber);
     if(modelCategory) {
-        sublineItems.push(`<button class="${buttonClasses}" data-filter-type="model" data-filter-value="${modelCategory}">${modelCategory}</button>`);
+        sublineItems.push(`<button class="${modelButtonClasses}" data-filter-type="model" data-filter-value="${modelCategory}">${modelCategory}</button>`);
     }
 
     if(record.onSamsungTracker) {
-        sublineItems.push(`<button class="${buttonClasses}" data-filter-type="sat">Samsung Action Tracker</button>`);
+        sublineItems.push(`<button class="${satButtonClasses}" data-filter-type="sat">Samsung Action Tracker</button>`);
     }
     
     let daysOpenHtml = '';
@@ -214,7 +218,8 @@ export function renderRecordCard(record) {
     const linkedRecordsHtml = linkedGroupId ? `<div class="mt-2"><dt class="font-semibold">Linked Faults:</dt><dd><button class="linked-fault-btn text-indigo-600 underline" data-group-id="${linkedGroupId}">View Group</button></dd></div>` : '';
     
     const actionsHtml = `
-        <div class="actions flex-shrink-0 ml-4 flex items-center space-x-1 text-slate-500">
+        <div class="actions flex-shrink-0 flex items-center space-x-1 text-slate-500">
+            ${daysOpenHtml}
             <button title="Edit Record" class="edit-record-btn p-1.5 rounded-full hover:bg-slate-200 hover:text-slate-800">
                 <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.5L14.732 3.732z" /></svg>
             </button>
@@ -232,17 +237,17 @@ export function renderRecordCard(record) {
     card.innerHTML = `
         <div class="collapsible-header flex justify-between items-start cursor-pointer record-header">
             <div class="flex-grow min-w-0">
-                <h3 class="text-md font-semibold text-indigo-700">${record.title} ${daysOpenHtml}</h3>
-                <div class="flex items-center gap-x-2 flex-wrap text-xs text-slate-500 mt-1">
+                <h3 class="text-md font-semibold text-indigo-700">${record.title}</h3>
+                <div class="flex items-center gap-x-2 flex-wrap text-xs mt-1">
                     ${sublineItems.join('')}
                     ${linkIcon}
                 </div>
-                <div class="mt-1">
+                <div class="mt-2">
                     ${creationHtml}
                 </div>
             </div>
-            <div class="flex flex-col items-end">
-                ${record.isClosed ? '<span class="text-xs font-bold bg-slate-500 text-white px-2 py-1 rounded-full mb-1">CLOSED</span>' : ''}
+            <div class="flex flex-col items-end gap-y-2">
+                ${record.isClosed ? '<span class="text-xs font-bold bg-slate-500 text-white px-2 py-1 rounded-full mb-1">CLOSED</span>' : '<div></div>'}
                 ${actionsHtml}
             </div>
             <svg class="chevron h-5 w-5 transition-transform text-slate-400 ml-2 mt-1 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" /></svg>
