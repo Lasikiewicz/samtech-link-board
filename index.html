@@ -4,8 +4,15 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     
-    <base href="/samtech-link-board/">
-
+    <!-- DYNAMIC BASE TAG SCRIPT -->
+    <!-- This script adds the base tag ONLY on the live github.io site. -->
+    <!-- This fixes pathing issues during local development. -->
+    <script>
+        if (window.location.hostname.includes('github.io')) {
+            document.write('<base href="/samtech-link-board/">');
+        }
+    </script>
+    
     <title>Samtech Tracker</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="preconnect" href="https://fonts.googleapis.com">
