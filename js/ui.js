@@ -1,5 +1,6 @@
 import { state, dom, groupColorAssignments, groupBackgroundColors } from './state.js';
 import { formatDateTime, getModelCategory } from './utils.js';
+// Removed renderRecords from this import line as it's now defined in this file.
 
 export const formInputClasses = "w-full p-2 border border-slate-300 rounded text-slate-900 placeholder-slate-400";
 export const formLabelClasses = "block text-sm font-medium text-slate-700 mb-1";
@@ -323,15 +324,53 @@ export function openEditCommentModal(recordId, commentIndex) {
     dom.editCommentModal.classList.remove('hidden');
 }
 
-// Renders the list of all records based on current filters.
+export function openLinkUnlinkModal(record) {
+    document.getElementById('link-unlink-title').textContent = record.title;
+    
+    dom.unlinkList.innerHTML = '';
+    const currentlyLinkedIds = new Set();
+    const linkedFaults = [...(record.relatedTo || []), ...(record.relatedBy || [])];
+    if (linkedFaults.length > 0) {
+        linkedFaults.forEach(fault => {
+            currentlyLinkedIds.add(fault.id);
+            const item = document.createElement('div');
+            item.className = 'flex justify-between items-center';
+            item.innerHTML = `<span>${fault.title}</span><button data-id="${fault.id}" data-title="${fault.title}" class="unlink-fault-btn text-red-500 hover:text-red-700 text-xs">Unlink</button>`;
+            dom.unlinkList.appendChild(item);
+        });
+    } else {
+        dom.unlinkList.innerHTML = `<p class="text-xs text-slate-400">Not linked to any faults.</p>`;
+    }
+
+    dom.linkList.innerHTML = '';
+    const availableToLink = state.allCommonFaults.filter(fault => 
+        !fault.isClosed &&
+        fault.id !== record.id && 
+        !currentlyLinkedIds.has(fault.id)
+    );
+    
+    if (availableToLink.length > 0) {
+        availableToLink.forEach(fault => {
+            const item = document.createElement('div');
+            item.className = 'flex justify-between items-center';
+            item.innerHTML = `<span>${fault.title}</span><button data-id="${fault.id}" data-title="${fault.title}" class="link-fault-btn text-green-500 hover:text-green-700 text-xs">Link</button>`;
+            dom.linkList.appendChild(item);
+        });
+    } else {
+         dom.linkList.innerHTML = `<p class="text-xs text-slate-400">No other open faults to link.</p>`;
+    }
+
+    dom.linkUnlinkModal.classList.remove('hidden');
+}
+
 export function renderRecords() {
-    let recordsToDisplay = [...state.allRecords]; // Start with all records from the current master list
+    let recordsToDisplay = [...state.allRecords];
 
     const isGroupId = state.currentCategory.length === 20 && /^[a-zA-Z0-9]+$/.test(state.currentCategory);
 
     if (isGroupId && state.groupedFaults.has(state.currentCategory)) {
         const groupRecords = state.groupedFaults.get(state.currentCategory).records;
-        recordsToDisplay = [...groupRecords].sort((a, b) => (a.createdAt?.seconds || 0) - (a.createdAt?.seconds || 0));
+        recordsToDisplay = [...groupRecords].sort((a, b) => (a.createdAt?.seconds || 0) - (b.createdAt?.seconds || 0));
     } else if (state.currentCategory.startsWith('model-')) {
         const prefix = state.currentCategory.split('-')[1];
         if (prefix === 'WSM') {

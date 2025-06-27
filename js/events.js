@@ -31,6 +31,52 @@ export function initializeEventListeners() {
     dom.cancelEdit.addEventListener('click', () => dom.editRecordModal.classList.add('hidden'));
     dom.cancelTimeEdit.addEventListener('click', () => dom.editTimeModal.classList.add('hidden'));
     dom.cancelCommentEdit.addEventListener('click', () => dom.editCommentModal.classList.add('hidden'));
+    dom.closeLinkUnlinkModal.addEventListener('click', () => dom.linkUnlinkModal.classList.add('hidden'));
+
+    dom.manageLinksBtn.addEventListener('click', () => {
+        const recordId = dom.editRecordForm.querySelector('[name="id"]').value;
+        state.recordForLinking = [...state.allRecords, ...state.allCommonFaults].find(r => r.id === recordId);
+        if (state.recordForLinking) openLinkUnlinkModal(state.recordForLinking);
+    });
+
+    dom.linkUnlinkModal.addEventListener('click', async (e) => {
+        const target = e.target;
+        if (!state.recordForLinking) return;
+
+        const linkId = target.dataset.id;
+        const linkTitle = target.dataset.title;
+
+        if (target.matches('.link-fault-btn')) {
+            target.disabled = true;
+            await runTransaction(state.db, async (transaction) => {
+                const sourceRef = doc(state.db, `/artifacts/${appId}/public/data/records`, state.recordForLinking.id);
+                const targetRef = doc(state.db, `/artifacts/${appId}/public/data/records`, linkId);
+                transaction.update(sourceRef, { relatedTo: arrayUnion({ id: linkId, title: linkTitle }) });
+                transaction.update(targetRef, { relatedBy: arrayUnion({ id: state.recordForLinking.id, title: state.recordForLinking.title }) });
+            });
+            const updatedRecord = [...state.allRecords, ...state.allCommonFaults].find(r => r.id === state.recordForLinking.id);
+            if(updatedRecord) openLinkUnlinkModal(updatedRecord);
+        } else if (target.matches('.unlink-fault-btn')) {
+            target.disabled = true;
+            await runTransaction(state.db, async (transaction) => {
+                const sourceRef = doc(state.db, `/artifacts/${appId}/public/data/records`, state.recordForLinking.id);
+                const targetRef = doc(state.db, `/artifacts/${appId}/public/data/records`, linkId);
+                const sourceDoc = await transaction.get(sourceRef);
+                const sourceData = sourceDoc.data();
+                
+                transaction.update(sourceRef, { 
+                    relatedTo: arrayRemove({ id: linkId, title: linkTitle }),
+                    relatedBy: arrayRemove({ id: linkId, title: linkTitle })
+                });
+                transaction.update(targetRef, { 
+                    relatedTo: arrayRemove({ id: state.recordForLinking.id, title: sourceData.title }),
+                    relatedBy: arrayRemove({ id: state.recordForLinking.id, title: sourceData.title })
+                });
+            });
+            const updatedRecord = [...state.allRecords, ...state.allCommonFaults].find(r => r.id === state.recordForLinking.id);
+            if(updatedRecord) openLinkUnlinkModal(updatedRecord);
+        }
+    });
 
     dom.filterControls.addEventListener('click', (e) => {
         const btn = e.target.closest('.control-btn');
@@ -91,7 +137,7 @@ export function initializeEventListeners() {
             return;
         }
 
-        let record = state.allRecords.find(r => r.id === recordId);
+        let record = [...state.allRecords, ...state.allCommonFaults].find(r => r.id === recordId);
         if (!record) return;
 
         if (e.target.closest('.edit-record-btn')) {
