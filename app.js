@@ -262,14 +262,13 @@ document.addEventListener('DOMContentLoaded', async () => {
         const categoryDisplayNames = { qa: 'Q&A', 'common-fault': 'Common Fault', general: 'General' };
         const categoryColors = { qa: '#5fcae2', 'common-fault': '#4892cf', general: '#3f57ab' };
 
-        // Calculate days open if the record is not closed
         let daysOpenHtml = '';
         if (!record.isClosed && record.createdAt?.seconds) {
             const now = new Date();
             const createdAtDate = new Date(record.createdAt.seconds * 1000);
             const diffTime = Math.abs(now - createdAtDate);
             const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-            daysOpenHtml = `<span class="text-xs font-semibold text-red-600 ml-2">(${diffDays} day${diffDays !== 1 ? 's' : ''} open)</span>`;
+            daysOpenHtml = `<span class="text-xs font-semibold text-red-600 shrink-0">(${diffDays} day${diffDays !== 1 ? 's' : ''} open)</span>`;
         }
         
         const typeAndModelHtml = `
@@ -307,8 +306,9 @@ document.addEventListener('DOMContentLoaded', async () => {
         card.innerHTML = `
             <div class="collapsible-header flex justify-between items-start cursor-pointer record-header">
                 <div class="flex-grow min-w-0">
-                    <div class="flex items-center gap-2 flex-wrap">
-                        <h3 class="text-md font-semibold text-indigo-700 truncate">${record.title} ${record.modelNumber ? `(${record.modelNumber})` : ''}</h3>
+                    <div class="flex items-baseline gap-x-2 flex-wrap">
+                        <h3 class="text-md font-semibold text-indigo-700 inline">${record.title}</h3>
+                        ${record.modelNumber ? `<span class="text-sm font-medium text-slate-600 shrink-0">(${record.modelNumber})</span>` : ''}
                         ${daysOpenHtml}
                         ${linkIcon}
                     </div>
