@@ -22,7 +22,8 @@ jobs:
 
       # This new step creates the firebase-config.js file using your repository secrets.
       - name: Create firebase-config.js from Secrets
-        uses: Pdebouav/file-creator@v1.0.1
+        # Change the version number on the next line
+        uses: Pdebouav/file-creator@v1.2.0 
         with:
           file-path: ./
           file-name: firebase-config.js
