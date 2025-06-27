@@ -1,6 +1,5 @@
 import { state, dom, groupColorAssignments, groupBackgroundColors } from './state.js';
 import { formatDateTime, getModelCategory } from './utils.js';
-// Removed renderRecords from this import line as it's now defined in this file.
 
 export const formInputClasses = "w-full p-2 border border-slate-300 rounded text-slate-900 placeholder-slate-400";
 export const formLabelClasses = "block text-sm font-medium text-slate-700 mb-1";
@@ -182,17 +181,26 @@ export function renderRecordCard(record) {
     const categoryDisplayNames = { qa: 'Q&A', 'common-fault': 'Common Fault', general: 'General' };
     
     let sublineItems = [];
-    const buttonClasses = "record-filter-btn text-blue-600 hover:text-blue-800 hover:underline focus:outline-none";
+    const buttonClasses = "record-filter-btn bg-gray-200 hover:bg-gray-300 text-gray-800 font-semibold py-1 px-2 rounded-md shadow";
 
     sublineItems.push(`<button class="${buttonClasses}" data-filter-type="category" data-filter-value="${record.category}">${categoryDisplayNames[record.category] || record.category}</button>`);
 
     const modelCategory = getModelCategory(record.modelNumber);
     if(modelCategory) {
-        sublineItems.push(`<button class="${buttonClasses}" data-filter-type="model" data-filter-value="${modelCategory}"> ${modelCategory}</button>`);
+        sublineItems.push(`<button class="${buttonClasses}" data-filter-type="model" data-filter-value="${modelCategory}">${modelCategory}</button>`);
     }
 
     if(record.onSamsungTracker) {
         sublineItems.push(`<button class="${buttonClasses}" data-filter-type="sat">Samsung Action Tracker</button>`);
+    }
+    
+    let daysOpenHtml = '';
+    if (!record.isClosed && record.createdAt?.seconds) {
+        const now = new Date();
+        const createdAtDate = new Date(record.createdAt.seconds * 1000);
+        const diffTime = Math.abs(now - createdAtDate);
+        const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+        daysOpenHtml = `<span class="text-xs font-semibold text-red-600">(${diffDays} day${diffDays !== 1 ? 's' : ''} open)</span>`;
     }
 
     const creationHtml = `<p class="text-xs text-slate-500">By <span class="font-semibold">${record.addedBy}</span> on ${formatDateTime(record.createdAt)}</p>`;
@@ -224,9 +232,9 @@ export function renderRecordCard(record) {
     card.innerHTML = `
         <div class="collapsible-header flex justify-between items-start cursor-pointer record-header">
             <div class="flex-grow min-w-0">
-                <h3 class="text-md font-semibold text-indigo-700">${record.title}</h3>
+                <h3 class="text-md font-semibold text-indigo-700">${record.title} ${daysOpenHtml}</h3>
                 <div class="flex items-center gap-x-2 flex-wrap text-xs text-slate-500 mt-1">
-                    ${sublineItems.join(' <span class="text-slate-300">&bull;</span> ')}
+                    ${sublineItems.join('')}
                     ${linkIcon}
                 </div>
                 <div class="mt-1">
