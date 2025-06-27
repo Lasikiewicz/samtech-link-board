@@ -1,6 +1,5 @@
 import { state, dom, groupColorAssignments, groupBackgroundColors } from './state.js';
 import { formatDateTime, getModelCategory } from './utils.js';
-import { renderRecords } from './firestore.js';
 
 export const formInputClasses = "w-full p-2 border border-slate-300 rounded text-slate-900 placeholder-slate-400";
 export const formLabelClasses = "block text-sm font-medium text-slate-700 mb-1";
@@ -322,4 +321,46 @@ export function openEditCommentModal(recordId, commentIndex) {
     form.querySelector('[name="timestamp"]').value = localISOString;
 
     dom.editCommentModal.classList.remove('hidden');
+}
+
+// Renders the list of all records based on current filters.
+export function renderRecords() {
+    let recordsToDisplay = [...state.allRecords]; // Start with all records from the current master list
+
+    const isGroupId = state.currentCategory.length === 20 && /^[a-zA-Z0-9]+$/.test(state.currentCategory);
+
+    if (isGroupId && state.groupedFaults.has(state.currentCategory)) {
+        const groupRecords = state.groupedFaults.get(state.currentCategory).records;
+        recordsToDisplay = [...groupRecords].sort((a, b) => (a.createdAt?.seconds || 0) - (a.createdAt?.seconds || 0));
+    } else if (state.currentCategory.startsWith('model-')) {
+        const prefix = state.currentCategory.split('-')[1];
+        if (prefix === 'WSM') {
+            const wsmPrefixes = ['WW', 'WM', 'WF', 'WD'];
+            recordsToDisplay = recordsToDisplay.filter(r => 
+                r.modelNumber && wsmPrefixes.some(p => r.modelNumber.toUpperCase().startsWith(p))
+            );
+        } else {
+             const modelPrefix = prefix === 'REF' ? 'RB' : prefix;
+             recordsToDisplay = recordsToDisplay.filter(r => r.modelNumber && r.modelNumber.toUpperCase().startsWith(modelPrefix));
+        }
+    } else if (state.currentCategory === 'samsung-action-tracker') {
+        recordsToDisplay = recordsToDisplay.filter(r => r.onSamsungTracker);
+    } else if (state.currentCategory !== 'all') {
+        recordsToDisplay = recordsToDisplay.filter(r => r.category === state.currentCategory);
+    }
+    
+    if (state.currentSearch) {
+        recordsToDisplay = recordsToDisplay.filter(r => 
+            Object.values(r).some(val => 
+                String(val).toLowerCase().includes(state.currentSearch)
+            )
+        );
+    }
+    
+    dom.recordsContainer.innerHTML = '';
+    if (recordsToDisplay.length === 0) { 
+        dom.recordsContainer.innerHTML = `<p class="text-slate-500">No records match your current filters.</p>`;
+        return;
+    }
+    recordsToDisplay.forEach(recordData => dom.recordsContainer.appendChild(renderRecordCard(recordData)));
 }
