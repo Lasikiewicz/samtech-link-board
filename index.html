@@ -4,7 +4,6 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     
-    <!-- This base tag is crucial for GitHub Pages. It tells the browser where to find all other files. -->
     <base href="/samtech-link-board/">
 
     <title>Samtech Tracker</title>
@@ -22,7 +21,7 @@
         .message-box { animation: fadeIn 0.3s ease-out; }
         @keyframes fadeIn { from { opacity: 0; transform: translateY(-10px); } to { opacity: 1; transform: translateY(0); } }
         .control-btn.active { background-color: #4f46e5; color: white; border-color: #4f46e5; }
-        .collapsible-content { max-height: 0; overflow: hidden; transition: max-height 0.5s ease-in-out; }
+        .collapsible-content { max-height: 0; overflow: hidden; transition: max-height: 0.5s ease-in-out; }
         .record-card.expanded .collapsible-content { max-height: 1500px; }
         .collapsible-header .chevron { transition: transform 0.3s; }
         .expanded > .collapsible-header .chevron { transform: rotate(180deg); }
@@ -45,7 +44,6 @@
 
     <div id="auth-container" class="min-h-screen flex items-center justify-center p-4">
         <div class="max-w-md w-full bg-white p-8 rounded-2xl shadow-xl">
-            <!-- These paths are now relative to the base href, so they don't need leading slashes or dots. -->
             <div class="text-center mb-8"><img src="image/logo1.png" alt="Samtech Solutions Logo" class="mx-auto mb-4 h-16 w-auto"><h1 class="text-2xl font-bold text-slate-900">Enter Access Password</h1></div>
             <form id="auth-form"><div class="space-y-4"><input id="auth-password" type="password" placeholder="Enter shared password" class="w-full px-4 py-2 border border-slate-300 bg-white rounded-lg text-slate-900 placeholder-slate-400" required></div><p id="auth-error" class="text-red-500 text-sm mt-4 h-5"></p><div class="mt-6 flex"><button type="submit" id="login-btn" class="w-full bg-indigo-600 text-white font-semibold px-6 py-2 rounded-lg hover:bg-indigo-700">Enter</button></div></form>
         </div>
@@ -124,7 +122,7 @@
 
     <div id="edit-time-modal" class="fixed inset-0 bg-black bg-opacity-70 flex items-center justify-center p-4 hidden"><div class="bg-white rounded-xl shadow-2xl p-6 w-full max-w-sm"><h2 class="text-xl font-semibold mb-1 text-slate-900">Edit Timestamp</h2><p id="edit-time-title" class="text-sm text-slate-500 mb-4 truncate"></p><form id="edit-time-form"><input type="hidden" name="id"><div class="space-y-4">
         <div><label class="block text-sm font-medium text-slate-700 mb-1">Timestamp</label><input id="edit-time-input" name="timestamp" type="datetime-local" class="w-full p-2 border border-slate-300 rounded text-slate-900"></div>
-    </div><div class="mt-6 flex justify-end space-x-3"><button type="button" id="cancel-time-edit" class="bg-slate-200 font-semibold px-4 py-2 rounded-lg">Cancel</button><button type="button" id="save-time-edit" class="bg-indigo-600 text-white font-semibold px-4 py-2 rounded-lg">Save Time</button></div></form></div></div>
+    </div><div class="mt-6 flex justify-end space-x-3"><button type="button" id="cancel-time-edit" class="bg-slate-200 font-semibold px-4 py-2 rounded-lg">Cancel</button><button type="submit" class="bg-indigo-600 text-white font-semibold px-4 py-2 rounded-lg">Save</button></div></form></div></div>
     <div id="confirm-delete-modal" class="fixed inset-0 bg-black bg-opacity-70 flex items-center justify-center p-4 hidden"><div class="bg-white rounded-xl shadow-2xl p-6 w-full max-w-sm"><h2 class="text-xl font-semibold mb-2 text-slate-900">Are you sure?</h2><p class="text-sm text-slate-600 mb-1">You are about to delete:</p><p id="delete-record-title" class="text-sm font-semibold text-red-600 mb-4 truncate"></p><p class="text-sm text-slate-600 mb-4">This action cannot be undone.</p><div class="mt-6 flex justify-end space-x-3"><button type="button" id="cancel-delete" class="bg-slate-200 font-semibold px-4 py-2 rounded-lg">Cancel</button><button type="button" id="confirm-delete-btn" class="bg-red-600 text-white font-semibold px-4 py-2 rounded-lg">Delete Record</button></div></div></div>
     <div id="link-fault-modal" class="fixed inset-0 bg-black bg-opacity-70 flex items-center justify-center p-4 hidden"><div class="bg-white rounded-xl shadow-2xl p-6 w-full max-w-lg"><h2 class="text-xl font-semibold mb-1 text-slate-900">Link to Existing Fault?</h2><p id="link-fault-title" class="text-sm text-slate-500 mb-4 truncate"></p><p class="text-sm mb-4">Found existing faults with a similar title or model number. Do you want to link this new fault to them?</p><div id="existing-faults-list" class="space-y-2 mb-4"></div><div class="mt-6 flex justify-end space-x-3"><button type="button" id="skip-link-btn" class="bg-slate-200 font-semibold px-4 py-2 rounded-lg">Don't Link, Create New</button><button type="button" id="confirm-link-btn" class="bg-indigo-600 text-white font-semibold px-4 py-2 rounded-lg">Link and Create</button></div></div></div>
     <div id="link-unlink-modal" class="fixed inset-0 bg-black bg-opacity-70 flex items-center justify-center p-4 hidden"><div class="bg-white rounded-xl shadow-2xl p-6 w-full max-w-2xl"><h2 class="text-xl font-semibold mb-1 text-slate-900">Manage Links</h2><p id="link-unlink-title" class="text-sm text-slate-500 mb-4 truncate"></p><div class="grid grid-cols-1 md:grid-cols-2 gap-6"><div id="unlink-container"> <h3 class="font-semibold mb-2">Currently Linked</h3> <div id="unlink-list" class="space-y-2 text-sm"></div></div><div id="link-container"> <h3 class="font-semibold mb-2">Available to Link</h3> <div id="link-list" class="space-y-2 text-sm max-h-64 overflow-y-auto custom-scrollbar"></div></div></div><div class="mt-6 flex justify-end space-x-3"><button type="button" id="close-link-unlink-modal" class="bg-slate-200 font-semibold px-4 py-2 rounded-lg">Close</button></div></div></div>
