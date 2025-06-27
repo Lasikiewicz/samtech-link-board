@@ -174,6 +174,17 @@ document.addEventListener('DOMContentLoaded', async () => {
         });
     };
 
+    const updateActiveFilterButtons = () => {
+        // Update top category filter bar
+        dom.categoryFilterBar.querySelectorAll('.control-btn').forEach(btn => {
+            btn.classList.toggle('active', btn.dataset.category === currentCategory);
+        });
+        // Update left side menu
+        dom.categoryMenu.querySelectorAll('.menu-item').forEach(btn => {
+            btn.classList.toggle('active', btn.dataset.id === currentCategory);
+        });
+    };
+
     // Renders the category navigation menu on the left side of the screen.
     const renderCategoryMenu = () => {
         dom.categoryMenu.innerHTML = '';
@@ -183,11 +194,11 @@ document.addEventListener('DOMContentLoaded', async () => {
             btn.dataset.id = id;
             btn.textContent = text;
             btn.className = `menu-item block w-full text-left truncate ${className}`;
-            if (currentCategory === id) btn.classList.add('active');
             btn.addEventListener('click', (e) => { 
                 e.stopPropagation();
                 currentCategory = id;
-                renderRecords(); // Re-render with new filter instead of re-fetching
+                updateActiveFilterButtons();
+                renderRecords();
             });
             return btn;
         };
@@ -227,11 +238,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         dom.categoryMenu.appendChild(createMenuButton('model-WSM', 'WSM Models', 'level-2'));
         dom.categoryMenu.appendChild(createMenuButton('model-TD', 'TD Models', 'level-2'));
 
-        if (dom.categoryFilterBar) {
-            dom.categoryFilterBar.querySelectorAll('.control-btn').forEach(btn => {
-                btn.classList.toggle('active', btn.dataset.category === currentCategory);
-            });
-        }
+        updateActiveFilterButtons();
     };
 
 
@@ -271,17 +278,18 @@ document.addEventListener('DOMContentLoaded', async () => {
         
         const categoryDisplayNames = { qa: 'Q&A', 'common-fault': 'Common Fault', general: 'General' };
         
-        let sublineItems = [
-            categoryDisplayNames[record.category] || record.category
-        ];
+        let sublineItems = [];
+        const buttonClasses = "record-filter-btn text-blue-600 hover:text-blue-800 hover:underline focus:outline-none";
+
+        sublineItems.push(`<button class="${buttonClasses}" data-filter-type="category" data-filter-value="${record.category}">${categoryDisplayNames[record.category] || record.category}</button>`);
 
         const modelCategory = getModelCategory(record.modelNumber);
         if(modelCategory) {
-            sublineItems.push(modelCategory);
+            sublineItems.push(`<button class="${buttonClasses}" data-filter-type="model" data-filter-value="${modelCategory}"> ${modelCategory}</button>`);
         }
 
         if(record.onSamsungTracker) {
-            sublineItems.push('Samsung Action Tracker');
+            sublineItems.push(`<button class="${buttonClasses}" data-filter-type="sat">Samsung Action Tracker</button>`);
         }
 
         const creationHtml = `<p class="text-xs text-slate-500">By <span class="font-semibold">${record.addedBy}</span> on ${formatDateTime(record.createdAt)}</p>`;
@@ -586,8 +594,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         currentSearch = '';
         dom.filterControls.querySelectorAll('.control-btn').forEach(b => b.classList.remove('active'));
         dom.filterControls.querySelector('[data-filter="open"]').classList.add('active');
-        dom.categoryFilterBar.querySelectorAll('.control-btn').forEach(b => b.classList.remove('active'));
-        dom.categoryFilterBar.querySelector('[data-category="all"]').classList.add('active');
+        updateActiveFilterButtons();
         renderRecords();
     });
 
@@ -615,8 +622,7 @@ document.addEventListener('DOMContentLoaded', async () => {
             const btn = e.target.closest('.control-btn');
             if (btn && btn.dataset.category) {
                 currentCategory = btn.dataset.category;
-                dom.categoryFilterBar.querySelectorAll('.control-btn').forEach(b => b.classList.remove('active'));
-                btn.classList.add('active');
+                updateActiveFilterButtons();
                 renderRecords();
             }
         });
@@ -731,6 +737,24 @@ document.addEventListener('DOMContentLoaded', async () => {
         if (!recordCard) return;
 
         const recordId = recordCard.dataset.id;
+        
+        if (e.target.closest('.record-filter-btn')) {
+            e.stopPropagation();
+            const btn = e.target.closest('.record-filter-btn');
+            const filterType = btn.dataset.filterType;
+            const filterValue = btn.dataset.filterValue;
+
+            if (filterType === 'category') {
+                currentCategory = filterValue;
+            } else if (filterType === 'model') {
+                currentCategory = `model-${filterValue}`;
+            } else if (filterType === 'sat') {
+                currentCategory = 'samsung-action-tracker';
+            }
+            updateActiveFilterButtons();
+            renderRecords();
+            return;
+        }
 
         if (e.target.closest('.edit-comment-btn')) {
             const commentIndex = parseInt(e.target.dataset.index);
@@ -780,12 +804,11 @@ document.addEventListener('DOMContentLoaded', async () => {
         }
 
         if (e.target.closest('.record-header')) {
-            const wasExpanded = recordCard.classList.contains('expanded');
-            if (recordCard.classList.toggle('expanded')) {
+            recordCard.classList.toggle('expanded');
+            const isExpanded = recordCard.classList.contains('expanded');
+            if (isExpanded) {
                 expandedRecordIds.add(recordId);
-                if (!wasExpanded) {
-                    renderComments(recordCard.querySelector('.comments-section'), record);
-                }
+                renderComments(recordCard.querySelector('.comments-section'), record);
             } else {
                 expandedRecordIds.delete(recordId);
             }
