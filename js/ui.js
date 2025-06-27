@@ -1,6 +1,5 @@
 import { state, dom, groupColorAssignments, groupBackgroundColors } from './state.js';
 import { formatDateTime, getModelCategory } from './utils.js';
-// The incorrect import has been removed from this file.
 
 export const formInputClasses = "w-full p-2 border border-slate-300 rounded text-slate-900 placeholder-slate-400";
 export const formLabelClasses = "block text-sm font-medium text-slate-700 mb-1";
@@ -408,11 +407,20 @@ export function renderRecords() {
     }
     
     if (state.currentSearch) {
-        recordsToDisplay = recordsToDisplay.filter(r => 
-            Object.values(r).some(val => 
-                String(val).toLowerCase().includes(state.currentSearch)
-            )
-        );
+        const lowerCaseSearch = state.currentSearch.toLowerCase();
+        recordsToDisplay = recordsToDisplay.filter(r => {
+            const hasMatchInFields = Object.values(r).some(val => 
+                String(val).toLowerCase().includes(lowerCaseSearch)
+            );
+            if (hasMatchInFields) return true;
+
+            if (r.comments && r.comments.length > 0) {
+                return r.comments.some(comment => 
+                    comment.text && comment.text.toLowerCase().includes(lowerCaseSearch)
+                );
+            }
+            return false;
+        });
     }
     
     dom.recordsContainer.innerHTML = '';
