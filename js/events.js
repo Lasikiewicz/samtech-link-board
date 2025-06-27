@@ -1,7 +1,7 @@
 import { state, dom } from './state.js';
 import { showApp, showLogin } from '../app.js';
 import { setFormCategory, openEditModal, openTimeEditModal, openEditCommentModal, renderComments, renderRecords, updateActiveFilterButtons, openLinkUnlinkModal } from './ui.js';
-import { setupRecordsListener, removePresence } from './firestore.js';
+import { setupRecordsListener } from './firestore.js';
 import { getFirestore, doc, getDoc, collection, onSnapshot, addDoc, updateDoc, deleteDoc, serverTimestamp, query, where, orderBy, arrayUnion, arrayRemove, Timestamp, getDocs, runTransaction, setDoc, writeBatch } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
 const appId = 'samtech-record-board';
@@ -19,7 +19,7 @@ export function initializeEventListeners() {
     });
 
     dom.searchInput.addEventListener('input', (e) => { 
-        state.currentSearch = e.target.value.toLowerCase(); 
+        state.currentSearch = e.target.value; 
         renderRecords(); 
     });
 
@@ -48,7 +48,6 @@ export function initializeEventListeners() {
         }
     });
 
-    // ADDED: Event listener for the delete button in the edit modal
     dom.deleteRecordBtn.addEventListener('click', () => {
         const recordId = dom.editRecordForm.querySelector('[name="id"]').value;
         const record = [...state.allRecords, ...state.allCommonFaults].find(r => r.id === recordId);
@@ -59,7 +58,6 @@ export function initializeEventListeners() {
         }
     });
     
-    // ADDED: Event listener for the final delete confirmation
     dom.confirmDeleteBtn.addEventListener('click', async () => {
         if (state.recordToDelete) {
             await deleteDoc(doc(state.db, `/artifacts/${appId}/public/data/records`, state.recordToDelete.id));
@@ -69,7 +67,6 @@ export function initializeEventListeners() {
         }
     });
 
-    // ADDED: Event listener to cancel deletion
     dom.cancelDelete.addEventListener('click', () => {
         dom.confirmDeleteModal.classList.add('hidden');
         state.recordToDelete = null;
@@ -296,7 +293,6 @@ export function initializeEventListeners() {
 
     dom.logoutBtn.addEventListener('click', () => { 
         sessionStorage.clear(); 
-        removePresence();
         showLogin();
     });
 

@@ -4,6 +4,31 @@ import { formatDateTime, getModelCategory } from './utils.js';
 export const formInputClasses = "w-full p-2 border border-slate-300 rounded text-slate-900 placeholder-slate-400";
 export const formLabelClasses = "block text-sm font-medium text-slate-700 mb-1";
 
+/**
+ * Escapes special characters in a string for use in a regular expression.
+ * @param {string} str The string to escape.
+ * @returns {string} The escaped string.
+ */
+function escapeRegExp(str) {
+  return str.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+}
+
+/**
+ * Highlights a search term within a block of text.
+ * @param {string} text The text to highlight.
+ * @param {string} searchTerm The term to search for.
+ * @returns {string} The text with the search term highlighted, or the original text if no term is provided.
+ */
+function highlightText(text, searchTerm) {
+    if (!searchTerm || !text) {
+        return text;
+    }
+    const escapedTerm = escapeRegExp(searchTerm);
+    const regex = new RegExp(`(${escapedTerm})`, 'gi');
+    return text.replace(regex, '<mark>$1</mark>');
+}
+
+
 export const formFieldsTemplates = {
     qa: `
         <div class="md:col-span-2"><label class="${formLabelClasses}">Q&A Title</label><input name="title" type="text" class="${formInputClasses}" required></div>
@@ -242,17 +267,17 @@ export function renderRecordCard(record) {
         daysOpenHtml = `<span class="text-xs font-semibold text-red-600">(${diffDays} day${diffDays !== 1 ? 's' : ''} open)</span>`;
     }
 
-    const creationHtml = `<p class="text-xs text-slate-500">By <span class="font-semibold">${record.addedBy}</span> on ${formatDateTime(record.createdAt)}</p>`;
+    const creationHtml = `<p class="text-xs text-slate-500">By <span class="font-semibold">${highlightText(record.addedBy, state.currentSearch)}</span> on ${formatDateTime(record.createdAt)}</p>`;
     
     const isLinked = record.category === 'common-fault' && ((record.relatedTo && record.relatedTo.length > 0) || (record.relatedBy && record.relatedBy.length > 0));
     const linkIcon = isLinked ? `<svg class="h-4 w-4 text-cyan-500 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" title="This fault is linked to others."><path stroke-linecap="round" stroke-linejoin="round" d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1"></path></svg>` : '';
     
     const detailsHtml = [
-        record.modelNumber ? `<div><dt class="font-semibold">Model Number:</dt><dd class="break-all">${record.modelNumber}</dd></div>` : '',
-        record.serialNumber ? `<div><dt class="font-semibold">Serial Number:</dt><dd class="break-all">${record.serialNumber}</dd></div>` : '',
-        record.serviceOrderNumber ? `<div><dt class="font-semibold">Service Order Number:</dt><dd class="break-all">${record.serviceOrderNumber}</dd></div>` : '',
-        record.salesforceCaseNumber ? `<div><dt class="font-semibold">Salesforce Case Number:</dt><dd class="break-all">${record.salesforceCaseNumber}</dd></div>` : '',
-        record.qaId ? `<div><dt class="font-semibold">Q&A ID:</dt><dd class="break-all">${record.qaId}</dd></div>` : ''
+        record.modelNumber ? `<div><dt class="font-semibold">Model Number:</dt><dd class="break-all">${highlightText(record.modelNumber, state.currentSearch)}</dd></div>` : '',
+        record.serialNumber ? `<div><dt class="font-semibold">Serial Number:</dt><dd class="break-all">${highlightText(record.serialNumber, state.currentSearch)}</dd></div>` : '',
+        record.serviceOrderNumber ? `<div><dt class="font-semibold">Service Order Number:</dt><dd class="break-all">${highlightText(record.serviceOrderNumber, state.currentSearch)}</dd></div>` : '',
+        record.salesforceCaseNumber ? `<div><dt class="font-semibold">Salesforce Case Number:</dt><dd class="break-all">${highlightText(record.salesforceCaseNumber, state.currentSearch)}</dd></div>` : '',
+        record.qaId ? `<div><dt class="font-semibold">Q&A ID:</dt><dd class="break-all">${highlightText(record.qaId, state.currentSearch)}</dd></div>` : ''
     ].filter(Boolean).join('');
     
     const linkedGroupId = getRecordGroupId(record.id);
@@ -275,7 +300,7 @@ export function renderRecordCard(record) {
     card.innerHTML = `
         <div class="collapsible-header flex justify-between items-start cursor-pointer record-header">
             <div class="flex-grow min-w-0">
-                <h3 class="text-md font-semibold text-indigo-700">${record.title}</h3>
+                <h3 class="text-md font-semibold text-indigo-700">${highlightText(record.title, state.currentSearch)}</h3>
                 <div class="flex items-center gap-2 flex-wrap text-xs mt-1">
                     ${sublineItems.join('')}
                     ${linkIcon}
@@ -293,7 +318,7 @@ export function renderRecordCard(record) {
         <div class="collapsible-content details-container">
             <div class="mt-4 pt-4 border-t border-slate-200 text-sm space-y-2">
                 <dl class="grid grid-cols-1 md:grid-cols-2 gap-x-4 gap-y-1">${detailsHtml}${linkedRecordsHtml}</dl>
-                ${record.description ? `<div class="pt-2"><p class="whitespace-pre-wrap">${record.description}</p></div>` : ''}
+                ${record.description ? `<div class="pt-2"><p class="whitespace-pre-wrap">${highlightText(record.description, state.currentSearch)}</p></div>` : ''}
             </div>
             <div class="comments-section mt-4 pt-4 border-t border-slate-200"></div>
         </div>`;
@@ -323,7 +348,7 @@ export function renderComments(container, record) {
                 }, 2000);
             }
             
-            commentDiv.innerHTML = `<p class="text-xs text-slate-500 mb-1">By: <span class="font-mono">${comment.addedBy}</span> at ${formatDateTime(comment.createdAt)}</p><div class="comment-body flex justify-between items-start"><p class="comment-text break-words whitespace-pre-wrap flex-grow">${comment.text || ''}</p><div class="comment-actions flex-shrink-0 ml-2 space-x-2"><button class="edit-comment-btn" data-index="${index}" title="Edit">&#9998;</button><button class="delete-comment-btn" data-index="${index}" title="Delete">&#10006;</button></div></div>`;
+            commentDiv.innerHTML = `<p class="text-xs text-slate-500 mb-1">By: <span class="font-mono">${highlightText(comment.addedBy, state.currentSearch)}</span> at ${formatDateTime(comment.createdAt)}</p><div class="comment-body flex justify-between items-start"><p class="comment-text break-words whitespace-pre-wrap flex-grow">${highlightText(comment.text, state.currentSearch) || ''}</p><div class="comment-actions flex-shrink-0 ml-2 space-x-2"><button class="edit-comment-btn" data-index="${index}" title="Edit">&#9998;</button><button class="delete-comment-btn" data-index="${index}" title="Delete">&#10006;</button></div></div>`;
             commentsList.appendChild(commentDiv);
         });
     } else { commentsList.innerHTML = '<p class="text-xs text-slate-400">No comments yet.</p>'; }
@@ -416,6 +441,7 @@ export function openLinkUnlinkModal(record) {
 
 export function renderRecords() {
     let recordsToDisplay = [...state.allRecords];
+    const lowerCaseSearch = state.currentSearch.toLowerCase();
 
     const isGroupId = state.currentCategory.length === 20 && /^[a-zA-Z0-9]+$/.test(state.currentCategory);
 
@@ -439,17 +465,21 @@ export function renderRecords() {
         recordsToDisplay = recordsToDisplay.filter(r => r.category === state.currentCategory);
     }
     
-    if (state.currentSearch) {
-        const lowerCaseSearch = state.currentSearch.toLowerCase();
+    if (lowerCaseSearch) {
         recordsToDisplay = recordsToDisplay.filter(r => {
-            const hasMatchInFields = Object.values(r).some(val => 
-                String(val).toLowerCase().includes(lowerCaseSearch)
-            );
+            const hasMatchInFields = Object.entries(r).some(([key, val]) => {
+                if (['title', 'description', 'modelNumber', 'serialNumber', 'serviceOrderNumber', 'salesforceCaseNumber', 'qaId', 'addedBy'].includes(key)) {
+                    return String(val).toLowerCase().includes(lowerCaseSearch);
+                }
+                return false;
+            });
+
             if (hasMatchInFields) return true;
 
             if (r.comments && r.comments.length > 0) {
                 return r.comments.some(comment => 
-                    comment.text && comment.text.toLowerCase().includes(lowerCaseSearch)
+                    (comment.text && comment.text.toLowerCase().includes(lowerCaseSearch)) ||
+                    (comment.addedBy && comment.addedBy.toLowerCase().includes(lowerCaseSearch))
                 );
             }
             return false;

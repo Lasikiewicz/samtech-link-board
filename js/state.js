@@ -4,7 +4,6 @@ export const state = {
     db: null,
     recordsUnsubscribe: null,
     commonFaultsUnsubscribe: null,
-    presenceUnsubscribe: null,
     allRecords: [],
     allCommonFaults: [],
     groupedFaults: new Map(),
@@ -18,7 +17,6 @@ export const state = {
     isInitialLoad: true,
     recentlySavedCommentInfo: null,
     recordForLinking: null,
-    presenceRef: null,
 };
 
 // Centralized DOM element references

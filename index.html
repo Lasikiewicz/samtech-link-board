@@ -12,6 +12,7 @@
     </script>
     
     <title>Samtech Tracker</title>
+    <link rel="icon" href="favicon.ico" type="image/x-icon">
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -43,6 +44,14 @@
         .menu-item.level-2, .menu-summary.level-2 { padding-left: 2rem; }
         .menu-item.level-3 { padding-left: 3rem; }
         .menu-header { padding: 1rem 0.75rem 0.25rem; font-size: 0.75rem; line-height: 1rem; font-weight: 700; text-transform: uppercase; color: #64748b; }
+        
+        /* Style for search highlight */
+        mark {
+            background-color: #fef08a; /* yellow-200 */
+            color: black;
+            padding: 0.1em 0;
+            border-radius: 0.2em;
+        }
     </style>
 </head>
 <body class="text-slate-800">
@@ -69,8 +78,6 @@
                 <div>
                     <img id="logo-img" src="image/logo1.png" alt="Samtech Solutions Logo" class="w-full mb-6 cursor-pointer">
                     <div class="mb-4 text-xs text-slate-500">Signed in as: <span id="user-name-display" class="font-mono font-semibold"></span></div>
-                    <div class="mt-4"><h3 class="text-xs font-bold uppercase text-slate-500">Active Users</h3><ul id="active-users-list" class="mt-1 text-sm space-y-1 font-mono"></ul></div>
-                    <hr class="my-4 border-slate-200">
                     <nav id="category-menu" class="space-y-1"></nav>
                 </div>
                 <div class="mt-auto pt-4">

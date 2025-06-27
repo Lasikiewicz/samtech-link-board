@@ -2,7 +2,7 @@ import { initializeApp, getApps, getApp } from "https://www.gstatic.com/firebase
 import { getFirestore } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 import { state, dom } from './js/state.js';
 import { initializeEventListeners } from './js/events.js';
-import { setupRecordsListener, setupCommonFaultsListener, setupPresence, removePresence } from './js/firestore.js';
+import { setupRecordsListener, setupCommonFaultsListener } from './js/firestore.js';
 
 document.addEventListener('DOMContentLoaded', () => {
     // This is a placeholder that will be replaced by the build process.
@@ -44,7 +44,6 @@ document.addEventListener('DOMContentLoaded', () => {
         confirmDeleteModal: document.getElementById('confirm-delete-modal'), 
         cancelDelete: document.getElementById('cancel-delete'), 
         confirmDeleteBtn: document.getElementById('confirm-delete-btn'),
-        // ADDED: References for the "Confirm Close" modal
         confirmCloseModal: document.getElementById('confirm-close-modal'),
         cancelClose: document.getElementById('cancel-close'),
         confirmCloseBtn: document.getElementById('confirm-close-btn'),
@@ -56,7 +55,6 @@ document.addEventListener('DOMContentLoaded', () => {
         closeLinkUnlinkModal: document.getElementById('close-link-unlink-modal'),
         unlinkList: document.getElementById('unlink-list'), 
         linkList: document.getElementById('link-list'),
-        activeUsersList: document.getElementById('active-users-list'),
         logoImg: document.getElementById('logo-img'),
         editCommentModal: document.getElementById('edit-comment-modal'),
         editCommentForm: document.getElementById('edit-comment-form'),
@@ -93,11 +91,11 @@ export function showApp() {
     dom.userNameDisplay.textContent = state.currentUserDisplayName; 
     setupRecordsListener(); 
     setupCommonFaultsListener();
-    setupPresence();
 }
 
 export function showLogin() { 
     dom.authContainer.style.display = 'flex'; 
     dom.appContainer.style.display = 'none'; 
-    removePresence(); // This will also unsubscribe listeners
+    if (state.recordsUnsubscribe) state.recordsUnsubscribe();
+    if (state.commonFaultsUnsubscribe) state.commonFaultsUnsubscribe();
 }
