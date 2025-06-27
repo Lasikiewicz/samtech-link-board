@@ -20,8 +20,13 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      # This single step now replaces all placeholders directly in app.js
-      # using your repository secrets.
+      # This new step will show us the file content BEFORE the replacement
+      - name: 'Debug: Show app.js before replacement'
+        run: |
+          echo "--- app.js content before replacement ---"
+          cat app.js
+          echo "-----------------------------------------"
+
       - name: Replace placeholders in app.js
         run: |
           sed -i "s|__API_KEY__|${{ secrets.FIREBASE_API_KEY }}|g" app.js
@@ -31,6 +36,13 @@ jobs:
           sed -i "s|__MESSAGING_SENDER_ID__|${{ secrets.FIREBASE_MESSAGING_SENDER_ID }}|g" app.js
           sed -i "s|__APP_ID__|${{ secrets.FIREBASE_APP_ID }}|g" app.js
           sed -i "s|__SHARED_PASSWORD__|${{ secrets.SHARED_PASSWORD }}|g" app.js
+
+      # This new step will show us the file content AFTER the replacement
+      - name: 'Debug: Show app.js after replacement'
+        run: |
+          echo "--- app.js content after replacement ---"
+          cat app.js
+          echo "----------------------------------------"
 
       - name: Upload artifact
         uses: actions/upload-pages-artifact@v3
