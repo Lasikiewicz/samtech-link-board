@@ -33,6 +33,19 @@ jobs:
           sed -i "s|__APP_ID__|${{ secrets.FIREBASE_APP_ID }}|g" app.js
           sed -i "s|__SHARED_PASSWORD__|${{ secrets.SHARED_PASSWORD }}|g" app.js
       
+      - name: Verify replacement
+        run: |
+          echo "Verifying that placeholders were replaced..."
+          if grep -q "__SHARED_PASSWORD__" app.js; then
+            echo "Error: __SHARED_PASSWORD__ placeholder was not replaced."
+            exit 1
+          fi
+          if grep -q "__API_KEY__" app.js; then
+            echo "Error: __API_KEY__ placeholder was not replaced."
+            exit 1
+          fi
+          echo "All placeholders replaced successfully."
+
       - name: Upload artifact
         uses: actions/upload-pages-artifact@v3
         with:

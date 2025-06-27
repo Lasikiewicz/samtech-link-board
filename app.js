@@ -15,8 +15,8 @@ document.addEventListener('DOMContentLoaded', async () => {
     };
     
     const appId = 'samtech-record-board';
-    // This placeholder will also be replaced by the workflow.
-    const SHARED_PASSWORD = "__SHARED_PASSWORD__" || "samtech";
+    // This placeholder will be replaced by the workflow. There is no fallback.
+    const SHARED_PASSWORD = "__SHARED_PASSWORD__";
 
     let app, db, recordsUnsubscribe, presenceUnsubscribe;
     let allRecords = [];
