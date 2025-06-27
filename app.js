@@ -18,6 +18,12 @@ document.addEventListener('DOMContentLoaded', async () => {
     // This placeholder will be replaced by the workflow. There is no fallback.
     const SHARED_PASSWORD = "__SHARED_PASSWORD__";
 
+    // --- DEBUGGING LINE ---
+    // This will print the value of the password to your browser's developer console (F12).
+    // You should remove this line after you have fixed the issue.
+    console.log("DEBUG: The application password is set to:", SHARED_PASSWORD);
+    // --- END DEBUGGING LINE ---
+
     let app, db, recordsUnsubscribe, presenceUnsubscribe;
     let allRecords = [];
     let groupedFaults = new Map();
@@ -907,12 +913,28 @@ document.addEventListener('DOMContentLoaded', async () => {
     });
 
     dom.authForm.addEventListener('submit', (e) => {
-        e.preventDefault(); dom.authErrorEl.textContent = '';
+        e.preventDefault();
+        dom.authErrorEl.textContent = '';
+
+        // --- DEBUGGING CHECK ---
+        // Check if the password is still the placeholder value.
+        if (SHARED_PASSWORD === "__SHARED_PASSWORD__") {
+            dom.authErrorEl.textContent = 'Configuration Error: Password not set during deployment.';
+            return;
+        }
+        // --- END DEBUGGING CHECK ---
+
         if (dom.authPasswordInput.value === SHARED_PASSWORD) {
             sessionStorage.setItem('isLoggedIn', 'true');
-            if (sessionStorage.getItem('displayName')) { currentUserDisplayName = sessionStorage.getItem('displayName'); showApp(); } 
-            else { dom.namePromptModal.classList.remove('hidden'); }
-        } else { dom.authErrorEl.textContent = 'Incorrect password.'; }
+            if (sessionStorage.getItem('displayName')) {
+                currentUserDisplayName = sessionStorage.getItem('displayName');
+                showApp();
+            } else {
+                dom.namePromptModal.classList.remove('hidden');
+            }
+        } else {
+            dom.authErrorEl.textContent = 'Incorrect password.';
+        }
     });
 
     dom.namePromptForm.addEventListener('submit', (e) => {
@@ -920,6 +942,8 @@ document.addEventListener('DOMContentLoaded', async () => {
         const name = document.getElementById('user-display-name').value.trim();
         if (name) { currentUserDisplayName = name; sessionStorage.setItem('displayName', name); showApp(); }
     });
+
+
 
     dom.logoutBtn.addEventListener('click', () => { 
         sessionStorage.clear(); 
