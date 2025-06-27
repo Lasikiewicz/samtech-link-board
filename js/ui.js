@@ -1,5 +1,6 @@
 import { state, dom, groupColorAssignments, groupBackgroundColors } from './state.js';
 import { formatDateTime, getModelCategory } from './utils.js';
+import { renderRecords } from './firestore.js';
 
 export const formInputClasses = "w-full p-2 border border-slate-300 rounded text-slate-900 placeholder-slate-400";
 export const formLabelClasses = "block text-sm font-medium text-slate-700 mb-1";
@@ -74,7 +75,7 @@ export function groupCommonFaults() {
         
         const groupRecords = Array.from(currentGroupIds).map(id => recordMap.get(id)).filter(Boolean);
         if (groupRecords.length > 1) {
-             groupRecords.sort((a,b) => (a.createdAt?.seconds || 0) - (b.createdAt?.seconds || 0));
+             groupRecords.sort((a,b) => (b.createdAt?.seconds || 0) - (a.createdAt?.seconds || 0));
              const rootRecord = groupRecords[0];
              if (rootRecord) {
                 state.groupedFaults.set(rootRecord.id, { title: rootRecord.title, records: groupRecords });
@@ -123,7 +124,23 @@ export function renderCategoryMenu() {
     catHeader.textContent = 'Categories';
     catHeader.className = 'menu-header';
     dom.categoryMenu.appendChild(catHeader);
-    dom.categoryMenu.appendChild(createMenuButton('common-fault', 'Common Faults', 'level-2'));
+
+    // Create collapsible section for Common Faults
+    const details = document.createElement('details');
+    details.className = 'level-2';
+    const summary = document.createElement('summary');
+    summary.className = 'menu-summary';
+    summary.innerHTML = `<span>Common Faults</span><svg class="chevron h-4 w-4 text-slate-500" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path></svg>`;
+    summary.addEventListener('click', (e) => {
+        if(e.target.closest('summary')) {
+            state.currentCategory = 'common-fault';
+            updateActiveFilterButtons();
+            renderRecords();
+        }
+    });
+
+    details.appendChild(summary);
+
     if(state.groupedFaults.size > 0) {
         const sortedGroups = Array.from(state.groupedFaults.entries()).sort(([, groupA], [, groupB]) => {
             const timeA = groupA.records[0]?.createdAt?.seconds || 0;
@@ -131,9 +148,11 @@ export function renderCategoryMenu() {
             return timeB - timeA;
         });
         sortedGroups.forEach(([groupId, group]) => {
-            dom.categoryMenu.appendChild(createMenuButton(groupId, group.records[0].title, 'level-3 font-normal'));
+            details.appendChild(createMenuButton(groupId, group.records[0].title, 'level-3 font-normal'));
         });
     }
+    dom.categoryMenu.appendChild(details);
+
     dom.categoryMenu.appendChild(createMenuButton('general', 'General', 'level-2'));
     dom.categoryMenu.appendChild(createMenuButton('qa', 'Q&A', 'level-2'));
     
@@ -203,7 +222,7 @@ export function renderRecordCard(record) {
         const createdAtDate = new Date(record.createdAt.seconds * 1000);
         const diffTime = Math.abs(now - createdAtDate);
         const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-        daysOpenHtml = `<span class="text-xs font-semibold text-red-600 ml-2">(${diffDays} day${diffDays !== 1 ? 's' : ''} open)</span>`;
+        daysOpenHtml = `<span class="text-xs font-semibold text-red-600">(${diffDays} day${diffDays !== 1 ? 's' : ''} open)</span>`;
     }
 
     const creationHtml = `<p class="text-xs text-slate-500">By <span class="font-semibold">${record.addedBy}</span> on ${formatDateTime(record.createdAt)}</p>`;
@@ -388,7 +407,7 @@ export function renderRecords() {
 
     if (isGroupId && state.groupedFaults.has(state.currentCategory)) {
         const groupRecords = state.groupedFaults.get(state.currentCategory).records;
-        recordsToDisplay = [...groupRecords].sort((a, b) => (a.createdAt?.seconds || 0) - (b.createdAt?.seconds || 0));
+        recordsToDisplay = [...groupRecords].sort((a, b) => (b.createdAt?.seconds || 0) - (a.createdAt?.seconds || 0));
     } else if (state.currentCategory.startsWith('model-')) {
         const prefix = state.currentCategory.split('-')[1];
         if (prefix === 'WSM') {
