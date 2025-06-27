@@ -1,6 +1,6 @@
 import { state, dom, groupColorAssignments, groupBackgroundColors } from './state.js';
 import { formatDateTime, getModelCategory } from './utils.js';
-import { renderRecords } from './firestore.js';
+// Removed the incorrect import of renderRecords from this line.
 
 export const formInputClasses = "w-full p-2 border border-slate-300 rounded text-slate-900 placeholder-slate-400";
 export const formLabelClasses = "block text-sm font-medium text-slate-700 mb-1";
@@ -125,7 +125,6 @@ export function renderCategoryMenu() {
     catHeader.className = 'menu-header';
     dom.categoryMenu.appendChild(catHeader);
 
-    // Create collapsible section for Common Faults
     const details = document.createElement('details');
     details.className = 'level-2';
     const summary = document.createElement('summary');
@@ -163,13 +162,13 @@ export function renderCategoryMenu() {
     dom.categoryMenu.appendChild(createMenuButton('samsung-action-tracker', 'Samsung Action Tracker', 'level-2'));
     
     const modelHeader = document.createElement('div');
-    modelHeader.textContent = 'Model Type';
+    modelHeader.textContent = 'Appliance Type';
     modelHeader.className = 'menu-header';
     dom.categoryMenu.appendChild(modelHeader);
-    dom.categoryMenu.appendChild(createMenuButton('model-REF', 'REF Models', 'level-2'));
-    dom.categoryMenu.appendChild(createMenuButton('model-DW', 'DW Models', 'level-2'));
-    dom.categoryMenu.appendChild(createMenuButton('model-WSM', 'WSM Models', 'level-2'));
-    dom.categoryMenu.appendChild(createMenuButton('model-TD', 'TD Models', 'level-2'));
+    dom.categoryMenu.appendChild(createMenuButton('model-REF', 'Refrigeration', 'level-2'));
+    dom.categoryMenu.appendChild(createMenuButton('model-DW', 'Dishwashers', 'level-2'));
+    dom.categoryMenu.appendChild(createMenuButton('model-WSM', 'Washing Machines', 'level-2'));
+    dom.categoryMenu.appendChild(createMenuButton('model-TD', 'Tumble Dryers', 'level-2'));
 
     updateActiveFilterButtons();
 }
@@ -222,7 +221,7 @@ export function renderRecordCard(record) {
         const createdAtDate = new Date(record.createdAt.seconds * 1000);
         const diffTime = Math.abs(now - createdAtDate);
         const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-        daysOpenHtml = `<span class="text-xs font-semibold text-red-600">(${diffDays} day${diffDays !== 1 ? 's' : ''} open)</span>`;
+        daysOpenHtml = `<span class="text-xs font-semibold text-red-600 ml-2">(${diffDays} day${diffDays !== 1 ? 's' : ''} open)</span>`;
     }
 
     const creationHtml = `<p class="text-xs text-slate-500">By <span class="font-semibold">${record.addedBy}</span> on ${formatDateTime(record.createdAt)}</p>`;
@@ -407,7 +406,7 @@ export function renderRecords() {
 
     if (isGroupId && state.groupedFaults.has(state.currentCategory)) {
         const groupRecords = state.groupedFaults.get(state.currentCategory).records;
-        recordsToDisplay = [...groupRecords].sort((a, b) => (b.createdAt?.seconds || 0) - (a.createdAt?.seconds || 0));
+        recordsToDisplay = [...groupRecords].sort((a, b) => (a.createdAt?.seconds || 0) - (b.createdAt?.seconds || 0));
     } else if (state.currentCategory.startsWith('model-')) {
         const prefix = state.currentCategory.split('-')[1];
         if (prefix === 'WSM') {
