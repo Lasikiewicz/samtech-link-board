@@ -20,9 +20,15 @@ jobs:
     environment:
       name: github-pages
       url: ${{ steps.deployment.outputs.page_url }}
-    # Map the secret to an environment variable for the job
+    
     env:
       APP_PASSWORD: ${{ secrets.SHARED_PASSWORD }}
+      FIREBASE_API_KEY: ${{ secrets.FIREBASE_API_KEY }}
+      FIREBASE_AUTH_DOMAIN: ${{ secrets.FIREBASE_AUTH_DOMAIN }}
+      FIREBASE_PROJECT_ID: ${{ secrets.FIREBASE_PROJECT_ID }}
+      FIREBASE_STORAGE_BUCKET: ${{ secrets.FIREBASE_STORAGE_BUCKET }}
+      FIREBASE_MESSAGING_SENDER_ID: ${{ secrets.FIREBASE_MESSAGING_SENDER_ID }}
+      FIREBASE_APP_ID: ${{ secrets.FIREBASE_APP_ID }}
       
     steps:
       - name: Checkout repository
@@ -31,29 +37,32 @@ jobs:
       - name: Check for required secrets
         run: |
           if [ -z "$APP_PASSWORD" ]; then
-            echo "::error file=.github/workflows/deploy.yml::'SHARED_PASSWORD' secret not found. Please add it to your repository settings."
+            echo "::error file=.github/workflows/deploy.yml::'SHARED_PASSWORD' secret not found."
             exit 1
           fi
-          echo "✅ SHARED_PASSWORD secret is present."
+          if [ -z "$FIREBASE_API_KEY" ]; then
+            echo "::error file=.github/workflows/deploy.yml::'FIREBASE_API_KEY' secret not found."
+            exit 1
+          fi
+          echo "✅ All required secrets are present."
 
-      # This is the new, more reliable method for setting the password.
-      - name: Create config.js from secret
-        run: echo "const SHARED_PASSWORD = '$APP_PASSWORD';" > config.js
+      - name: Create config.js from secrets
+        run: |
+          mkdir -p js
+          echo "window.SHARED_PASSWORD = '$APP_PASSWORD';" > js/config.js
+          echo "window.firebaseConfig = {" >> js/config.js
+          echo "  apiKey: \"$FIREBASE_API_KEY\"," >> js/config.js
+          echo "  authDomain: \"$FIREBASE_AUTH_DOMAIN\"," >> js/config.js
+          echo "  projectId: \"$FIREBASE_PROJECT_ID\"," >> js/config.js
+          echo "  storageBucket: \"$FIREBASE_STORAGE_BUCKET\"," >> js/config.js
+          echo "  messagingSenderId: \"$FIREBASE_MESSAGING_SENDER_ID\"," >> js/config.js
+          echo "  appId: \"$FIREBASE_APP_ID\"" >> js/config.js
+          echo "};" >> js/config.js
 
-      # This step is for verification during the run.
       - name: Verify config.js creation
         run: |
-          echo "Contents of generated config.js:"
-          cat config.js
-
-      - name: Replace Firebase placeholders (Password replacement removed)
-        run: |
-          sed -i "s|__API_KEY__|${{ secrets.FIREBASE_API_KEY }}|g" app.js
-          sed -i "s|__AUTH_DOMAIN__|${{ secrets.FIREBASE_AUTH_DOMAIN }}|g" app.js
-          sed -i "s|__PROJECT_ID__|${{ secrets.FIREBASE_PROJECT_ID }}|g" app.js
-          sed -i "s|__STORAGE_BUCKET__|${{ secrets.FIREBASE_STORAGE_BUCKET }}|g" app.js
-          sed -i "s|__MESSAGING_SENDER_ID__|${{ secrets.FIREBASE_MESSAGING_SENDER_ID }}|g" app.js
-          sed -i "s|__APP_ID__|${{ secrets.FIREBASE_APP_ID }}|g" app.js
+          echo "Contents of generated js/config.js:"
+          cat js/config.js
 
       - name: Create .nojekyll file
         run: touch .nojekyll
@@ -61,7 +70,6 @@ jobs:
       - name: Upload artifact
         uses: actions/upload-pages-artifact@v3
         with:
-          # Include the newly created config.js in the deployment
           path: '.'
 
       - name: Deploy to GitHub Pages
