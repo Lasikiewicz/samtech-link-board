@@ -15,14 +15,8 @@ document.addEventListener('DOMContentLoaded', async () => {
     };
     
     const appId = 'samtech-record-board';
-    // This placeholder will be replaced by the workflow. There is no fallback.
-    const SHARED_PASSWORD = "__SHARED_PASSWORD__";
-
-    // --- DEBUGGING LINE ---
-    // This will print the value of the password to your browser's developer console (F12).
-    // You should remove this line after you have fixed the issue.
-    console.log("DEBUG: The application password is set to:", SHARED_PASSWORD);
-    // --- END DEBUGGING LINE ---
+    // The SHARED_PASSWORD variable is now loaded from the generated config.js file
+    // and is globally available. It is no longer defined here.
 
     let app, db, recordsUnsubscribe, presenceUnsubscribe;
     let allRecords = [];
@@ -916,13 +910,10 @@ document.addEventListener('DOMContentLoaded', async () => {
         e.preventDefault();
         dom.authErrorEl.textContent = '';
 
-        // --- DEBUGGING CHECK ---
-        // Check if the password is still the placeholder value.
-        if (SHARED_PASSWORD === "__SHARED_PASSWORD__") {
+        if (typeof SHARED_PASSWORD === 'undefined' || SHARED_PASSWORD.includes('__')) {
             dom.authErrorEl.textContent = 'Configuration Error: Password not set during deployment.';
             return;
         }
-        // --- END DEBUGGING CHECK ---
 
         if (dom.authPasswordInput.value === SHARED_PASSWORD) {
             sessionStorage.setItem('isLoggedIn', 'true');
@@ -942,8 +933,6 @@ document.addEventListener('DOMContentLoaded', async () => {
         const name = document.getElementById('user-display-name').value.trim();
         if (name) { currentUserDisplayName = name; sessionStorage.setItem('displayName', name); showApp(); }
     });
-
-
 
     dom.logoutBtn.addEventListener('click', () => { 
         sessionStorage.clear(); 

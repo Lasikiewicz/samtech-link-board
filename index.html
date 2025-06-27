@@ -134,7 +134,8 @@
     <div id="link-fault-modal" class="fixed inset-0 bg-black bg-opacity-70 flex items-center justify-center p-4 hidden"><div class="bg-white rounded-xl shadow-2xl p-6 w-full max-w-lg"><h2 class="text-xl font-semibold mb-1 text-slate-900">Link to Existing Fault?</h2><p id="link-fault-title" class="text-sm text-slate-500 mb-4 truncate"></p><p class="text-sm mb-4">Found existing faults with a similar title or model number. Do you want to link this new fault to them?</p><div id="existing-faults-list" class="space-y-2 mb-4"></div><div class="mt-6 flex justify-end space-x-3"><button type="button" id="skip-link-btn" class="bg-slate-200 font-semibold px-4 py-2 rounded-lg">Don't Link, Create New</button><button type="button" id="confirm-link-btn" class="bg-indigo-600 text-white font-semibold px-4 py-2 rounded-lg">Link and Create</button></div></div></div>
     <div id="link-unlink-modal" class="fixed inset-0 bg-black bg-opacity-70 flex items-center justify-center p-4 hidden"><div class="bg-white rounded-xl shadow-2xl p-6 w-full max-w-2xl"><h2 class="text-xl font-semibold mb-1 text-slate-900">Manage Links</h2><p id="link-unlink-title" class="text-sm text-slate-500 mb-4 truncate"></p><div class="grid grid-cols-1 md:grid-cols-2 gap-6"><div id="unlink-container"> <h3 class="font-semibold mb-2">Currently Linked</h3> <div id="unlink-list" class="space-y-2 text-sm"></div></div><div id="link-container"> <h3 class="font-semibold mb-2">Available to Link</h3> <div id="link-list" class="space-y-2 text-sm max-h-64 overflow-y-auto custom-scrollbar"></div></div></div><div class="mt-6 flex justify-end space-x-3"><button type="button" id="close-link-unlink-modal" class="bg-slate-200 font-semibold px-4 py-2 rounded-lg">Close</button></div></div></div>
     
+    <!-- Load the generated config file FIRST -->
+    <script src="config.js"></script>
     <script data-cfasync="false" src="app.js" type="module"></script>
 </body>
 </html>
- 
