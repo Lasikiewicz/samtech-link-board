@@ -20,8 +20,6 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      # This step now uses basic shell commands to create the config file,
-      # removing the need for any third-party actions.
       - name: Create firebase-config.js from Secrets
         run: |
           echo "export const firebaseConfig = {" > firebase-config.js
@@ -33,10 +31,13 @@ jobs:
           echo "  appId: \"${{ secrets.FIREBASE_APP_ID }}\"" >> firebase-config.js
           echo "};" >> firebase-config.js
       
-      # This step remains the same to handle the password.
       - name: Replace Password placeholder
         run: |
           sed -i "s|__SHARED_PASSWORD__|${{ secrets.SHARED_PASSWORD }}|g" app.js
+
+      # This new step will list all files to make sure firebase-config.js was created.
+      - name: Verify created files
+        run: ls -l
 
       - name: Upload artifact
         uses: actions/upload-pages-artifact@v3
