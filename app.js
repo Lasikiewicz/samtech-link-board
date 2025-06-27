@@ -1,11 +1,14 @@
+// Import the configuration from the new file
+import { firebaseConfig } from './firebase-config.js'; 
 import { initializeApp, getApps, getApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
 import { getFirestore, doc, getDoc, collection, onSnapshot, addDoc, updateDoc, deleteDoc, serverTimestamp, query, where, orderBy, arrayUnion, arrayRemove, Timestamp, getDocs, runTransaction, setDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
 // This event listener ensures that the entire HTML document is loaded and parsed before the script runs.
 document.addEventListener('DOMContentLoaded', () => {
-    const firebaseConfig = { apiKey: "__API_KEY__", authDomain: "__AUTH_DOMAIN__", projectId: "__PROJECT_ID__", storageBucket: "__STORAGE_BUCKET__", messagingSenderId: "__MESSAGING_SENDER_ID__", appId: "__APP_ID__" };
+    // The firebaseConfig is now imported from firebase-config.js
     const appId = 'samtech-record-board';
-    const SHARED_PASSWORD = "__SHARED_PASSWORD__" || "samtech";
+    // It's better to manage the shared password via environment variables if possible, but this works for now.
+    const SHARED_PASSWORD = "samtech"; // Replace with a more secure method if needed
 
     let app, db, recordsUnsubscribe, presenceUnsubscribe;
     let allRecords = [];
@@ -22,7 +25,19 @@ document.addEventListener('DOMContentLoaded', () => {
     const groupBackgroundColors = ['#f0f9ff', '#f7fee7', '#fefce8', '#fff7ed', '#fdf2f8', '#faf5ff'];
     const groupColorAssignments = new Map();
 
-    try { app = getApps().length ? getApp() : initializeApp(firebaseConfig); db = getFirestore(app); } catch (e) { console.error("Firebase init failed:", e); }
+    // Initialize Firebase
+    try { 
+        app = getApps().length ? getApp() : initializeApp(firebaseConfig); 
+        db = getFirestore(app); 
+    } catch (e) { 
+        console.error("Firebase init failed:", e); 
+        // Display a user-friendly error message
+        const loadingState = document.getElementById('loading-state');
+        if (loadingState) {
+            loadingState.innerHTML = `<p class="text-red-500">Could not connect to the database. Please check your Firebase configuration and ensure the Firestore API is enabled in your Google Cloud project.</p>`;
+        }
+    }
+
 
     // This object holds references to all the DOM elements the script interacts with.
     const dom = {
@@ -381,6 +396,7 @@ document.addEventListener('DOMContentLoaded', () => {
     
     // Sets up the real-time listener for Firestore records.
     const setupRecordsListener = () => {
+        if (!db) return; // Don't try to listen if the database isn't initialized
         if (recordsUnsubscribe) recordsUnsubscribe();
         dom.loadingState.style.display = 'block';
         
@@ -435,6 +451,7 @@ document.addEventListener('DOMContentLoaded', () => {
     
     // Sets up real-time presence tracking for active users.
     const setupPresence = async () => {
+        if (!db) return; // Don't try if DB not initialized
         presenceRef = doc(collection(db, 'presence'));
         
         await setDoc(presenceRef, { name: currentUserDisplayName, onlineSince: serverTimestamp() });
