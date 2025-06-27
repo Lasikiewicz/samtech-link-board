@@ -19,6 +19,8 @@ document.addEventListener('DOMContentLoaded', () => {
     let recentlySavedCommentInfo = null;
     let recordForLinking = null;
     let presenceRef = null;
+    const groupBackgroundColors = ['#f0f9ff', '#f7fee7', '#fefce8', '#fff7ed', '#fdf2f8', '#faf5ff'];
+    const groupColorAssignments = new Map();
 
     try { app = getApps().length ? getApp() : initializeApp(firebaseConfig); db = getFirestore(app); } catch (e) { console.error("Firebase init failed:", e); }
 
@@ -55,29 +57,29 @@ document.addEventListener('DOMContentLoaded', () => {
     // Defines the HTML structure for the different record category forms.
     const formFieldsTemplates = {
         qa: `
-            <div><label class="${formLabelClasses}">Q&A Title</label><input name="title" type="text" class="${formInputClasses}" required></div>
+            <div class="md:col-span-2"><label class="${formLabelClasses}">Q&A Title</label><input name="title" type="text" class="${formInputClasses}" required></div>
             <div><label class="${formLabelClasses}">Q&A Question ID</label><input name="qaId" type="text" pattern="\\d{8}" title="8 digits" class="${formInputClasses}" required></div>
             <div><label class="${formLabelClasses}">Model Number</label><input name="modelNumber" type="text" class="${formInputClasses}"></div>
             <div><label class="${formLabelClasses}">Serial Number</label><input name="serialNumber" type="text" class="${formInputClasses}"></div>
             <div><label class="${formLabelClasses}">Service Order Number</label><input name="serviceOrderNumber" type="text" pattern="\\d{10}" title="10 digits" class="${formInputClasses}"></div>
             <div><label class="${formLabelClasses}">Salesforce Case Number</label><input name="salesforceCaseNumber" type="text" class="${formInputClasses}"></div>
-            <div><label class="${formLabelClasses}">Description</label><textarea name="description" class="${formInputClasses}" rows="4"></textarea></div>`,
+            <div class="md:col-span-2"><label class="${formLabelClasses}">Description</label><textarea name="description" class="${formInputClasses}" rows="4"></textarea></div>`,
         'common-fault': `
-            <div><label class="${formLabelClasses}">Title</label><input name="title" type="text" class="${formInputClasses}" required></div>
+            <div class="md:col-span-2"><label class="${formLabelClasses}">Title</label><input name="title" type="text" class="${formInputClasses}" required></div>
             <div><label class="${formLabelClasses}">Model Number</label><input name="modelNumber" type="text" class="${formInputClasses}"></div>
             <div><label class="${formLabelClasses}">Serial Number</label><input name="serialNumber" type="text" class="${formInputClasses}"></div>
             <div><label class="${formLabelClasses}">Service Order Number</label><input name="serviceOrderNumber" type="text" pattern="\\d{10}" title="10 digits" class="${formInputClasses}"></div>
             <div><label class="${formLabelClasses}">Salesforce Case Number</label><input name="salesforceCaseNumber" type="text" class="${formInputClasses}"></div>
-            <div><label class="${formLabelClasses}">Description</label><textarea name="description" class="${formInputClasses}" rows="4"></textarea></div>
-            <label class="flex items-center mt-4"><input type="checkbox" name="onSamsungTracker" class="rounded mr-2"> On Samsung Action Tracker</label>`,
+            <div class="md:col-span-2"><label class="${formLabelClasses}">Description</label><textarea name="description" class="${formInputClasses}" rows="4"></textarea></div>
+            <div class="md:col-span-2"><label class="flex items-center mt-2"><input type="checkbox" name="onSamsungTracker" class="rounded mr-2"> On Samsung Action Tracker</label></div>`,
         general: `
-            <div><label class="${formLabelClasses}">Title</label><input name="title" type="text" class="${formInputClasses}" required></div>
+            <div class="md:col-span-2"><label class="${formLabelClasses}">Title</label><input name="title" type="text" class="${formInputClasses}" required></div>
             <div><label class="${formLabelClasses}">Model Number</label><input name="modelNumber" type="text" class="${formInputClasses}"></div>
             <div><label class="${formLabelClasses}">Serial Number</label><input name="serialNumber" type="text" class="${formInputClasses}"></div>
             <div><label class="${formLabelClasses}">Service Order Number</label><input name="serviceOrderNumber" type="text" pattern="\\d{10}" title="10 digits" class="${formInputClasses}"></div>
             <div><label class="${formLabelClasses}">Salesforce Case Number</label><input name="salesforceCaseNumber" type="text" class="${formInputClasses}"></div>
-            <div><label class="${formLabelClasses}">Description</label><textarea name="description" class="${formInputClasses}" rows="4"></textarea></div>
-            <label class="flex items-center mt-4"><input type="checkbox" name="onSamsungTracker" class="rounded mr-2"> On Samsung Action Tracker</label>`
+            <div class="md:col-span-2"><label class="${formLabelClasses}">Description</label><textarea name="description" class="${formInputClasses}" rows="4"></textarea></div>
+            <div class="md:col-span-2"><label class="flex items-center mt-2"><input type="checkbox" name="onSamsungTracker" class="rounded mr-2"> On Samsung Action Tracker</label></div>`
     };
 
     let currentFormCategory = 'qa';
@@ -138,6 +140,14 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         }
         groupedFaults = groups;
+
+        let colorIndex = 0;
+        groupedFaults.forEach((group, groupId) => {
+            if (!groupColorAssignments.has(groupId)) {
+                groupColorAssignments.set(groupId, groupBackgroundColors[colorIndex % groupBackgroundColors.length]);
+                colorIndex++;
+            }
+        });
     };
 
     // Renders the category navigation menu on the left side of the screen.
@@ -214,7 +224,15 @@ document.addEventListener('DOMContentLoaded', () => {
     const renderRecordCard = (record) => {
         const card = document.createElement('div');
         card.dataset.id = record.id;
-        card.className = `record-card bg-white p-5 rounded-xl shadow-lg transition-all ${record.isClosed ? 'opacity-60' : ''}`;
+        
+        const groupId = getRecordGroupId(record.id);
+        const groupColor = groupId ? groupColorAssignments.get(groupId) : null;
+
+        card.className = `record-card p-5 rounded-xl shadow-lg transition-all ${record.isClosed ? 'opacity-60' : 'bg-white'}`;
+        if (groupColor) {
+            card.style.backgroundColor = groupColor;
+        }
+
         if (expandedRecordIds.has(record.id)) card.classList.add('expanded');
         
         const subTitleHtml = `<p class="text-xs text-slate-500 mt-1">By <span class="font-semibold">${record.addedBy}</span> on ${formatDateTime(record.createdAt)}</p>`;
@@ -246,9 +264,17 @@ document.addEventListener('DOMContentLoaded', () => {
         const detailsHtml = `${record.qaId?`<div><dt class="font-semibold">Q&A ID:</dt><dd class="break-all">${record.qaId}</dd></div>`:''}${record.modelNumber?`<div><dt class="font-semibold">Model Number:</dt><dd class="break-all">${record.modelNumber}</dd></div>`:''}${record.serialNumber?`<div><dt class="font-semibold">Serial Number:</dt><dd class="break-all">${record.serialNumber}</dd></div>`:''}${record.serviceOrderNumber?`<div><dt class="font-semibold">Service Order Number:</dt><dd class="break-all">${record.serviceOrderNumber}</dd></div>`:''}${record.salesforceCaseNumber?`<div><dt class="font-semibold">Salesforce Case Number:</dt><dd class="break-all">${record.salesforceCaseNumber}</dd></div>`:''}`;
         const categoryDisplayNames = { qa: 'Q&A', 'common-fault': 'Common Fault', general: 'General' };
         const categoryColors = { qa: '#5fcae2', 'common-fault': '#4892cf', general: '#3f57ab' };
-        const groupId = getRecordGroupId(record.id);
-        const linkedRecordsHtml = groupId ? `<div class="mt-2"><dt class="font-semibold">Linked Faults:</dt><dd><button class="linked-fault-btn text-indigo-600 underline" data-group-id="${groupId}">View Group</button></dd></div>` : '';
-        const actionsHtml = `<div class="actions flex-shrink-0 ml-4 space-x-1"><button title="Edit Record" class="edit-record-btn p-1.5 rounded-full hover:bg-slate-200">&#9998;</button><button title="Edit Timestamp" class="edit-time-btn p-1.5 rounded-full hover:bg-slate-200">&#128337;</button><button title="${record.isClosed ? 'Re-open Record' : 'Close Record'}" class="toggle-close-btn p-1.5 rounded-full hover:bg-slate-200">${record.isClosed ? '&#128275;' : '&#128274;'}</button></div>`;
+        const linkedGroupId = getRecordGroupId(record.id);
+        const linkedRecordsHtml = linkedGroupId ? `<div class="mt-2"><dt class="font-semibold">Linked Faults:</dt><dd><button class="linked-fault-btn text-indigo-600 underline" data-group-id="${linkedGroupId}">View Group</button></dd></div>` : '';
+        
+        let ageHtml = '';
+        if (record.createdAt?.seconds) {
+            const ageInDays = Math.floor((Date.now() / 1000 - record.createdAt.seconds) / (60 * 60 * 24));
+            if (ageInDays >= 0) {
+                 ageHtml = `<span class="text-xs text-slate-500 mr-2 self-center">${ageInDays}d old</span>`;
+            }
+        }
+        const actionsHtml = `<div class="actions flex-shrink-0 ml-4 flex items-center space-x-1">${ageHtml}<button title="Edit Record" class="edit-record-btn p-1.5 rounded-full hover:bg-slate-200">&#9998;</button><button title="Edit Timestamp" class="edit-time-btn p-1.5 rounded-full hover:bg-slate-200">&#128337;</button><button title="${record.isClosed ? 'Re-open Record' : 'Close Record'}" class="toggle-close-btn p-1.5 rounded-full hover:bg-slate-200">${record.isClosed ? '&#128275;' : '&#128274;'}</button></div>`;
 
         card.innerHTML = `<div class="collapsible-header flex justify-between items-start cursor-pointer record-header">
             <div>
