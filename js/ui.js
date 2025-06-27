@@ -4,8 +4,6 @@ import { formatDateTime, getModelCategory } from './utils.js';
 export const formInputClasses = "w-full p-2 border border-slate-300 rounded text-slate-900 placeholder-slate-400";
 export const formLabelClasses = "block text-sm font-medium text-slate-700 mb-1";
 
-// ... rest of the file
-
 export const formFieldsTemplates = {
     qa: `
         <div class="md:col-span-2"><label class="${formLabelClasses}">Q&A Title</label><input name="title" type="text" class="${formInputClasses}" required></div>
@@ -94,13 +92,29 @@ export function groupCommonFaults() {
 }
 
 export function updateActiveFilterButtons() {
+    // Update top bar
     dom.categoryFilterBar.querySelectorAll('.control-btn').forEach(btn => {
         btn.classList.toggle('active', btn.dataset.category === state.currentCategory);
     });
-    dom.categoryMenu.querySelectorAll('.menu-item').forEach(btn => {
-        btn.classList.toggle('active', btn.dataset.id === state.currentCategory);
-    });
+
+    // Update side menu
+    // First, remove active class from all items
+    dom.categoryMenu.querySelectorAll('.menu-item, .menu-summary').forEach(el => el.classList.remove('active'));
+
+    const activeItem = dom.categoryMenu.querySelector(`.menu-item[data-id='${state.currentCategory}']`);
+    
+    if (activeItem) {
+        activeItem.classList.add('active');
+        
+        // If the active item is inside the details view, expand it and activate the parent summary
+        const details = activeItem.closest('#common-faults-details');
+        if (details) {
+            details.open = true;
+            details.querySelector('.menu-summary').classList.add('active');
+        }
+    }
 }
+
 
 export function renderCategoryMenu() {
     dom.categoryMenu.innerHTML = '';
@@ -126,7 +140,36 @@ export function renderCategoryMenu() {
     catHeader.className = 'menu-header';
     dom.categoryMenu.appendChild(catHeader);
 
-    dom.categoryMenu.appendChild(createMenuButton('common-fault', 'Common Faults', 'level-2'));
+    // --- NEW Common Faults Section with Sub-menu ---
+    const commonFaultsDetails = document.createElement('details');
+    commonFaultsDetails.id = 'common-faults-details';
+
+    const commonFaultsSummary = document.createElement('summary');
+    commonFaultsSummary.className = 'menu-summary level-2';
+    commonFaultsSummary.innerHTML = `
+        <span>Common Faults</span>
+        <svg class="chevron h-4 w-4 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" /></svg>
+    `;
+    commonFaultsDetails.appendChild(commonFaultsSummary);
+
+    const subMenuContainer = document.createElement('div');
+    
+    // Add a button for "All Common Faults" inside the sub-menu
+    subMenuContainer.appendChild(createMenuButton('common-fault', 'All Common Faults', 'level-3'));
+    
+    // Add grouped faults as individual sub-menu items
+    if (state.groupedFaults.size > 0) {
+        const sortedGroups = Array.from(state.groupedFaults.values()).sort((a, b) => a.title.localeCompare(b.title));
+        sortedGroups.forEach(group => {
+            const groupId = group.records[0].id;
+            subMenuContainer.appendChild(createMenuButton(groupId, group.title, 'level-3'));
+        });
+    }
+
+    commonFaultsDetails.appendChild(subMenuContainer);
+    dom.categoryMenu.appendChild(commonFaultsDetails);
+    // --- END NEW Section ---
+
     dom.categoryMenu.appendChild(createMenuButton('general', 'General', 'level-2'));
     dom.categoryMenu.appendChild(createMenuButton('qa', 'Q&A', 'level-2'));
     
