@@ -258,6 +258,16 @@ document.addEventListener('DOMContentLoaded', async () => {
         
         const categoryDisplayNames = { qa: 'Q&A', 'common-fault': 'Common Fault', general: 'General' };
         const categoryColors = { qa: '#5fcae2', 'common-fault': '#4892cf', general: '#3f57ab' };
+
+        // Calculate days open if the record is not closed
+        let daysOpenHtml = '';
+        if (!record.isClosed && record.createdAt?.seconds) {
+            const now = new Date();
+            const createdAtDate = new Date(record.createdAt.seconds * 1000);
+            const diffTime = Math.abs(now - createdAtDate);
+            const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+            daysOpenHtml = `<span class="text-xs font-semibold text-red-600 ml-2">(${diffDays} day${diffDays !== 1 ? 's' : ''} open)</span>`;
+        }
         
         const typeAndModelHtml = `
             <span class="text-xs capitalize text-white px-2 py-0.5 rounded-full" style="background-color: ${categoryColors[record.category] || '#64748b'}">
@@ -297,6 +307,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                 <div class="flex-grow min-w-0">
                     <div class="flex items-center gap-2">
                         <h3 class="text-md font-semibold text-indigo-700 truncate">${record.title}</h3>
+                        ${daysOpenHtml}
                         ${linkIcon}
                     </div>
                     <div class="flex items-center gap-2 mt-1">
@@ -752,7 +763,7 @@ document.addEventListener('DOMContentLoaded', async () => {
             const commentBody = e.target.closest('.comment-body');
             const commentIndex = parseInt(e.target.dataset.index);
             const currentText = commentBody.querySelector('.comment-text').textContent;
-            commentBody.innerHTML = `<textarea class="edit-comment-textarea flex-grow w-full text-sm p-2 border rounded">${currentText}</textarea><div class="flex flex-col ml-2 space-y-1"><button class="save-comment-btn text-xs bg-green-500 text-white px-2 py-1 rounded" data-index="${commentIndex}">Save</button><button class="cancel-comment-btn text-xs bg-gray-500 text-white px-2 py-1 rounded">Cancel</button></div>`;
+            commentBody.innerHTML = `<textarea class="edit-comment-textarea flex-grow w-full text-sm p-2 border rounded" rows="4">${currentText}</textarea><div class="flex flex-col ml-2 space-y-1"><button class="save-comment-btn text-xs bg-green-500 text-white px-2 py-1 rounded" data-index="${commentIndex}">Save</button><button class="cancel-comment-btn text-xs bg-gray-500 text-white px-2 py-1 rounded">Cancel</button></div>`;
             return;
         }
 
