@@ -4,10 +4,10 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Samtech Tracker</title>
-    <script src="https://cdn.tailwindcss.com"></script>
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <script src="[https://cdn.tailwindcss.com](https://cdn.tailwindcss.com)"></script>
+    <link rel="preconnect" href="[https://fonts.googleapis.com](https://fonts.googleapis.com)">
+    <link rel="preconnect" href="[https://fonts.gstatic.com](https://fonts.gstatic.com)" crossorigin>
+    <link href="[https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap](https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap)" rel="stylesheet">
     <style>
         html { scroll-behavior: smooth; }
         body { font-family: 'Inter', sans-serif; background-color: #f1f5f9; }
@@ -60,7 +60,7 @@
         <aside class="lg:col-span-1">
             <div class="sticky top-8 flex flex-col h-[calc(100vh-4rem)]">
                 <div>
-                    <img src="image/logo1.png" alt="Samtech Solutions Logo" class="w-full mb-6">
+                    <img id="logo-img" src="image/logo1.png" alt="Samtech Solutions Logo" class="w-full mb-6 cursor-pointer">
                     <div class="mb-4 text-xs text-slate-500">Signed in as: <span id="user-name-display" class="font-mono font-semibold"></span></div>
                     <div class="mt-4"><h3 class="text-xs font-bold uppercase text-slate-500">Active Users</h3><ul id="active-users-list" class="mt-1 text-sm space-y-1 font-mono"></ul></div>
                     <hr class="my-4 border-slate-200">
@@ -102,14 +102,14 @@
       </div>
     </div>
 
-    <div id="add-record-modal" class="fixed inset-0 bg-black bg-opacity-70 flex items-center justify-center p-4 hidden"><div class="bg-white rounded-xl shadow-2xl p-6 w-full max-w-3xl"><h2 class="text-xl font-semibold mb-4 text-slate-900">Add New Record</h2><form id="add-record-form"><div class="mb-4"><label class="block text-sm font-medium mb-1">Category</label><div id="form-category-selector" class="grid grid-cols-3 gap-2"><button type="button" class="form-category-btn px-4 py-2 border rounded-lg" data-category="qa">Q&A</button><button type="button" class="form-category-btn px-4 py-2 border rounded-lg" data-category="common-fault">Common Faults</button><button type="button" class="form-category-btn px-4 py-2 border rounded-lg" data-category="general">General</button></div></div><div id="form-fields-container" class="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-4"></div><div class="mt-6 flex justify-end space-x-3"><button type="button" id="cancel-add" class="bg-slate-200 text-slate-800 font-semibold px-4 py-2 rounded-lg">Cancel</button><button type="submit" id="add-record-submit" class="bg-indigo-600 text-white font-semibold px-4 py-2 rounded-lg disabled:opacity-50">Add Record</button></div></form></div></div>
+    <div id="add-record-modal" class="fixed inset-0 bg-black bg-opacity-70 flex items-center justify-center p-4 hidden"><div class="bg-white rounded-xl shadow-2xl p-6 w-full max-w-4xl"><h2 class="text-xl font-semibold mb-4 text-slate-900">Add New Record</h2><form id="add-record-form"><div class="mb-4"><label class="block text-sm font-medium mb-1">Category</label><div id="form-category-selector" class="grid grid-cols-3 gap-2"><button type="button" class="form-category-btn px-4 py-2 border rounded-lg" data-category="qa">Q&A</button><button type="button" class="form-category-btn px-4 py-2 border rounded-lg" data-category="common-fault">Common Faults</button><button type="button" class="form-category-btn px-4 py-2 border rounded-lg" data-category="general">General</button></div></div><div id="form-fields-container" class="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-4"></div><div class="mt-6 flex justify-end space-x-3"><button type="button" id="cancel-add" class="bg-slate-200 text-slate-800 font-semibold px-4 py-2 rounded-lg">Cancel</button><button type="submit" id="add-record-submit" class="bg-indigo-600 text-white font-semibold px-4 py-2 rounded-lg disabled:opacity-50">Add Record</button></div></form></div></div>
     
-    <div id="edit-record-modal" class="fixed inset-0 bg-black bg-opacity-70 flex items-center justify-center p-4 hidden"><div class="bg-white rounded-xl shadow-2xl p-6 w-full max-w-2xl">
+    <div id="edit-record-modal" class="fixed inset-0 bg-black bg-opacity-70 flex items-center justify-center p-4 hidden"><div class="bg-white rounded-xl shadow-2xl p-6 w-full max-w-4xl">
         <div class="mb-4">
             <h2 class="text-xl font-semibold mb-1 text-slate-900">Edit Record</h2>
             <p id="edit-record-title" class="text-sm text-slate-500 truncate"></p>
         </div>
-        <form id="edit-record-form"><input type="hidden" name="id"><div id="edit-form-fields-container" class="space-y-4"></div>
+        <form id="edit-record-form"><input type="hidden" name="id"><div id="edit-form-fields-container" class="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-4"></div>
         <div id="edit-form-actions" class="mt-6 flex justify-end items-center space-x-2">
             <button type="button" id="cancel-edit" class="px-4 py-2 rounded-lg bg-slate-200 text-slate-800 font-semibold hover:bg-slate-300">Cancel</button>
             <button type="button" id="delete-record-btn" class="px-4 py-2 rounded-lg bg-red-600 text-white font-semibold hover:bg-red-700">Delete</button>

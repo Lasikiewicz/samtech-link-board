@@ -1,5 +1,5 @@
-import { initializeApp, getApps, getApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
-import { getFirestore, doc, getDoc, collection, onSnapshot, addDoc, updateDoc, deleteDoc, serverTimestamp, query, where, orderBy, arrayUnion, arrayRemove, Timestamp, getDocs, runTransaction, setDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+import { initializeApp, getApps, getApp } from "[https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js](https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js)";
+import { getFirestore, doc, getDoc, collection, onSnapshot, addDoc, updateDoc, deleteDoc, serverTimestamp, query, where, orderBy, arrayUnion, arrayRemove, Timestamp, getDocs, runTransaction, setDoc } from "[https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js](https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js)";
 
 // This event listener ensures that the entire HTML document is loaded and parsed before the script runs.
 document.addEventListener('DOMContentLoaded', () => {
@@ -49,6 +49,7 @@ document.addEventListener('DOMContentLoaded', () => {
         linkUnlinkModal: document.getElementById('link-unlink-modal'), closeLinkUnlinkModal: document.getElementById('close-link-unlink-modal'),
         unlinkList: document.getElementById('unlink-list'), linkList: document.getElementById('link-list'),
         activeUsersList: document.getElementById('active-users-list'),
+        logoImg: document.getElementById('logo-img'),
     };
 
     const formInputClasses = "w-full p-2 border border-slate-300 rounded text-slate-900 placeholder-slate-400";
@@ -387,7 +388,6 @@ document.addEventListener('DOMContentLoaded', () => {
         const isGroupId = currentCategory.length === 20 && /^[a-zA-Z0-9]+$/.test(currentCategory);
         let effectiveCategory = isGroupId ? 'common-fault' : currentCategory;
         
-        // FIX: Added specific logic to handle the REF model category, which corresponds to 'RB' model prefixes.
         if (effectiveCategory.startsWith('model-')) {
             let prefix = effectiveCategory.split('-')[1];
             if (prefix === 'REF') {
@@ -490,6 +490,16 @@ document.addEventListener('DOMContentLoaded', () => {
         if (recordsUnsubscribe) recordsUnsubscribe(); 
         removePresence();
     };
+    
+    dom.logoImg.addEventListener('click', () => {
+        currentCategory = 'all';
+        currentStatusFilter = 'open';
+        dom.searchInput.value = '';
+        currentSearch = '';
+        dom.filterControls.querySelectorAll('.control-btn').forEach(b => b.classList.remove('active'));
+        dom.filterControls.querySelector('[data-filter="open"]').classList.add('active');
+        setupRecordsListener();
+    });
 
     dom.searchInput.addEventListener('input', (e) => { currentSearch = e.target.value.toLowerCase(); renderRecords(); });
 
@@ -845,7 +855,6 @@ document.addEventListener('DOMContentLoaded', () => {
         if (recordId && recordData.title) {
             submitBtn.disabled = true; submitBtn.textContent = '...';
             try { await updateDoc(doc(db, `/artifacts/${appId}/public/data/records`, recordId), recordData); dom.editRecordModal.classList.add('hidden');
-            // FIX: Corrected button text in finally block to match button label.
             } finally { submitBtn.disabled = false; submitBtn.textContent = 'Save'; }
         }
     });
