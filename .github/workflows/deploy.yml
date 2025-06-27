@@ -20,14 +20,13 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      # This new step creates the firebase-config.js file using your repository secrets.
+      # This step now uses a different, more reliable action to create the file.
       - name: Create firebase-config.js from Secrets
-        # Change the version number on the next line
-        uses: Pdebouav/file-creator@v1.2.0 
+        uses: dmikey/create-file-action@v1.0.0
         with:
-          file-path: ./
-          file-name: firebase-config.js
-          file-content: |
+          path: ./
+          name: firebase-config.js
+          content: |
             export const firebaseConfig = {
               apiKey: "${{ secrets.FIREBASE_API_KEY }}",
               authDomain: "${{ secrets.FIREBASE_AUTH_DOMAIN }}",
@@ -36,9 +35,8 @@ jobs:
               messagingSenderId: "${{ secrets.FIREBASE_MESSAGING_SENDER_ID }}",
               appId: "${{ secrets.FIREBASE_APP_ID }}"
             };
-          overwrite: true
-
-      # This step replaces the placeholder in the app.js file with the shared password secret.
+      
+      # This step remains the same to handle the password.
       - name: Replace Password placeholder
         run: |
           sed -i "s|__SHARED_PASSWORD__|${{ secrets.SHARED_PASSWORD }}|g" app.js
