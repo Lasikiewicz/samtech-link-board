@@ -70,6 +70,9 @@ document.addEventListener('DOMContentLoaded', async () => {
         unlinkList: document.getElementById('unlink-list'), linkList: document.getElementById('link-list'),
         activeUsersList: document.getElementById('active-users-list'),
         logoImg: document.getElementById('logo-img'),
+        editCommentModal: document.getElementById('edit-comment-modal'),
+        editCommentForm: document.getElementById('edit-comment-form'),
+        cancelCommentEdit: document.getElementById('cancel-comment-edit'),
     };
 
     const formInputClasses = "w-full p-2 border border-slate-300 rounded text-slate-900 placeholder-slate-400";
@@ -273,7 +276,6 @@ document.addEventListener('DOMContentLoaded', async () => {
             <span class="text-xs capitalize text-white px-2 py-0.5 rounded-full" style="background-color: ${categoryColors[record.category] || '#64748b'}">
                 ${categoryDisplayNames[record.category] || record.category}
             </span>
-            ${record.modelNumber ? `<span class="text-xs font-semibold text-slate-600">${record.modelNumber}</span>` : ''}
         `;
 
         const creationHtml = `<p class="text-xs text-slate-500">By <span class="font-semibold">${record.addedBy}</span> on ${formatDateTime(record.createdAt)}</p>`;
@@ -305,8 +307,8 @@ document.addEventListener('DOMContentLoaded', async () => {
         card.innerHTML = `
             <div class="collapsible-header flex justify-between items-start cursor-pointer record-header">
                 <div class="flex-grow min-w-0">
-                    <div class="flex items-center gap-2">
-                        <h3 class="text-md font-semibold text-indigo-700 truncate">${record.title}</h3>
+                    <div class="flex items-center gap-2 flex-wrap">
+                        <h3 class="text-md font-semibold text-indigo-700 truncate">${record.title} ${record.modelNumber ? `(${record.modelNumber})` : ''}</h3>
                         ${daysOpenHtml}
                         ${linkIcon}
                     </div>
@@ -417,6 +419,26 @@ document.addEventListener('DOMContentLoaded', async () => {
         form.querySelector('.space-y-4').appendChild(addedByDiv);
 
         dom.editTimeModal.classList.remove('hidden');
+    };
+
+    // Opens the modal for editing a comment.
+    const openEditCommentModal = (recordId, commentIndex) => {
+        const record = allRecords.find(r => r.id === recordId);
+        if (!record || !record.comments || !record.comments[commentIndex]) return;
+
+        const comment = record.comments[commentIndex];
+        const form = dom.editCommentForm;
+
+        form.querySelector('[name="recordId"]').value = recordId;
+        form.querySelector('[name="commentIndex"]').value = commentIndex;
+        form.querySelector('[name="commentText"]').value = comment.text;
+        form.querySelector('[name="addedBy"]').value = comment.addedBy;
+
+        const date = comment.createdAt.seconds ? new Date(comment.createdAt.seconds * 1000) : new Date();
+        const localISOString = new Date(date.getTime() - (date.getTimezoneOffset() * 60000)).toISOString().slice(0, 16);
+        form.querySelector('[name="timestamp"]').value = localISOString;
+
+        dom.editCommentModal.classList.remove('hidden');
     };
     
     // Sets up the real-time listener for Firestore records.
@@ -549,6 +571,8 @@ document.addEventListener('DOMContentLoaded', async () => {
     dom.cancelAdd.addEventListener('click', () => dom.addRecordModal.classList.add('hidden'));
     dom.cancelEdit.addEventListener('click', () => dom.editRecordModal.classList.add('hidden'));
     dom.cancelTimeEdit.addEventListener('click', () => dom.editTimeModal.classList.add('hidden'));
+    dom.cancelCommentEdit.addEventListener('click', () => dom.editCommentModal.classList.add('hidden'));
+
 
     dom.filterControls.addEventListener('click', (e) => {
         const btn = e.target.closest('.control-btn');
@@ -681,6 +705,14 @@ document.addEventListener('DOMContentLoaded', async () => {
         const recordCard = e.target.closest('.record-card');
         if (!recordCard) return;
 
+        const recordId = recordCard.dataset.id;
+
+        if (e.target.closest('.edit-comment-btn')) {
+            const commentIndex = parseInt(e.target.dataset.index);
+            openEditCommentModal(recordId, commentIndex);
+            return;
+        }
+
         if (e.target.closest('.linked-fault-btn')) {
             e.preventDefault();
             const groupId = e.target.dataset.groupId;
@@ -691,7 +723,6 @@ document.addEventListener('DOMContentLoaded', async () => {
             return;
         }
 
-        const recordId = recordCard.dataset.id;
         let record = allRecords.find(r => r.id === recordId);
         if (!record) return;
 
@@ -758,60 +789,51 @@ document.addEventListener('DOMContentLoaded', async () => {
             }
             return;
         }
-
-        if(e.target.classList.contains('edit-comment-btn')) {
-            const commentBody = e.target.closest('.comment-body');
-            const commentIndex = parseInt(e.target.dataset.index);
-            const currentText = commentBody.querySelector('.comment-text').textContent;
-            commentBody.innerHTML = `<textarea class="edit-comment-textarea flex-grow w-full text-sm p-2 border rounded" rows="4">${currentText}</textarea><div class="flex flex-col ml-2 space-y-1"><button class="save-comment-btn text-xs bg-green-500 text-white px-2 py-1 rounded" data-index="${commentIndex}">Save</button><button class="cancel-comment-btn text-xs bg-gray-500 text-white px-2 py-1 rounded">Cancel</button></div>`;
-            return;
-        }
-
-        if(e.target.classList.contains('save-comment-btn')) {
-            const saveBtn = e.target;
-            saveBtn.disabled = true;
-            saveBtn.textContent = '...';
-            
-            const commentIndex = parseInt(e.target.dataset.index);
-            const newText = e.target.closest('.comment-body').querySelector('.edit-comment-textarea').value;
-            const recordRef = doc(db, `/artifacts/${appId}/public/data/records`, recordId);
-            
-            try {
-                await runTransaction(db, async (transaction) => {
-                    const recordDoc = await transaction.get(recordRef);
-                    if (!recordDoc.exists()) throw "Document does not exist!";
-                    const comments = recordDoc.data().comments;
-                    comments[commentIndex].text = newText;
-                    transaction.update(recordRef, { comments });
-                });
-                recentlySavedCommentInfo = { recordId: recordId, commentIndex: commentIndex };
-            } catch (error) {
-                console.error("Failed to save comment:", error);
-                saveBtn.disabled = false;
-                saveBtn.textContent = 'Save';
-            }
-            return;
-        }
         
         if(e.target.classList.contains('delete-comment-btn')) {
             const commentIndex = parseInt(e.target.dataset.index);
-            await runTransaction(db, async (transaction) => {
-                 const recordRef = doc(db, `/artifacts/${appId}/public/data/records`, recordId);
-                 const recordDoc = await transaction.get(recordRef);
-                 if(!recordDoc.exists()) throw "Document does not exist!";
-                 const comments = recordDoc.data().comments;
-                 comments.splice(commentIndex, 1);
-                 transaction.update(recordRef, { comments });
-             });
+            const isConfirmed = confirm('Are you sure you want to delete this comment?');
+            if(isConfirmed) {
+                await runTransaction(db, async (transaction) => {
+                     const recordRef = doc(db, `/artifacts/${appId}/public/data/records`, recordId);
+                     const recordDoc = await transaction.get(recordRef);
+                     if(!recordDoc.exists()) throw "Document does not exist!";
+                     const comments = recordDoc.data().comments;
+                     comments.splice(commentIndex, 1);
+                     transaction.update(recordRef, { comments });
+                 });
+            }
              return;
         }
-        
-        if (e.target.classList.contains('cancel-comment-btn')) {
-            const fullRecord = allRecords.find(r => r.id === recordId);
-            if (fullRecord) {
-                renderComments(e.target.closest('.comments-section'), fullRecord);
-            }
-            return;
+    });
+
+    dom.editCommentForm.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const form = e.target;
+        const recordId = form.querySelector('[name="recordId"]').value;
+        const commentIndex = parseInt(form.querySelector('[name="commentIndex"]').value);
+        const newText = form.querySelector('[name="commentText"]').value;
+        const newAddedBy = form.querySelector('[name="addedBy"]').value;
+        const newTimestampValue = form.querySelector('[name="timestamp"]').value;
+
+        const recordRef = doc(db, `/artifacts/${appId}/public/data/records`, recordId);
+        try {
+            await runTransaction(db, async (transaction) => {
+                const recordDoc = await transaction.get(recordRef);
+                if (!recordDoc.exists()) throw "Document does not exist!";
+                
+                const comments = recordDoc.data().comments || [];
+                if(comments[commentIndex]) {
+                    comments[commentIndex].text = newText;
+                    comments[commentIndex].addedBy = newAddedBy;
+                    comments[commentIndex].createdAt = Timestamp.fromDate(new Date(newTimestampValue));
+                }
+                transaction.update(recordRef, { comments });
+            });
+            dom.editCommentModal.classList.add('hidden');
+        } catch (error) {
+            console.error("Failed to save comment:", error);
+            alert("Error saving comment. Please try again.");
         }
     });
 
