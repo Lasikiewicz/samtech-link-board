@@ -55,7 +55,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const formInputClasses = "w-full p-2 border border-slate-300 rounded text-slate-900 placeholder-slate-400";
     const formLabelClasses = "block text-sm font-medium text-slate-700 mb-1";
     
-    // Defines the HTML structure for the different record category forms.
+    // Defines the HTML structure for the different record category forms
     const formFieldsTemplates = {
         qa: `
             <div class="md:col-span-2"><label class="${formLabelClasses}">Q&A Title</label><input name="title" type="text" class="${formInputClasses}" required></div>
