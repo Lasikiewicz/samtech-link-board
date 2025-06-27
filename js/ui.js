@@ -1,6 +1,6 @@
 import { state, dom, groupColorAssignments, groupBackgroundColors } from './state.js';
 import { formatDateTime, getModelCategory } from './utils.js';
-// The incorrect import of renderRecords has been removed from here.
+import { renderRecords } from './firestore.js';
 
 export const formInputClasses = "w-full p-2 border border-slate-300 rounded text-slate-900 placeholder-slate-400";
 export const formLabelClasses = "block text-sm font-medium text-slate-700 mb-1";
@@ -172,7 +172,7 @@ export function renderRecordCard(record) {
     const groupId = getRecordGroupId(record.id);
     const groupColor = groupId ? groupColorAssignments.get(groupId) : null;
 
-    card.className = `record-card p-4 rounded-xl shadow-lg transition-all ${record.isClosed ? 'opacity-60' : 'bg-white'}`;
+    card.className = `record-card p-3 rounded-xl shadow-lg transition-all ${record.isClosed ? 'opacity-60' : 'bg-white'}`;
     if (groupColor) {
         card.style.backgroundColor = groupColor;
     }
@@ -204,7 +204,7 @@ export function renderRecordCard(record) {
         const createdAtDate = new Date(record.createdAt.seconds * 1000);
         const diffTime = Math.abs(now - createdAtDate);
         const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-        daysOpenHtml = `<span class="text-xs font-semibold text-red-600">(${diffDays} day${diffDays !== 1 ? 's' : ''} open)</span>`;
+        daysOpenHtml = `<span class="text-xs font-semibold text-red-600 ml-2">(${diffDays} day${diffDays !== 1 ? 's' : ''} open)</span>`;
     }
 
     const creationHtml = `<p class="text-xs text-slate-500">By <span class="font-semibold">${record.addedBy}</span> on ${formatDateTime(record.createdAt)}</p>`;
@@ -212,7 +212,13 @@ export function renderRecordCard(record) {
     const isLinked = record.category === 'common-fault' && ((record.relatedTo && record.relatedTo.length > 0) || (record.relatedBy && record.relatedBy.length > 0));
     const linkIcon = isLinked ? `<svg class="h-4 w-4 text-cyan-500 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" title="This fault is linked to others."><path stroke-linecap="round" stroke-linejoin="round" d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1"></path></svg>` : '';
     
-    const detailsHtml = `${record.qaId?`<div><dt class="font-semibold">Q&A ID:</dt><dd class="break-all">${record.qaId}</dd></div>`:''}${record.modelNumber?`<div><dt class="font-semibold">Model Number:</dt><dd class="break-all">${record.modelNumber}</dd></div>`:''}${record.serialNumber?`<div><dt class="font-semibold">Serial Number:</dt><dd class="break-all">${record.serialNumber}</dd></div>`:''}${record.serviceOrderNumber?`<div><dt class="font-semibold">Service Order Number:</dt><dd class="break-all">${record.serviceOrderNumber}</dd></div>`:''}${record.salesforceCaseNumber?`<div><dt class="font-semibold">Salesforce Case Number:</dt><dd class="break-all">${record.salesforceCaseNumber}</dd></div>`:''}`;
+    const detailsHtml = [
+        record.modelNumber ? `<div><dt class="font-semibold">Model Number:</dt><dd class="break-all">${record.modelNumber}</dd></div>` : '',
+        record.serialNumber ? `<div><dt class="font-semibold">Serial Number:</dt><dd class="break-all">${record.serialNumber}</dd></div>` : '',
+        record.serviceOrderNumber ? `<div><dt class="font-semibold">Service Order Number:</dt><dd class="break-all">${record.serviceOrderNumber}</dd></div>` : '',
+        record.salesforceCaseNumber ? `<div><dt class="font-semibold">Salesforce Case Number:</dt><dd class="break-all">${record.salesforceCaseNumber}</dd></div>` : '',
+        record.qaId ? `<div><dt class="font-semibold">Q&A ID:</dt><dd class="break-all">${record.qaId}</dd></div>` : ''
+    ].filter(Boolean).join('');
     
     const linkedGroupId = getRecordGroupId(record.id);
     const linkedRecordsHtml = linkedGroupId ? `<div class="mt-2"><dt class="font-semibold">Linked Faults:</dt><dd><button class="linked-fault-btn text-indigo-600 underline" data-group-id="${linkedGroupId}">View Group</button></dd></div>` : '';
@@ -238,7 +244,7 @@ export function renderRecordCard(record) {
         <div class="collapsible-header flex justify-between items-start cursor-pointer record-header">
             <div class="flex-grow min-w-0">
                 <h3 class="text-md font-semibold text-indigo-700">${record.title}</h3>
-                <div class="flex items-center gap-x-2 flex-wrap text-xs mt-1">
+                <div class="flex items-center gap-2 flex-wrap text-xs mt-1">
                     ${sublineItems.join('')}
                     ${linkIcon}
                 </div>

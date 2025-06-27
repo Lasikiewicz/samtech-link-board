@@ -27,6 +27,13 @@ export function initializeEventListeners() {
         setFormCategory('qa', dom.formFieldsContainer); 
         dom.addRecordModal.classList.remove('hidden'); 
     });
+    
+    dom.formCategorySelector.addEventListener('click', (e) => {
+        if (e.target.matches('.form-category-btn')) {
+            setFormCategory(e.target.dataset.category, dom.formFieldsContainer);
+        }
+    });
+
     dom.cancelAdd.addEventListener('click', () => dom.addRecordModal.classList.add('hidden'));
     dom.cancelEdit.addEventListener('click', () => dom.editRecordModal.classList.add('hidden'));
     dom.cancelTimeEdit.addEventListener('click', () => dom.editTimeModal.classList.add('hidden'));
