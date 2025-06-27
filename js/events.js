@@ -48,6 +48,34 @@ export function initializeEventListeners() {
         }
     });
 
+    // ADDED: Event listener for the delete button in the edit modal
+    dom.deleteRecordBtn.addEventListener('click', () => {
+        const recordId = dom.editRecordForm.querySelector('[name="id"]').value;
+        const record = [...state.allRecords, ...state.allCommonFaults].find(r => r.id === recordId);
+        if (record) {
+            state.recordToDelete = record;
+            document.getElementById('delete-record-title').textContent = record.title;
+            dom.confirmDeleteModal.classList.remove('hidden');
+        }
+    });
+    
+    // ADDED: Event listener for the final delete confirmation
+    dom.confirmDeleteBtn.addEventListener('click', async () => {
+        if (state.recordToDelete) {
+            await deleteDoc(doc(state.db, `/artifacts/${appId}/public/data/records`, state.recordToDelete.id));
+            dom.confirmDeleteModal.classList.add('hidden');
+            dom.editRecordModal.classList.add('hidden');
+            state.recordToDelete = null;
+        }
+    });
+
+    // ADDED: Event listener to cancel deletion
+    dom.cancelDelete.addEventListener('click', () => {
+        dom.confirmDeleteModal.classList.add('hidden');
+        state.recordToDelete = null;
+    });
+
+
     dom.manageLinksBtn.addEventListener('click', () => {
         const recordId = dom.editRecordForm.querySelector('[name="id"]').value;
         state.recordForLinking = [...state.allRecords, ...state.allCommonFaults].find(r => r.id === recordId);

@@ -44,6 +44,10 @@ document.addEventListener('DOMContentLoaded', () => {
         confirmDeleteModal: document.getElementById('confirm-delete-modal'), 
         cancelDelete: document.getElementById('cancel-delete'), 
         confirmDeleteBtn: document.getElementById('confirm-delete-btn'),
+        // ADDED: References for the "Confirm Close" modal
+        confirmCloseModal: document.getElementById('confirm-close-modal'),
+        cancelClose: document.getElementById('cancel-close'),
+        confirmCloseBtn: document.getElementById('confirm-close-btn'),
         linkFaultModal: document.getElementById('link-fault-modal'), 
         existingFaultsList: document.getElementById('existing-faults-list'), 
         skipLinkBtn: document.getElementById('skip-link-btn'), 
