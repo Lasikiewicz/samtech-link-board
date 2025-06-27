@@ -249,67 +249,76 @@ document.addEventListener('DOMContentLoaded', async () => {
         const groupId = getRecordGroupId(record.id);
         const groupColor = groupId ? groupColorAssignments.get(groupId) : null;
 
-        card.className = `record-card p-5 rounded-xl shadow-lg transition-all ${record.isClosed ? 'opacity-60' : 'bg-white'}`;
+        card.className = `record-card p-4 rounded-xl shadow-lg transition-all ${record.isClosed ? 'opacity-60' : 'bg-white'}`;
         if (groupColor) {
             card.style.backgroundColor = groupColor;
         }
 
         if (expandedRecordIds.has(record.id)) card.classList.add('expanded');
         
-        const subTitleHtml = `<p class="text-xs text-slate-500 mt-1">By <span class="font-semibold">${record.addedBy}</span> on ${formatDateTime(record.createdAt)}</p>`;
-        
-        const modelTags = [];
-        const statusTags = [];
-
-        const modelUpper = record.modelNumber?.toUpperCase() || '';
-        if (modelUpper.startsWith('RB')) {
-            modelTags.push(`<button class="filter-model-btn text-xs font-bold bg-sky-500 text-white px-2 py-1 rounded-full transition-transform hover:scale-105" data-filter-prefix="REF">REF</button>`);
-        }
-        if (modelUpper.startsWith('DW')) {
-            modelTags.push(`<button class="filter-model-btn text-xs font-bold bg-amber-500 text-white px-2 py-1 rounded-full transition-transform hover:scale-105" data-filter-prefix="DW">DW</button>`);
-        }
-        if (['WW', 'WM', 'WF', 'WD'].some(p => modelUpper.startsWith(p))) {
-            modelTags.push(`<button class="filter-model-btn text-xs font-bold bg-teal-500 text-white px-2 py-1 rounded-full transition-transform hover:scale-105" data-filter-prefix="WSM">WSM</button>`);
-        }
-        if (modelUpper.startsWith('TD')) {
-            modelTags.push(`<button class="filter-model-btn text-xs font-bold bg-slate-500 text-white px-2 py-1 rounded-full transition-transform hover:scale-105" data-filter-prefix="TD">TD</button>`);
-        }
-
-        if (record.onSamsungTracker) {
-            statusTags.push(`<button class="filter-sat-btn text-xs font-bold bg-green-500 text-white px-2 py-1 rounded-full transition-transform hover:scale-105">Samsung Action Tracker</button>`);
-        }
-
-        const isLinked = record.category === 'common-fault' && ((record.relatedTo && record.relatedTo.length > 0) || (record.relatedBy && record.relatedBy.length > 0));
-        const linkIcon = isLinked ? `<svg class="h-4 w-4 text-cyan-500 ml-2" fill="none" viewBox="0 0 24 24" stroke="currentColor" title="This fault is linked to others."><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1"></path></svg>` : '';
-        
-        const detailsHtml = `${record.qaId?`<div><dt class="font-semibold">Q&A ID:</dt><dd class="break-all">${record.qaId}</dd></div>`:''}${record.modelNumber?`<div><dt class="font-semibold">Model Number:</dt><dd class="break-all">${record.modelNumber}</dd></div>`:''}${record.serialNumber?`<div><dt class="font-semibold">Serial Number:</dt><dd class="break-all">${record.serialNumber}</dd></div>`:''}${record.serviceOrderNumber?`<div><dt class="font-semibold">Service Order Number:</dt><dd class="break-all">${record.serviceOrderNumber}</dd></div>`:''}${record.salesforceCaseNumber?`<div><dt class="font-semibold">Salesforce Case Number:</dt><dd class="break-all">${record.salesforceCaseNumber}</dd></div>`:''}`;
         const categoryDisplayNames = { qa: 'Q&A', 'common-fault': 'Common Fault', general: 'General' };
         const categoryColors = { qa: '#5fcae2', 'common-fault': '#4892cf', general: '#3f57ab' };
+        
+        const typeAndModelHtml = `
+            <span class="text-xs capitalize text-white px-2 py-0.5 rounded-full" style="background-color: ${categoryColors[record.category] || '#64748b'}">
+                ${categoryDisplayNames[record.category] || record.category}
+            </span>
+            ${record.modelNumber ? `<span class="text-xs font-semibold text-slate-600">${record.modelNumber}</span>` : ''}
+        `;
+
+        const creationHtml = `<p class="text-xs text-slate-500">By <span class="font-semibold">${record.addedBy}</span> on ${formatDateTime(record.createdAt)}</p>`;
+        
+        const isLinked = record.category === 'common-fault' && ((record.relatedTo && record.relatedTo.length > 0) || (record.relatedBy && record.relatedBy.length > 0));
+        const linkIcon = isLinked ? `<svg class="h-4 w-4 text-cyan-500 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" title="This fault is linked to others."><path stroke-linecap="round" stroke-linejoin="round" d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1"></path></svg>` : '';
+        
+        const detailsHtml = `${record.qaId?`<div><dt class="font-semibold">Q&A ID:</dt><dd class="break-all">${record.qaId}</dd></div>`:''}${record.modelNumber?`<div><dt class="font-semibold">Model Number:</dt><dd class="break-all">${record.modelNumber}</dd></div>`:''}${record.serialNumber?`<div><dt class="font-semibold">Serial Number:</dt><dd class="break-all">${record.serialNumber}</dd></div>`:''}${record.serviceOrderNumber?`<div><dt class="font-semibold">Service Order Number:</dt><dd class="break-all">${record.serviceOrderNumber}</dd></div>`:''}${record.salesforceCaseNumber?`<div><dt class="font-semibold">Salesforce Case Number:</dt><dd class="break-all">${record.salesforceCaseNumber}</dd></div>`:''}`;
+        
         const linkedGroupId = getRecordGroupId(record.id);
         const linkedRecordsHtml = linkedGroupId ? `<div class="mt-2"><dt class="font-semibold">Linked Faults:</dt><dd><button class="linked-fault-btn text-indigo-600 underline" data-group-id="${linkedGroupId}">View Group</button></dd></div>` : '';
         
-        let ageHtml = '';
-        if (record.createdAt?.seconds) {
-            const ageInDays = Math.floor((Date.now() / 1000 - record.createdAt.seconds) / (60 * 60 * 24));
-            if (ageInDays >= 0) {
-                 ageHtml = `<span class="text-xs text-slate-500 mr-2 self-center">${ageInDays}d old</span>`;
-            }
-        }
-        const actionsHtml = `<div class="actions flex-shrink-0 ml-4 flex items-center space-x-1">${ageHtml}<button title="Edit Record" class="edit-record-btn p-1.5 rounded-full hover:bg-slate-200">&#9998;</button><button title="Edit Timestamp" class="edit-time-btn p-1.5 rounded-full hover:bg-slate-200">&#128337;</button><button title="${record.isClosed ? 'Re-open Record' : 'Close Record'}" class="toggle-close-btn p-1.5 rounded-full hover:bg-slate-200">${record.isClosed ? '&#128275;' : '&#128274;'}</button></div>`;
+        const actionsHtml = `
+            <div class="actions flex-shrink-0 ml-4 flex items-center space-x-1 text-slate-500">
+                <button title="Edit Record" class="edit-record-btn p-1.5 rounded-full hover:bg-slate-200 hover:text-slate-800">
+                    <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.5L14.732 3.732z" /></svg>
+                </button>
+                <button title="Edit Timestamp" class="edit-time-btn p-1.5 rounded-full hover:bg-slate-200 hover:text-slate-800">
+                    <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+                </button>
+                <button title="${record.isClosed ? 'Re-open Record' : 'Close Record'}" class="toggle-close-btn p-1.5 rounded-full hover:bg-slate-200 hover:text-slate-800">
+                    ${record.isClosed 
+                        ? `<svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M8 11V7a4 4 0 118 0m-4 8v3m-6-3h12a2 2 0 002-2v-4a2 2 0 00-2-2H6a2 2 0 00-2 2v4a2 2 0 002 2z" /></svg>` 
+                        : `<svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" /></svg>`
+                    }
+                </button>
+            </div>`;
 
-        card.innerHTML = `<div class="collapsible-header flex justify-between items-start cursor-pointer record-header">
-            <div>
-                <div class="flex items-center gap-2">
-                    <span class="text-xs capitalize text-white px-2 py-0.5 rounded-full" style="background-color: ${categoryColors[record.category] || '#64748b'}">${categoryDisplayNames[record.category] || record.category}</span>
-                    ${modelTags.join('')}
-                    <h3 class="text-lg font-semibold text-indigo-600 break-all">${record.title}</h3>
-                    ${linkIcon}
+        card.innerHTML = `
+            <div class="collapsible-header flex justify-between items-start cursor-pointer record-header">
+                <div class="flex-grow min-w-0">
+                    <div class="flex items-center gap-2">
+                        <h3 class="text-md font-semibold text-indigo-700 truncate">${record.title}</h3>
+                        ${linkIcon}
+                    </div>
+                    <div class="flex items-center gap-2 mt-1">
+                        ${typeAndModelHtml}
+                    </div>
+                    <div class="mt-1">
+                        ${creationHtml}
+                    </div>
                 </div>
-                ${subTitleHtml}
+                <div class="flex flex-col items-end">
+                    ${record.isClosed ? '<span class="text-xs font-bold bg-slate-500 text-white px-2 py-1 rounded-full mb-1">CLOSED</span>' : ''}
+                    ${actionsHtml}
+                </div>
+                <svg class="chevron h-5 w-5 transition-transform text-slate-400 ml-2 mt-1 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" /></svg>
             </div>
-            <div class="flex items-center gap-2">${statusTags.join('')}${record.isClosed?'<span class="text-xs font-bold bg-slate-500 text-white px-2 py-1 rounded-full">CLOSED</span>':''}${actionsHtml}<svg class="chevron h-5 w-5 transition-transform" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" /></svg></div>
-        </div>
-        <div class="collapsible-content details-container"><div class="mt-4 pt-4 border-t border-slate-200 text-sm space-y-2"><dl class="grid grid-cols-1 md:grid-cols-2 gap-x-4 gap-y-1">${detailsHtml}${linkedRecordsHtml}</dl>${record.description?`<div class="pt-2"><p class="whitespace-pre-wrap">${record.description}</p></div>`:''}</div><div class="comments-section mt-4 pt-4 border-t border-slate-200"></div></div>`;
+            <div class="collapsible-content details-container">
+                <div class="mt-4 pt-4 border-t border-slate-200 text-sm space-y-2">
+                    <dl class="grid grid-cols-1 md:grid-cols-2 gap-x-4 gap-y-1">${detailsHtml}${linkedRecordsHtml}</dl>
+                    ${record.description ? `<div class="pt-2"><p class="whitespace-pre-wrap">${record.description}</p></div>` : ''}
+                </div>
+                <div class="comments-section mt-4 pt-4 border-t border-slate-200"></div>
+            </div>`;
         
         if (expandedRecordIds.has(record.id)) {
             renderComments(card.querySelector('.comments-section'), record);
