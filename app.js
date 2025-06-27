@@ -1,5 +1,5 @@
 import { initializeApp, getApps, getApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
-import { getFirestore, doc, getDoc, collection, onSnapshot, addDoc, updateDoc, deleteDoc, serverTimestamp, query, where, orderBy, arrayUnion, arrayRemove, Timestamp, getDocs, runTransaction, setDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+import { getFirestore, doc, getDoc, collection, onSnapshot, addDoc, updateDoc, deleteDoc, serverTimestamp, query, where, orderBy, arrayUnion, arrayRemove, Timestamp, getDocs, runTransaction, setDoc, writeBatch } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
 // This event listener ensures that the entire HTML document is loaded and parsed before the script runs.
 document.addEventListener('DOMContentLoaded', async () => {
@@ -18,7 +18,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     // The SHARED_PASSWORD variable is now loaded from the generated config.js file
     // and is globally available. It is no longer defined here.
 
-    let app, db, recordsUnsubscribe, commonFaultsUnsubscribe;
+    let app, db, recordsUnsubscribe, commonFaultsUnsubscribe, presenceUnsubscribe;
     let allRecords = [];
     let allCommonFaults = [];
     let groupedFaults = new Map();
@@ -243,6 +243,16 @@ document.addEventListener('DOMContentLoaded', async () => {
         }
         return null;
     };
+
+    const getModelCategory = (modelNumber) => {
+        if (!modelNumber) return null;
+        const model = modelNumber.toUpperCase();
+        if (model.startsWith('RB')) return 'REF';
+        if (model.startsWith('DW')) return 'DW';
+        if (['WW', 'WM', 'WF', 'WD'].some(prefix => model.startsWith(prefix))) return 'WSM';
+        if (model.startsWith('TD')) return 'TD';
+        return null;
+    };
     
     // Renders a single record card.
     const renderRecordCard = (record) => {
@@ -260,24 +270,19 @@ document.addEventListener('DOMContentLoaded', async () => {
         if (expandedRecordIds.has(record.id)) card.classList.add('expanded');
         
         const categoryDisplayNames = { qa: 'Q&A', 'common-fault': 'Common Fault', general: 'General' };
-        const categoryColors = { qa: '#5fcae2', 'common-fault': '#4892cf', general: '#3f57ab' };
+        
+        let sublineItems = [
+            categoryDisplayNames[record.category] || record.category
+        ];
 
-        let daysOpenHtml = '';
-        if (!record.isClosed && record.createdAt?.seconds) {
-            const now = new Date();
-            const createdAtDate = new Date(record.createdAt.seconds * 1000);
-            const diffTime = Math.abs(now - createdAtDate);
-            const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-            daysOpenHtml = `<span class="text-xs font-semibold text-red-600 shrink-0">(${diffDays} day${diffDays !== 1 ? 's' : ''} open)</span>`;
+        const modelCategory = getModelCategory(record.modelNumber);
+        if(modelCategory) {
+            sublineItems.push(modelCategory);
         }
 
-        const onTrackerHtml = record.onSamsungTracker ? `<span class="text-xs font-bold text-white bg-blue-500 px-2 py-0.5 rounded-full shrink-0">SAT</span>` : '';
-        
-        const typeAndModelHtml = `
-            <span class="text-xs capitalize text-white px-2 py-0.5 rounded-full" style="background-color: ${categoryColors[record.category] || '#64748b'}">
-                ${categoryDisplayNames[record.category] || record.category}
-            </span>
-        `;
+        if(record.onSamsungTracker) {
+            sublineItems.push('Samsung Action Tracker');
+        }
 
         const creationHtml = `<p class="text-xs text-slate-500">By <span class="font-semibold">${record.addedBy}</span> on ${formatDateTime(record.createdAt)}</p>`;
         
@@ -308,15 +313,10 @@ document.addEventListener('DOMContentLoaded', async () => {
         card.innerHTML = `
             <div class="collapsible-header flex justify-between items-start cursor-pointer record-header">
                 <div class="flex-grow min-w-0">
-                    <div class="flex items-center gap-x-2 flex-wrap">
-                        <h3 class="text-md font-semibold text-indigo-700">${record.title}</h3>
-                        ${record.modelNumber ? `<span class="text-sm font-medium text-slate-600 shrink-0">(${record.modelNumber})</span>` : ''}
-                        ${onTrackerHtml}
-                        ${daysOpenHtml}
+                    <h3 class="text-md font-semibold text-indigo-700">${record.title}</h3>
+                    <div class="flex items-center gap-x-2 flex-wrap text-xs text-slate-500 mt-1">
+                        ${sublineItems.join(' <span class="text-slate-300">&bull;</span> ')}
                         ${linkIcon}
-                    </div>
-                    <div class="flex items-center gap-2 mt-1">
-                        ${typeAndModelHtml}
                     </div>
                     <div class="mt-1">
                         ${creationHtml}
@@ -491,25 +491,36 @@ document.addEventListener('DOMContentLoaded', async () => {
         
         recordsUnsubscribe = onSnapshot(q, (snapshot) => {
             dom.loadingState.style.display = 'none';
-            
             allRecords = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
             renderRecords();
-            if (isInitialLoad) {
-                if (allRecords.length > 0) {
-                     expandedRecordIds.add(allRecords[0].id);
-                     renderRecords(); 
-                }
-                isInitialLoad = false;
-            }
         }, (error) => { console.error("Firestore error:", error); dom.loadingState.innerHTML = `<p class="text-red-500">Error loading data. A required index is likely missing. Check console (F12) for a link.</p>`; });
+    };
+
+    const cleanupInactiveUsers = async () => {
+        const twoMinutesAgo = Timestamp.fromMillis(Date.now() - 2 * 60 * 1000);
+        const q = query(collection(db, 'presence'), where('lastSeen', '<', twoMinutesAgo));
+        const snapshot = await getDocs(q);
+        const batch = writeBatch(db);
+        snapshot.docs.forEach(doc => {
+            batch.delete(doc.ref);
+        });
+        await batch.commit();
     };
     
     // Sets up real-time presence tracking for active users.
     const setupPresence = async () => {
-        if (!db) return; // Don't try if DB not initialized
-        presenceRef = doc(collection(db, 'presence'));
+        if (!db || !currentUserDisplayName) return; 
+        presenceRef = doc(db, 'presence', currentUserDisplayName);
+
+        const updatePresence = () => {
+            if(presenceRef) {
+                setDoc(presenceRef, { name: currentUserDisplayName, lastSeen: serverTimestamp() }, { merge: true });
+            }
+        };
         
-        await setDoc(presenceRef, { name: currentUserDisplayName, onlineSince: serverTimestamp() });
+        updatePresence();
+        setInterval(updatePresence, 60 * 1000); // Update every minute
+        setInterval(cleanupInactiveUsers, 5 * 60 * 1000); // Cleanup every 5 minutes
 
         if(presenceUnsubscribe) presenceUnsubscribe();
         presenceUnsubscribe = onSnapshot(query(collection(db, 'presence')), (snapshot) => {
@@ -539,7 +550,10 @@ document.addEventListener('DOMContentLoaded', async () => {
     };
 
     const removePresence = async () => {
-        if (presenceUnsubscribe) presenceUnsubscribe();
+        if (presenceUnsubscribe) {
+            presenceUnsubscribe();
+            presenceUnsubscribe = null;
+        }
         if (presenceRef) {
             await deleteDoc(presenceRef);
             presenceRef = null;
