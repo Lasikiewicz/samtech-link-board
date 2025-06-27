@@ -1,5 +1,11 @@
 name: Build and Deploy to GitHub Pages
 
+# This ensures that only one deployment runs at a time for the main branch.
+# It will cancel any previous, in-progress runs when a new commit is pushed.
+concurrency:
+  group: "pages"
+  cancel-in-progress: true
+
 on:
   push:
     branches:
@@ -50,6 +56,11 @@ jobs:
             exit 1
           fi
           echo "✅ Placeholder verification passed."
+
+      # This file signals to GitHub Pages to skip the Jekyll build process
+      # and can help prevent caching issues.
+      - name: Create .nojekyll file
+        run: touch .nojekyll
 
       - name: Upload artifact
         uses: actions/upload-pages-artifact@v3
