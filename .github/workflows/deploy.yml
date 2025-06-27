@@ -20,21 +20,18 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      # This step now uses a different, more reliable action to create the file.
+      # This step now uses basic shell commands to create the config file,
+      # removing the need for any third-party actions.
       - name: Create firebase-config.js from Secrets
-        uses: dmikey/create-file-action@v1.0.0
-        with:
-          path: ./
-          name: firebase-config.js
-          content: |
-            export const firebaseConfig = {
-              apiKey: "${{ secrets.FIREBASE_API_KEY }}",
-              authDomain: "${{ secrets.FIREBASE_AUTH_DOMAIN }}",
-              projectId: "${{ secrets.FIREBASE_PROJECT_ID }}",
-              storageBucket: "${{ secrets.FIREBASE_STORAGE_BUCKET }}",
-              messagingSenderId: "${{ secrets.FIREBASE_MESSAGING_SENDER_ID }}",
-              appId: "${{ secrets.FIREBASE_APP_ID }}"
-            };
+        run: |
+          echo "export const firebaseConfig = {" > firebase-config.js
+          echo "  apiKey: \"${{ secrets.FIREBASE_API_KEY }}\"," >> firebase-config.js
+          echo "  authDomain: \"${{ secrets.FIREBASE_AUTH_DOMAIN }}\"," >> firebase-config.js
+          echo "  projectId: \"${{ secrets.FIREBASE_PROJECT_ID }}\"," >> firebase-config.js
+          echo "  storageBucket: \"${{ secrets.FIREBASE_STORAGE_BUCKET }}\"," >> firebase-config.js
+          echo "  messagingSenderId: \"${{ secrets.FIREBASE_MESSAGING_SENDER_ID }}\"," >> firebase-config.js
+          echo "  appId: \"${{ secrets.FIREBASE_APP_ID }}\"" >> firebase-config.js
+          echo "};" >> firebase-config.js
       
       # This step remains the same to handle the password.
       - name: Replace Password placeholder
