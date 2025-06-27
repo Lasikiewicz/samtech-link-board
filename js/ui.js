@@ -1,6 +1,6 @@
 import { state, dom, groupColorAssignments, groupBackgroundColors } from './state.js';
 import { formatDateTime, getModelCategory } from './utils.js';
-// Removed the incorrect import of renderRecords from this line.
+import { renderRecords } from './firestore.js';
 
 export const formInputClasses = "w-full p-2 border border-slate-300 rounded text-slate-900 placeholder-slate-400";
 export const formLabelClasses = "block text-sm font-medium text-slate-700 mb-1";
@@ -13,14 +13,14 @@ export const formFieldsTemplates = {
         <div><label class="${formLabelClasses}">Serial Number</label><input name="serialNumber" type="text" class="${formInputClasses}"></div>
         <div><label class="${formLabelClasses}">Service Order Number</label><input name="serviceOrderNumber" type="text" pattern="\\d{10}" title="10 digits" class="${formInputClasses}"></div>
         <div><label class="${formLabelClasses}">Salesforce Case Number</label><input name="salesforceCaseNumber" type="text" class="${formInputClasses}"></div>
-        <div class="md:col-span-2"><label class="${formLabelClasses}">Description</label><textarea name="description" class="${formInputClasses}" rows="4"></textarea></div>`,
+        <div class="md:col-span-2"><label class="${formLabelClasses}">Description</label><textarea name="description" class="${formInputClasses}" rows="8"></textarea></div>`,
     'common-fault': `
         <div class="md:col-span-2"><label class="${formLabelClasses}">Title</label><input name="title" type="text" class="${formInputClasses}" required></div>
         <div><label class="${formLabelClasses}">Model Number</label><input name="modelNumber" type="text" class="${formInputClasses}"></div>
         <div><label class="${formLabelClasses}">Serial Number</label><input name="serialNumber" type="text" class="${formInputClasses}"></div>
         <div><label class="${formLabelClasses}">Service Order Number</label><input name="serviceOrderNumber" type="text" pattern="\\d{10}" title="10 digits" class="${formInputClasses}"></div>
         <div><label class="${formLabelClasses}">Salesforce Case Number</label><input name="salesforceCaseNumber" type="text" class="${formInputClasses}"></div>
-        <div class="md:col-span-2"><label class="${formLabelClasses}">Description</label><textarea name="description" class="${formInputClasses}" rows="4"></textarea></div>
+        <div class="md:col-span-2"><label class="${formLabelClasses}">Description</label><textarea name="description" class="${formInputClasses}" rows="8"></textarea></div>
         <div class="md:col-span-2"><label class="flex items-center mt-2"><input type="checkbox" name="onSamsungTracker" class="rounded mr-2"> On Samsung Action Tracker</label></div>`,
     general: `
         <div class="md:col-span-2"><label class="${formLabelClasses}">Title</label><input name="title" type="text" class="${formInputClasses}" required></div>
@@ -28,7 +28,7 @@ export const formFieldsTemplates = {
         <div><label class="${formLabelClasses}">Serial Number</label><input name="serialNumber" type="text" class="${formInputClasses}"></div>
         <div><label class="${formLabelClasses}">Service Order Number</label><input name="serviceOrderNumber" type="text" pattern="\\d{10}" title="10 digits" class="${formInputClasses}"></div>
         <div><label class="${formLabelClasses}">Salesforce Case Number</label><input name="salesforceCaseNumber" type="text" class="${formInputClasses}"></div>
-        <div class="md:col-span-2"><label class="${formLabelClasses}">Description</label><textarea name="description" class="${formInputClasses}" rows="4"></textarea></div>
+        <div class="md:col-span-2"><label class="${formLabelClasses}">Description</label><textarea name="description" class="${formInputClasses}" rows="8"></textarea></div>
         <div class="md:col-span-2"><label class="flex items-center mt-2"><input type="checkbox" name="onSamsungTracker" class="rounded mr-2"> On Samsung Action Tracker</label></div>`
 };
 
@@ -125,33 +125,7 @@ export function renderCategoryMenu() {
     catHeader.className = 'menu-header';
     dom.categoryMenu.appendChild(catHeader);
 
-    const details = document.createElement('details');
-    details.className = 'level-2';
-    const summary = document.createElement('summary');
-    summary.className = 'menu-summary';
-    summary.innerHTML = `<span>Common Faults</span><svg class="chevron h-4 w-4 text-slate-500" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path></svg>`;
-    summary.addEventListener('click', (e) => {
-        if(e.target.closest('summary')) {
-            state.currentCategory = 'common-fault';
-            updateActiveFilterButtons();
-            renderRecords();
-        }
-    });
-
-    details.appendChild(summary);
-
-    if(state.groupedFaults.size > 0) {
-        const sortedGroups = Array.from(state.groupedFaults.entries()).sort(([, groupA], [, groupB]) => {
-            const timeA = groupA.records[0]?.createdAt?.seconds || 0;
-            const timeB = groupB.records[0]?.createdAt?.seconds || 0;
-            return timeB - timeA;
-        });
-        sortedGroups.forEach(([groupId, group]) => {
-            details.appendChild(createMenuButton(groupId, group.records[0].title, 'level-3 font-normal'));
-        });
-    }
-    dom.categoryMenu.appendChild(details);
-
+    dom.categoryMenu.appendChild(createMenuButton('common-fault', 'Common Faults', 'level-2'));
     dom.categoryMenu.appendChild(createMenuButton('general', 'General', 'level-2'));
     dom.categoryMenu.appendChild(createMenuButton('qa', 'Q&A', 'level-2'));
     
@@ -221,7 +195,7 @@ export function renderRecordCard(record) {
         const createdAtDate = new Date(record.createdAt.seconds * 1000);
         const diffTime = Math.abs(now - createdAtDate);
         const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-        daysOpenHtml = `<span class="text-xs font-semibold text-red-600 ml-2">(${diffDays} day${diffDays !== 1 ? 's' : ''} open)</span>`;
+        daysOpenHtml = `<span class="text-xs font-semibold text-red-600">(${diffDays} day${diffDays !== 1 ? 's' : ''} open)</span>`;
     }
 
     const creationHtml = `<p class="text-xs text-slate-500">By <span class="font-semibold">${record.addedBy}</span> on ${formatDateTime(record.createdAt)}</p>`;
@@ -245,9 +219,6 @@ export function renderRecordCard(record) {
             ${daysOpenHtml}
             <button title="Edit Record" class="edit-record-btn p-1.5 rounded-full hover:bg-slate-200 hover:text-slate-800">
                 <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.5L14.732 3.732z" /></svg>
-            </button>
-            <button title="Edit Timestamp" class="edit-time-btn p-1.5 rounded-full hover:bg-slate-200 hover:text-slate-800">
-                <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
             </button>
             <button title="${record.isClosed ? 'Re-open Record' : 'Close Record'}" class="toggle-close-btn p-1.5 rounded-full hover:bg-slate-200 hover:text-slate-800">
                 ${record.isClosed 
@@ -406,7 +377,7 @@ export function renderRecords() {
 
     if (isGroupId && state.groupedFaults.has(state.currentCategory)) {
         const groupRecords = state.groupedFaults.get(state.currentCategory).records;
-        recordsToDisplay = [...groupRecords].sort((a, b) => (a.createdAt?.seconds || 0) - (b.createdAt?.seconds || 0));
+        recordsToDisplay = [...groupRecords].sort((a, b) => (b.createdAt?.seconds || 0) - (a.createdAt?.seconds || 0));
     } else if (state.currentCategory.startsWith('model-')) {
         const prefix = state.currentCategory.split('-')[1];
         if (prefix === 'WSM') {

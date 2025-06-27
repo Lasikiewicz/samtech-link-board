@@ -40,6 +40,14 @@ export function initializeEventListeners() {
     dom.cancelCommentEdit.addEventListener('click', () => dom.editCommentModal.classList.add('hidden'));
     dom.closeLinkUnlinkModal.addEventListener('click', () => dom.linkUnlinkModal.classList.add('hidden'));
 
+    dom.editRecordForm.addEventListener('click', (e) => {
+        if (e.target.id === 'edit-timestamp-btn') {
+            const recordId = dom.editRecordForm.querySelector('[name="id"]').value;
+            const record = [...state.allRecords, ...state.allCommonFaults].find(r => r.id === recordId);
+            if (record) openTimeEditModal(record);
+        }
+    });
+
     dom.manageLinksBtn.addEventListener('click', () => {
         const recordId = dom.editRecordForm.querySelector('[name="id"]').value;
         state.recordForLinking = [...state.allRecords, ...state.allCommonFaults].find(r => r.id === recordId);
@@ -104,12 +112,21 @@ export function initializeEventListeners() {
         }
     });
 
+    let recordToClose = null;
     dom.recordsContainer.addEventListener('click', async (e) => {
         const recordCard = e.target.closest('.record-card');
         if (!recordCard) return;
 
         const recordId = recordCard.dataset.id;
         
+        if (e.target.closest('.toggle-close-btn')) {
+            recordToClose = recordId;
+            const record = [...state.allRecords, ...state.allCommonFaults].find(r => r.id === recordId);
+            document.getElementById('close-record-title').textContent = record.title;
+            dom.confirmCloseModal.classList.remove('hidden');
+            return;
+        }
+
         if (e.target.closest('.record-filter-btn')) {
             e.stopPropagation();
             const btn = e.target.closest('.record-filter-btn');
@@ -149,14 +166,6 @@ export function initializeEventListeners() {
 
         if (e.target.closest('.edit-record-btn')) {
             openEditModal(record);
-            return;
-        }
-        if (e.target.closest('.edit-time-btn')) {
-            openTimeEditModal(record);
-            return;
-        }
-        if (e.target.closest('.toggle-close-btn')) {
-            await updateDoc(doc(state.db, `/artifacts/${appId}/public/data/records`, recordId), { isClosed: !record.isClosed });
             return;
         }
 
@@ -210,6 +219,19 @@ export function initializeEventListeners() {
             }
              return;
         }
+    });
+
+    dom.confirmCloseBtn.addEventListener('click', async () => {
+        if(recordToClose) {
+            const record = [...state.allRecords, ...state.allCommonFaults].find(r => r.id === recordToClose);
+            await updateDoc(doc(state.db, `/artifacts/${appId}/public/data/records`, recordToClose), { isClosed: !record.isClosed });
+            dom.confirmCloseModal.classList.add('hidden');
+            recordToClose = null;
+        }
+    });
+    dom.cancelClose.addEventListener('click', () => {
+        dom.confirmCloseModal.classList.add('hidden');
+        recordToClose = null;
     });
 
     dom.authForm.addEventListener('submit', (e) => {
