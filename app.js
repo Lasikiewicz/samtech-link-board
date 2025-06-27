@@ -6,36 +6,25 @@ document.addEventListener('DOMContentLoaded', async () => {
     let firebaseConfig;
 
     // --- Smart Config Loading ---
-    // This block checks if we are on the live GitHub Pages site.
-    // If so, it uses placeholders for the deployment workflow.
-    // Otherwise, it dynamically imports the local config file.
-    if (window.location.hostname.includes('github.io')) {
-        firebaseConfig = {
-            apiKey: "__API_KEY__",
-            authDomain: "__AUTH_DOMAIN__",
-            projectId: "__PROJECT_ID__",
-            storageBucket: "__STORAGE_BUCKET__",
-            messagingSenderId: "__MESSAGING_SENDER_ID__",
-            appId: "__APP_ID__"
-        };
-    } else {
-        // We are likely on a local server. Try to load the local config file.
-        try {
-            const configModule = await import('./firebase-config.js');
-            firebaseConfig = configModule.firebaseConfig;
-        } catch (e) {
-            console.error("CRITICAL ERROR: Could not load firebase-config.js.", e);
-            document.body.innerHTML = `<div style="padding: 2rem; text-align: center; font-family: sans-serif; color: #b91c1c;">
-                <h1>Configuration Error</h1>
-                <p>Could not load <code>firebase-config.js</code>.</p>
-                <p>Please ensure the file exists and that you are running this page from a local web server (not from the file system).</p>
-                <p>We recommend using the "Live Server" extension in VS Code.</p>
-            </div>`;
-            return; // Stop the script
-        }
+    // This block now directly imports the config file.
+    // The workflow creates this file on the live site. For local development,
+    // you will create this file yourself.
+    try {
+        const configModule = await import('./firebase-config.js');
+        firebaseConfig = configModule.firebaseConfig;
+    } catch (e) {
+        console.error("CRITICAL ERROR: Could not load firebase-config.js.", e);
+        document.body.innerHTML = `<div style="padding: 2rem; text-align: center; font-family: sans-serif; color: #b91c1c;">
+            <h1>Configuration Error</h1>
+            <p>Could not load <code>firebase-config.js</code>.</p>
+            <p>For local development, please create this file manually. It should contain your Firebase project credentials.</p>
+            <p>We recommend using the "Live Server" extension in VS Code.</p>
+        </div>`;
+        return; // Stop the script
     }
     
     const appId = 'samtech-record-board';
+    // This line remains the same and will be handled by the 'sed' command in the workflow.
     const SHARED_PASSWORD = "__SHARED_PASSWORD__" || "samtech";
 
     let app, db, recordsUnsubscribe, presenceUnsubscribe;

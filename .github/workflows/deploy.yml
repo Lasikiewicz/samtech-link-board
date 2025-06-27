@@ -20,19 +20,28 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      # This step uses built-in shell commands to replace the placeholders.
-      # This is more reliable than a third-party action.
-      # IMPORTANT: This step will fail if your GitHub Secret names are not an exact match.
-      - name: Replace Firebase and Password placeholders
+      # This new step creates the firebase-config.js file using your repository secrets.
+      - name: Create firebase-config.js from Secrets
+        uses: Pdebouav/file-creator@v1.0.1
+        with:
+          file-path: ./
+          file-name: firebase-config.js
+          file-content: |
+            export const firebaseConfig = {
+              apiKey: "${{ secrets.FIREBASE_API_KEY }}",
+              authDomain: "${{ secrets.FIREBASE_AUTH_DOMAIN }}",
+              projectId: "${{ secrets.FIREBASE_PROJECT_ID }}",
+              storageBucket: "${{ secrets.FIREBASE_STORAGE_BUCKET }}",
+              messagingSenderId: "${{ secrets.FIREBASE_MESSAGING_SENDER_ID }}",
+              appId: "${{ secrets.FIREBASE_APP_ID }}"
+            };
+          overwrite: true
+
+      # This step replaces the placeholder in the app.js file with the shared password secret.
+      - name: Replace Password placeholder
         run: |
-          sed -i "s|__API_KEY__|${{ secrets.FIREBASE_API_KEY }}|g" app.js
-          sed -i "s|__AUTH_DOMAIN__|${{ secrets.FIREBASE_AUTH_DOMAIN }}|g" app.js
-          sed -i "s|__PROJECT_ID__|${{ secrets.FIREBASE_PROJECT_ID }}|g" app.js
-          sed -i "s|__STORAGE_BUCKET__|${{ secrets.FIREBASE_STORAGE_BUCKET }}|g" app.js
-          sed -i "s|__MESSAGING_SENDER_ID__|${{ secrets.FIREBASE_MESSAGING_SENDER_ID }}|g" app.js
-          sed -i "s|__APP_ID__|${{ secrets.FIREBASE_APP_ID }}|g" app.js
           sed -i "s|__SHARED_PASSWORD__|${{ secrets.SHARED_PASSWORD }}|g" app.js
-      
+
       - name: Upload artifact
         uses: actions/upload-pages-artifact@v3
         with:
