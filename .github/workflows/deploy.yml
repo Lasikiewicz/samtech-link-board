@@ -20,9 +20,18 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      # This step uses built-in shell commands to replace the placeholders.
-      # This is more reliable than a third-party action.
-      # IMPORTANT: This step will fail if your GitHub Secret names are not an exact match.
+      - name: Check for required secrets
+        run: |
+          if [ -z "${{ secrets.SHARED_PASSWORD }}" ]; then
+            echo "::error file=deploy.yml,line=26,col=15::'SHARED_PASSWORD' secret not found. Please add it to your repository settings under Settings > Secrets and variables > Actions."
+            exit 1
+          fi
+          if [ -z "${{ secrets.FIREBASE_API_KEY }}" ]; then
+            echo "::error file=deploy.yml,line=26,col=15::'FIREBASE_API_KEY' secret not found. Please add all Firebase secrets."
+            exit 1
+          fi
+          echo "✅ All required secrets are present."
+
       - name: Replace Firebase and Password placeholders
         run: |
           sed -i "s|__API_KEY__|${{ secrets.FIREBASE_API_KEY }}|g" app.js
@@ -37,14 +46,10 @@ jobs:
         run: |
           echo "Verifying that placeholders were replaced..."
           if grep -q "__SHARED_PASSWORD__" app.js; then
-            echo "Error: __SHARED_PASSWORD__ placeholder was not replaced."
+            echo "::error file=deploy.yml,line=42,col=15::Critical Error: __SHARED_PASSWORD__ placeholder was not replaced after substitution."
             exit 1
           fi
-          if grep -q "__API_KEY__" app.js; then
-            echo "Error: __API_KEY__ placeholder was not replaced."
-            exit 1
-          fi
-          echo "All placeholders replaced successfully."
+          echo "✅ Placeholder verification passed."
 
       - name: Upload artifact
         uses: actions/upload-pages-artifact@v3
