@@ -3,28 +3,19 @@ import { getFirestore, doc, getDoc, collection, onSnapshot, addDoc, updateDoc, d
 
 // This event listener ensures that the entire HTML document is loaded and parsed before the script runs.
 document.addEventListener('DOMContentLoaded', async () => {
-    let firebaseConfig;
-
-    // --- Smart Config Loading ---
-    // This block now directly imports the config file.
-    // The workflow creates this file on the live site. For local development,
-    // you will create this file yourself.
-    try {
-        const configModule = await import('./firebase-config.js');
-        firebaseConfig = configModule.firebaseConfig;
-    } catch (e) {
-        console.error("CRITICAL ERROR: Could not load firebase-config.js.", e);
-        document.body.innerHTML = `<div style="padding: 2rem; text-align: center; font-family: sans-serif; color: #b91c1c;">
-            <h1>Configuration Error</h1>
-            <p>Could not load <code>firebase-config.js</code>.</p>
-            <p>For local development, please create this file manually. It should contain your Firebase project credentials.</p>
-            <p>We recommend using the "Live Server" extension in VS Code.</p>
-        </div>`;
-        return; // Stop the script
-    }
+    // The Firebase config is now defined with placeholders that will be replaced
+    // by the GitHub Actions workflow during deployment.
+    const firebaseConfig = {
+        apiKey: "__API_KEY__",
+        authDomain: "__AUTH_DOMAIN__",
+        projectId: "__PROJECT_ID__",
+        storageBucket: "__STORAGE_BUCKET__",
+        messagingSenderId: "__MESSAGING_SENDER_ID__",
+        appId: "__APP_ID__"
+    };
     
     const appId = 'samtech-record-board';
-    // This line remains the same and will be handled by the 'sed' command in the workflow.
+    // This placeholder will also be replaced by the workflow.
     const SHARED_PASSWORD = "__SHARED_PASSWORD__" || "samtech";
 
     let app, db, recordsUnsubscribe, presenceUnsubscribe;
